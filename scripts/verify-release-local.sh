@@ -16,22 +16,10 @@ done
 # GitHub Actions dispatch, deployment or paid provider request.
 bun run check
 bun run test
-python3 scripts/planning-quality-eval.py
-bun --no-env-file scripts/uat/traveler-holdout-eval.ts
-bun --no-env-file scripts/uat/generation-quality-eval.ts
-python3 scripts/test-trip-attempt-fence.py
-python3 scripts/test-database-access-boundaries.py
-python3 scripts/test-staging-bootstrap.py
-python3 scripts/test-helper-search-paths.py
-python3 scripts/test-release-account-push.py
-python3 scripts/test-trip-creation-recovery.py
-python3 scripts/test-venue-evidence.py
-cd apps/web
-bunx playwright test -c playwright.planning.config.ts
-bunx playwright test -c playwright.checkout.config.ts
-bunx playwright test -c playwright.recovery.config.ts
+bun run test:evals
+bun run test:db
+bun run test:e2e:isolated
 
 # Build the unmodified production configuration against a read-only local catalog.
 # The resulting artifact is verification-only; it must never be deployed.
-cd ../..
 node scripts/verify-web-build.mjs

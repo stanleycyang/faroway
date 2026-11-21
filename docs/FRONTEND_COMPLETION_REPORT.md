@@ -168,7 +168,7 @@ backend/
 ## 🚀 How to Run
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
+cd apps/web
 npm run dev
 ```
 

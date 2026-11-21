@@ -862,7 +862,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-02 20:10 PST
 
 - ✅ **TASK-010 COMPLETED**: Landing page with hero section
-  - Location: `/Users/stanleyyang/.openclaw/workspace/faroway/backend/app/(marketing)/page.tsx`
+  - Location: `apps/web/app/(marketing)/page.tsx`
   - Created shared components:
     - `Button.tsx` - Reusable button with primary/secondary/ghost variants
     - `Header.tsx` - Navigation header with logo and menu
@@ -887,7 +887,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-02 20:05 PST
 
 - ✅ **TASK-001 COMPLETED**: Next.js 15 backend project created
-  - Location: `/Users/stanleyyang/.openclaw/workspace/faroway/backend`
+  - Location: `apps/web`
   - Tech stack: Next.js 15, TypeScript, Tailwind CSS, ESLint
   - Dependencies installed: @supabase/supabase-js, @supabase/ssr
   - Project structure implemented with App Router

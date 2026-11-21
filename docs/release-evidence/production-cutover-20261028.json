@@ -127,7 +127,7 @@
   "backup": {
     "physical_backup_completed_at": "2026-10-27T10:26:59.692Z",
     "pitr_enabled": false,
-    "private_local_directory": "/Users/stanley/.codex/backups/faroway-20261028",
+    "private_local_directory": "<private-local-backup-dir>",
     "public_schema_and_data_restore": "Passed in networkless disposable PostgreSQL; auth identities stubbed locally, not a full hosted Auth restore.",
     "atomic_migration_rollback": "Passed; original schema and itinerary content restored.",
     "rehearsal_seconds": 0.173

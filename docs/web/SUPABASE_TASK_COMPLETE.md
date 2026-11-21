@@ -143,7 +143,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 **After project creation**:
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
+cd apps/web
 
 # Method 1: CLI (recommended)
 supabase link --project-ref <your-project-ref>
@@ -190,7 +190,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### 5. Test the Setup
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
+cd apps/web
 npm run test:db
 ```
 

@@ -6,14 +6,37 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const BUCKET = 'images';
-const SUPABASE_URL = 'https://jcnephijkxgtprsutgsf.supabase.co';
-const ENV_PATH = path.resolve(__dirname, '../apps/web/.env');
+const ENV_PATHS = [
+  path.resolve(__dirname, '../apps/web/.env.local'),
+  path.resolve(__dirname, '../apps/web/.env'),
+];
 
-function loadEnv(): string {
-  const envContent = fs.readFileSync(ENV_PATH, 'utf-8');
-  const match = envContent.match(/SUPABASE_SERVICE_ROLE_KEY=(.+)/);
-  if (!match) throw new Error('SUPABASE_SERVICE_ROLE_KEY not found');
-  return match[1].trim();
+function loadEnvValue(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  for (const envPath of ENV_PATHS) {
+    if (!fs.existsSync(envPath)) continue;
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    const match = envContent.match(new RegExp(`^${name}=(.+)$`, 'm'));
+    if (match) return match[1].trim().replace(/^["']|["']$/g, '');
+  }
+  return undefined;
+}
+
+function loadConfig(): { supabaseUrl: string; serviceKey: string } {
+  const supabaseUrl =
+    loadEnvValue('SUPABASE_URL') || loadEnvValue('NEXT_PUBLIC_SUPABASE_URL');
+  const serviceKey = loadEnvValue('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl) {
+    throw new Error(
+      'SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL not found in environment or apps/web/.env(.local)',
+    );
+  }
+  if (!serviceKey) {
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY not found in environment or apps/web/.env(.local)',
+    );
+  }
+  return { supabaseUrl: supabaseUrl.replace(/\/$/, ''), serviceKey };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -55,8 +78,8 @@ const RETRIES = [
 ];
 
 async function main() {
-  const serviceKey = loadEnv();
-  const supabase = createClient(SUPABASE_URL, serviceKey);
+  const { supabaseUrl, serviceKey } = loadConfig();
+  const supabase = createClient(supabaseUrl, serviceKey);
 
   for (const item of RETRIES) {
     try {

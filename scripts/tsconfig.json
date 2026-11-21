@@ -17,8 +17,11 @@
   },
   "include": [
     "bun-test.d.ts",
+    "check-env.ts",
     "rotate-apple-secret.ts",
     "__tests__/rotate-apple-secret.test.ts",
+    "__tests__/generated-itinerary-eval.test.ts",
+    "__tests__/strict-ux-rubric.test.ts",
     "uat/**/*.ts",
     "__tests__/uat-staging-guard.test.ts",
     "__tests__/uat-smoke.test.ts",

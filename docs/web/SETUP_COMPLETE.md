@@ -61,7 +61,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ### 2. Run Development Server
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
+cd apps/web
 npm run dev
 ```
 

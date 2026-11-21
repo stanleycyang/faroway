@@ -8,6 +8,7 @@
     "./mobile": "./src/mobile.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
   },

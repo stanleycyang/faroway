@@ -9,6 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

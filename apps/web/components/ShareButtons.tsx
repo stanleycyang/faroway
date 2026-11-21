@@ -74,8 +74,7 @@ export function ShareButtons({
           url: shareUrl,
         });
       } catch {
-        // User cancelled or share failed
-        console.log("Share cancelled or failed");
+        // User cancelled or share failed — no action needed
       }
     } else {
       setShowDropdown(!showDropdown);

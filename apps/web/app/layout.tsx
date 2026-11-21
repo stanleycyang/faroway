@@ -184,6 +184,13 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <head>
+        {/* Impact requires a value attribute, which React's meta typings omit. */}
+        {process.env.IMPACT_SITE_VERIFICATION ? (
+          <meta
+            name="impact-site-verification"
+            {...{ value: process.env.IMPACT_SITE_VERIFICATION }}
+          />
+        ) : null}
         {/* Structured Data */}
         <script
           type="application/ld+json"

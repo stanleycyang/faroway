@@ -80,9 +80,7 @@ jobs:
         run: bun run test
 
       - name: Offline itinerary quality and affiliate evals
-        run: |
-          bun --no-env-file scripts/uat/traveler-holdout-eval.ts
-          bun --no-env-file scripts/uat/generation-quality-eval.ts
+        run: bun run test:evals
 
   full-verification:
     name: Full Release Verification
@@ -100,47 +98,19 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Calibrate offline planning-quality rubric
-        run: |
-          python3 scripts/planning-quality-eval.py
-          bun --no-env-file scripts/uat/traveler-holdout-eval.ts
-          bun --no-env-file scripts/uat/generation-quality-eval.ts
+        run: bun run test:evals
 
-      - name: Test trip lifecycle races in disposable PostgreSQL
-        run: python3 scripts/test-trip-attempt-fence.py
-        timeout-minutes: 5
+      - name: Run disposable PostgreSQL migration and RLS suites
+        run: bun run test:db
+        timeout-minutes: 15
 
-      - name: Test durable trip creation and deleted-trip recovery
-        run: python3 scripts/test-trip-creation-recovery.py
-        timeout-minutes: 5
-
-      - name: Test privileged database boundaries in disposable PostgreSQL
-        run: python3 scripts/test-database-access-boundaries.py
-        timeout-minutes: 5
-
-      - name: Rehearse complete staging bootstrap on PostgreSQL 17.11
-        run: python3 scripts/test-staging-bootstrap.py
-        timeout-minutes: 5
-
-      - name: Rehearse fixed helper search paths
-        run: python3 scripts/test-helper-search-paths.py
-        timeout-minutes: 5
-
-      - name: Rehearse isolated account and push release candidate
-        run: python3 scripts/test-release-account-push.py
-        timeout-minutes: 5
-
-      - name: Install checkout test browser
+      - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium
         working-directory: apps/web
 
-      - name: Test hosted checkout in desktop and mobile browsers
-        run: bunx playwright test -c playwright.checkout.config.ts
-        working-directory: apps/web
-
-      - name: Test trip creation recovery and public sharing in the full app
-        run: bunx playwright test -c playwright.recovery.config.ts
-        working-directory: apps/web
-        timeout-minutes: 15
+      - name: Run isolated browser verification suites (planning, checkout, recovery)
+        run: bun run test:e2e:isolated
+        timeout-minutes: 20
 
   build-web:
     name: Build Web

@@ -129,7 +129,7 @@ Configure credentials with the staging environment loaded before Expo evaluates
 the QA config:
 
 ```bash
-cd /Users/stanleyyang/workspace/faroway/apps/mobile
+cd apps/mobile
 eas env:exec preview 'EXPO_NO_DOTENV=1 EXPO_PUBLIC_MOBILE_QA=1 EXPO_PUBLIC_SUPABASE_URL=https://omovikloadpvzijoaqus.supabase.co EXPO_PUBLIC_API_URL=https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app eas credentials -p ios'
 ```
 

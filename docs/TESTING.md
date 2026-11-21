@@ -30,7 +30,7 @@ This document provides comprehensive testing guidelines and findings for the Far
 
 ```bash
 # Start Expo development server
-cd /Users/stanleyyang/workspace/faroway-codex-prod-readiness/apps/mobile
+cd apps/mobile
 bun start
 
 # iOS Simulator

@@ -16,7 +16,7 @@ Successfully created a production-ready Next.js 15 backend project for Faroway w
 
 ### TASK-001: Create Next.js 15 Backend Project ✅
 
-- **Location**: `/Users/stanleyyang/.openclaw/workspace/faroway/backend`
+- **Location**: `<repo-root>/apps/web` (formerly `backend/`)
 - **Framework**: Next.js 15.1.6 with App Router
 - **Language**: TypeScript 5.7.3
 - **Styling**: Tailwind CSS 3.4.17
