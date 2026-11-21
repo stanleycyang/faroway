@@ -3,6 +3,8 @@ import { act, create } from "react-test-renderer";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AFFILIATE_DISCLOSURE_SHORT } from "@faroway/constants";
 import {
+  openAffiliateUrlInNewTab,
+  preopenAffiliateTab,
   trackAffiliateClick,
   trackAndOpenAffiliateLink,
 } from "@/components/affiliates/track-click-client";
@@ -11,6 +13,15 @@ import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliate
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+
+function createPopupMock() {
+  return {
+    opener: { parent: true } as unknown,
+    closed: false,
+    location: { replace: vi.fn(), href: "" },
+    close: vi.fn(),
+  };
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -54,7 +65,8 @@ describe("track-click-client", () => {
         redirectUrl: trackedUrl,
       }),
     });
-    const openMock = vi.fn().mockReturnValue({ closed: false });
+    const popup = createPopupMock();
+    const openMock = vi.fn().mockReturnValue(popup);
     const assignMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("window", {
@@ -92,11 +104,10 @@ describe("track-click-client", () => {
     });
     expect(body).not.toHaveProperty("partner");
 
-    expect(openMock).toHaveBeenCalledWith(
-      trackedUrl,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    expect(openMock).toHaveBeenCalledWith("", "_blank");
+    expect(popup.opener).toBeNull();
+    expect(popup.location.replace).toHaveBeenCalledWith(trackedUrl);
+    expect(popup.close).not.toHaveBeenCalled();
     expect(assignMock).not.toHaveBeenCalled();
     expect(result).toEqual({
       tracked: true,
@@ -107,41 +118,70 @@ describe("track-click-client", () => {
     });
   });
 
-  it("omits non-UUID tripId and falls back to location.assign when popup is blocked", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error("Network error"));
-    const openMock = vi.fn().mockReturnValue(null);
+  it("omits non-UUID tripId and falls back to location.assign when popup is blocked (null or closed)", async () => {
+    for (const blockedPopup of [null, { closed: true }]) {
+      const fetchMock = vi.fn().mockRejectedValue(new Error("Network error"));
+      const openMock = vi.fn().mockReturnValue(blockedPopup);
+      const assignMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      vi.stubGlobal("window", {
+        open: openMock,
+        location: { assign: assignMock },
+      });
+
+      const rawUrl = "https://www.booking.com/searchresults.html?ss=Kyoto";
+      const result = await trackAndOpenAffiliateLink({
+        affiliateUrl: rawUrl,
+        itemType: "hotel",
+        itemId: "hotel-1",
+        itemName: "Kyoto Ryokan",
+        tripId: "not-a-uuid",
+        source: "shared_trip",
+      });
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(body.tripId).toBeUndefined();
+      expect(openMock).toHaveBeenCalledWith("", "_blank");
+      expect(assignMock).toHaveBeenCalledWith(rawUrl);
+      expect(result).toEqual({
+        tracked: false,
+        url: rawUrl,
+        clickId: undefined,
+        partner: "booking",
+        openedInNewTab: false,
+      });
+    }
+  });
+
+  it("closes pre-opened tab on rejected URL and supports popup.location.href fallback", () => {
+    const popup = createPopupMock();
+    const openMock = vi.fn().mockReturnValue(popup);
     const assignMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("window", {
       open: openMock,
       location: { assign: assignMock },
     });
 
-    const rawUrl = "https://www.booking.com/searchresults.html?ss=Kyoto";
-    const result = await trackAndOpenAffiliateLink({
-      affiliateUrl: rawUrl,
-      itemType: "hotel",
-      itemId: "hotel-1",
-      itemName: "Kyoto Ryokan",
-      tripId: "not-a-uuid",
-      source: "shared_trip",
-    });
+    const preopened = preopenAffiliateTab();
+    expect(openMock).toHaveBeenCalledWith("", "_blank");
+    expect(popup.opener).toBeNull();
+    expect(
+      openAffiliateUrlInNewTab("https://evil.example/phish", preopened),
+    ).toBe(false);
+    expect(popup.close).toHaveBeenCalledTimes(1);
+    expect(assignMock).not.toHaveBeenCalled();
 
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
-    expect(body.tripId).toBeUndefined();
-    expect(openMock).toHaveBeenCalledWith(
-      rawUrl,
-      "_blank",
-      "noopener,noreferrer",
-    );
-    expect(assignMock).toHaveBeenCalledWith(rawUrl);
-    expect(result).toEqual({
-      tracked: false,
-      url: rawUrl,
-      clickId: undefined,
-      partner: "booking",
-      openedInNewTab: false,
-    });
+    const hrefOnlyPopup = {
+      opener: { parent: true } as unknown,
+      closed: false,
+      location: { href: "" },
+      close: vi.fn(),
+    } as unknown as Window;
+    const validUrl = "https://www.airalo.com/japan-esim";
+    expect(openAffiliateUrlInNewTab(validUrl, hrefOnlyPopup)).toBe(true);
+    expect(hrefOnlyPopup.opener).toBeNull();
+    expect(hrefOnlyPopup.location.href).toBe(validUrl);
+    expect(assignMock).not.toHaveBeenCalled();
   });
 
   it("trackAffiliateClick rejects redirectUrl outside the host allowlist", async () => {
@@ -189,11 +229,13 @@ describe("TrackedAffiliateButton", () => {
         redirectUrl: "https://www.klook.com/activity/123?sub_id=c1",
       }),
     });
-    const openMock = vi.fn().mockReturnValue({ closed: false });
+    const popup = createPopupMock();
+    const openMock = vi.fn().mockReturnValue(popup);
+    const assignMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("window", {
       open: openMock,
-      location: { assign: vi.fn() },
+      location: { assign: assignMock },
     });
 
     let renderer!: ReturnType<typeof create>;
@@ -224,11 +266,12 @@ describe("TrackedAffiliateButton", () => {
       });
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(openMock).toHaveBeenCalledWith(
+      expect(openMock).toHaveBeenCalledWith("", "_blank");
+      expect(popup.opener).toBeNull();
+      expect(popup.location.replace).toHaveBeenCalledWith(
         "https://www.klook.com/activity/123?sub_id=c1",
-        "_blank",
-        "noopener,noreferrer",
       );
+      expect(assignMock).not.toHaveBeenCalled();
     } finally {
       await act(async () => renderer?.unmount());
     }

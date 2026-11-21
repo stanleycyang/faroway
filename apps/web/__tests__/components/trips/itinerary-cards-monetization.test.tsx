@@ -362,4 +362,167 @@ describe("Itinerary card affiliate CTAs (Feature #13)", () => {
       await act(async () => renderer?.unmount());
     }
   });
+
+  it("displays accurate Hostelworld partner label in HotelQuotePanel and excludes unallowlisted/ungated items from ItineraryDay bookable count", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            tripId: "trip-1",
+            tripUpdatedAt: "2026-10-01T00:00:00Z",
+            observedAt: "2026-10-02T00:00:00Z",
+            sandbox: true,
+            hotels: [
+              {
+                id: "lp-2",
+                name: "Khaosan Tokyo Kabuki",
+                offers: [
+                  {
+                    id: "off-2",
+                    stayAmount: 180,
+                    currency: "USD",
+                    roomCount: 1,
+                    additionalTaxes: [],
+                    cancellationNote: "Non-refundable",
+                  },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <AffiliateTrackingProvider
+            value={{
+              destination: "Tokyo",
+              source: "itinerary",
+              hotelPartnerLinks: {
+                primary: {
+                  partner: "hostelworld",
+                  label: "Check rates on Hostelworld",
+                  vertical: "hotels",
+                  url: "https://www.hostelworld.com/st/hostels/p/12345/khaosan/",
+                  configured: true,
+                  isSearchFallback: true,
+                  disclosure: AFFILIATE_DISCLOSURE_SHORT,
+                },
+                alternatives: [],
+              },
+            }}
+          >
+            <HotelQuotePanel
+              trip={{
+                id: "trip-1",
+                user_id: "owner-1",
+                destination: "Tokyo",
+                start_date: "2026-11-01",
+                end_date: "2026-11-04",
+                travelers: 2,
+                budget_tier: "budget",
+                status: "completed",
+                vibes: [],
+                preferences: {
+                  hotelSearch: {
+                    consentVersion: "hotel-search-nuitee-v1",
+                    countryCode: "JP",
+                    guestNationality: "US",
+                    rooms: [{ adults: 2, children: [] }],
+                  },
+                },
+                created_at: "2026-10-01T00:00:00Z",
+                updated_at: "2026-10-01T00:00:00Z",
+                is_shared: false,
+                share_token: null,
+              }}
+            />
+          </AffiliateTrackingProvider>,
+        );
+      });
+
+      const searchBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Search hotel options"))!;
+      await act(async () => {
+        await searchBtn.props.onClick();
+      });
+
+      const out = JSON.stringify(renderer.toJSON());
+      expect(out).toContain("Check live rates on Hostelworld");
+      expect(out).not.toContain("Check live rates on Stay22");
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+
+    const dayHtml = renderToStaticMarkup(
+      <ItineraryDay
+        dayNumber={1}
+        date="2026-11-01"
+        title="Arrival"
+        summary="Day 1"
+        defaultExpanded={false}
+        morning={{
+          activities: [
+            {
+              id: "act-evil",
+              name: "Untrusted Tour",
+              description: "Should not count",
+              duration: 60,
+              estimatedCost: { amount: 25, currency: "USD" },
+              category: "sightseeing",
+              timeOfDay: "morning",
+              location: { name: "Tokyo" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://evil.example/tour",
+                affiliateId: "evil",
+              },
+            },
+            {
+              id: "activity_v_legacy",
+              name: "Legacy Viator Tour",
+              description: "Missing version 1",
+              duration: 60,
+              estimatedCost: { amount: 45, currency: "USD" },
+              category: "sightseeing",
+              timeOfDay: "morning",
+              location: { name: "Tokyo" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://www.viator.com/tours/Tokyo/d334-1",
+                affiliateId: "viator",
+              },
+            },
+            {
+              id: "activity_gyg_valid",
+              name: "Valid GYG Tour",
+              description: "Allowlisted",
+              duration: 90,
+              estimatedCost: { amount: 55, currency: "USD" },
+              category: "sightseeing",
+              timeOfDay: "morning",
+              location: { name: "Tokyo" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://www.getyourguide.com/tokyo-l193/tour-t1/",
+                affiliateId: "getyourguide",
+              },
+            },
+          ],
+          meals: [],
+        }}
+        afternoon={{ activities: [], meals: [] }}
+        evening={{ activities: [], meals: [] }}
+      />,
+    );
+    expect(dayHtml).toContain("1 bookable experience");
+    expect(dayHtml).not.toContain("2 bookable");
+    expect(dayHtml).not.toContain("3 bookable");
+  });
 });

@@ -24,7 +24,12 @@ import { formatTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate } from "@/lib/trips/budget";
 import { buildViatorHandoffUrl } from "@/lib/affiliates/viator-link";
 import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
-import { trackAffiliateClick } from "@/components/affiliates/track-click-client";
+import {
+  closePreopenedAffiliateTab,
+  openAffiliateUrlInNewTab,
+  preopenAffiliateTab,
+  trackAffiliateClick,
+} from "@/components/affiliates/track-click-client";
 import {
   CheckoutContext,
   useTripCheckout,
@@ -235,24 +240,28 @@ function CheckoutSession({
     [enabled, mode, review],
   );
 
-  const openExternalPartner = (url: string) => {
-    const popup =
-      typeof window.open === "function"
-        ? window.open(url, "_blank", "noopener,noreferrer")
-        : null;
-    if (!popup || popup.closed) {
-      window.location.assign(url);
-    } else {
+  const openExternalPartner = (url: string, preopenedPopup?: Window | null) => {
+    if (openAffiliateUrlInNewTab(url, preopenedPopup)) {
       setSelection(null);
     }
   };
 
   const continueToProvider = async () => {
     if (!selection || busyRef.current) return;
+    if (
+      selection.resolvedMode !== "viator_hosted" &&
+      (!selection.affiliateUrl ||
+        !isAllowedAffiliateUrl(selection.affiliateUrl))
+    ) {
+      setError("The partner link could not be verified.");
+      return;
+    }
+
     busyRef.current = true;
     ++readSequence.current;
     setBusy(true);
     setError(null);
+    const popup = preopenAffiliateTab();
     try {
       if (selection.resolvedMode === "viator_hosted") {
         const response = await fetch(endpoint, {
@@ -265,9 +274,15 @@ function CheckoutSession({
           }),
           signal: AbortSignal.timeout(20_000),
         });
-        if (!mounted.current) return;
+        if (!mounted.current) {
+          closePreopenedAffiliateTab(popup);
+          return;
+        }
         const data = await response.json();
-        if (!mounted.current) return;
+        if (!mounted.current) {
+          closePreopenedAffiliateTab(popup);
+          return;
+        }
         if (!response.ok)
           throw new Error(data.error || "Could not prepare checkout.");
         if (
@@ -282,20 +297,15 @@ function CheckoutSession({
           data.redirectUrl,
           `checkout-${selection.attemptId}`,
         );
-        if (!url) throw new Error("The provider link could not be verified.");
-        openExternalPartner(url);
+        if (!url || !isAllowedAffiliateUrl(url)) {
+          throw new Error("The provider link could not be verified.");
+        }
+        openExternalPartner(url, popup);
         return;
       }
 
-      if (
-        !selection.affiliateUrl ||
-        !isAllowedAffiliateUrl(selection.affiliateUrl)
-      ) {
-        throw new Error("The partner link could not be verified.");
-      }
-
       const tracked = await trackAffiliateClick({
-        affiliateUrl: selection.affiliateUrl,
+        affiliateUrl: selection.affiliateUrl!,
         partner: selection.resolvedPartner,
         itemType:
           selection.itemType ??
@@ -310,12 +320,16 @@ function CheckoutSession({
         campaign: selection.campaign,
       });
 
-      if (!mounted.current) return;
+      if (!mounted.current) {
+        closePreopenedAffiliateTab(popup);
+        return;
+      }
       if (!tracked || !isAllowedAffiliateUrl(tracked.url)) {
         throw new Error("The partner link could not be verified.");
       }
-      openExternalPartner(tracked.url);
+      openExternalPartner(tracked.url, popup);
     } catch (reason) {
+      closePreopenedAffiliateTab(popup);
       if (!mounted.current) return;
       setError(reason instanceof Error ? reason.message : "Please try again.");
       if (selection.resolvedMode === "viator_hosted") {

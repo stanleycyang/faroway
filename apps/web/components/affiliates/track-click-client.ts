@@ -39,19 +39,64 @@ export interface TrackAffiliateClickResult {
   partner: AffiliatePartnerId;
 }
 
-export function openAffiliateUrlInNewTab(url: string): boolean {
+export function preopenAffiliateTab(): Window | null {
+  if (typeof window === "undefined" || typeof window.open !== "function") {
+    return null;
+  }
+  const popup = window.open("", "_blank");
+  if (popup) {
+    try {
+      popup.opener = null;
+    } catch {
+      // Ignore readonly opener errors in restricted environments.
+    }
+  }
+  return popup ?? null;
+}
+
+export function closePreopenedAffiliateTab(
+  popup: Window | null | undefined,
+): void {
+  if (popup && !popup.closed) {
+    try {
+      popup.close?.();
+    } catch {
+      // Ignore close errors on restricted or already-closed windows.
+    }
+  }
+}
+
+export function openAffiliateUrlInNewTab(
+  url: string,
+  preopenedPopup?: Window | null,
+): boolean {
   if (typeof window === "undefined" || !isAllowedAffiliateUrl(url)) {
+    closePreopenedAffiliateTab(preopenedPopup);
     return false;
   }
   const popup =
-    typeof window.open === "function"
-      ? window.open(url, "_blank", "noopener,noreferrer")
-      : null;
-  if (!popup || popup.closed) {
-    window.location.assign(url);
-    return false;
+    preopenedPopup === undefined ? preopenAffiliateTab() : preopenedPopup;
+  if (popup && !popup.closed) {
+    try {
+      popup.opener = null;
+    } catch {
+      // Ignore readonly opener errors in restricted environments.
+    }
+    try {
+      if (typeof popup.location?.replace === "function") {
+        popup.location.replace(url);
+        return true;
+      }
+      if (popup.location && "href" in popup.location) {
+        popup.location.href = url;
+        return true;
+      }
+    } catch {
+      closePreopenedAffiliateTab(popup);
+    }
   }
-  return true;
+  window.location.assign(url);
+  return false;
 }
 
 export async function trackAffiliateClick(
@@ -135,11 +180,33 @@ export async function trackAffiliateClick(
 export async function trackAndOpenAffiliateLink(
   input: TrackAndOpenInput,
 ): Promise<(TrackAffiliateClickResult & { openedInNewTab: boolean }) | null> {
-  const result = await trackAffiliateClick(input);
-  if (!result) return null;
-  const openedInNewTab = openAffiliateUrlInNewTab(result.url);
-  return {
-    ...result,
-    openedInNewTab,
-  };
+  if (!isAllowedAffiliateUrl(input.affiliateUrl)) {
+    return null;
+  }
+  const partner =
+    resolveAffiliatePartnerByUrl(input.affiliateUrl) ??
+    normalizeAffiliatePartner(input.partner);
+  if (!partner) {
+    return null;
+  }
+
+  // Pre-open synchronously inside user gesture so Safari/browsers don't block
+  // after the async /api/track/click call, without passing "noopener,noreferrer".
+  const popup = preopenAffiliateTab();
+
+  try {
+    const result = await trackAffiliateClick(input);
+    if (!result || !isAllowedAffiliateUrl(result.url)) {
+      closePreopenedAffiliateTab(popup);
+      return null;
+    }
+    const openedInNewTab = openAffiliateUrlInNewTab(result.url, popup);
+    return {
+      ...result,
+      openedInNewTab,
+    };
+  } catch (error) {
+    closePreopenedAffiliateTab(popup);
+    throw error;
+  }
 }

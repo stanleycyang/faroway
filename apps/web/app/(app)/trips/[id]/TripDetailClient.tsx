@@ -70,6 +70,7 @@ import {
   buildTripBookingItems,
 } from "@/components/trips/BookingsSheet";
 import { useViatorContentEnabled } from "@/components/trips/ViatorContentPolicy";
+import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 
 /**
  * Error boundary that prevents a single broken itinerary day from crashing the whole page.
@@ -685,13 +686,18 @@ export function TripDetailClient({
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
           count += slot.activities.filter(
-            (a) => a?.bookingInfo?.bookingUrl,
+            (a) =>
+              canDisplayViatorContent(a, viatorContentEnabled) &&
+              Boolean(
+                a?.bookingInfo?.bookingUrl &&
+                isAllowedAffiliateUrl(a.bookingInfo.bookingUrl),
+              ),
           ).length;
         }
       }
     }
     return count;
-  }, [itinerary]);
+  }, [itinerary, viatorContentEnabled]);
 
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
@@ -2028,24 +2034,67 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
                 />
               )}
 
-              {returnHasSeparateUrl && returnTransport?.affiliateUrl && (
-                <TrackedAffiliateButton
-                  variant="onDark"
-                  label="Book return leg"
-                  affiliateUrl={returnTransport.affiliateUrl}
-                  partner={
+              {returnHasSeparateUrl &&
+                returnTransport?.affiliateUrl &&
+                (() => {
+                  const returnPartner =
                     resolveAffiliatePartnerByUrl(
                       returnTransport.affiliateUrl,
-                    ) ?? "duffel"
-                  }
-                  itemType="flight"
-                  itemId={returnId || "featured-flight-return"}
-                  itemName={`${returnTransport.provider || "Return flight"}`}
-                  tripId={affiliateCtx?.tripId}
-                  source={affiliateCtx?.source ?? "itinerary"}
-                  placement="featured_flights_return"
-                />
-              )}
+                    ) ??
+                    normalizeAffiliatePartner(
+                      returnTransport.affiliatePartner,
+                    ) ??
+                    "duffel";
+                  const returnPartnerLabel =
+                    formatAffiliatePartnerName(returnPartner);
+                  const returnRouteLabel = `${returnTransport.departure?.airport || "Return"} → ${returnTransport.arrival?.airport || "Origin"}`;
+                  const returnPrice = readPrice(
+                    returnTransport.price,
+                    returnTransport.currency,
+                  );
+                  return checkout ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.currentTarget.focus();
+                        checkout.review({
+                          id: returnId || "featured-flight-return",
+                          name: `${returnTransport.provider || "Return flight"} (${returnRouteLabel})`,
+                          date: returnFlight?.date || outbound.date,
+                          dateLabel: `${returnRouteLabel} · ${returnFlight?.date || outbound.date}`,
+                          mode: "partner_click",
+                          itemType: "flight",
+                          partner: returnPartner,
+                          partnerLabel: returnPartnerLabel,
+                          affiliateUrl: returnTransport.affiliateUrl!,
+                          price: returnPrice?.amount,
+                          currency: returnPrice?.currency,
+                          source: affiliateCtx?.source ?? "itinerary",
+                          placement: "featured_flights_return",
+                        });
+                      }}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#143D46] hover:bg-[#EFF5F3] transition-colors"
+                    >
+                      <span>Book return leg</span>
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <TrackedAffiliateButton
+                      variant="onDark"
+                      label="Book return leg"
+                      affiliateUrl={returnTransport.affiliateUrl}
+                      partner={returnPartner}
+                      itemType="flight"
+                      itemId={returnId || "featured-flight-return"}
+                      itemName={`${returnTransport.provider || "Return flight"}`}
+                      tripId={affiliateCtx?.tripId}
+                      price={returnPrice?.amount}
+                      currency={returnPrice?.currency}
+                      source={affiliateCtx?.source ?? "itinerary"}
+                      placement="featured_flights_return"
+                    />
+                  );
+                })()}
 
               {(!outboundCurrent || outboundPartner !== "duffel") &&
                 flightFallbacks.slice(0, 2).map((link) => {

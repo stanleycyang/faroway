@@ -678,7 +678,7 @@ export function RestaurantCard({
           <span
             key={i}
             aria-hidden="true"
-            className={`text-xs font-bold ${i <= level ? "text-emerald-700" : "text-slate-400"}`}
+            className={`text-xs font-bold ${i <= level ? "text-emerald-700" : "text-emerald-800/45"}`}
           >
             $
           </span>

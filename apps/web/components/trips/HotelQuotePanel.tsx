@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import {
   formatAffiliatePartnerName,
   isAllowedAffiliateUrl,
+  resolveAffiliatePartnerByUrl,
   validateHotelSearchDetails,
 } from "@faroway/constants";
 import { useUser } from "@/hooks/useUser";
@@ -44,13 +45,7 @@ function buildHotelSpecificPartnerUrl(
       if (isAllowedAffiliateUrl(adjusted)) {
         return {
           url: adjusted,
-          partner: parsed.hostname.includes("stay22.com")
-            ? "stay22"
-            : parsed.hostname.includes("booking.com")
-              ? "booking"
-              : parsed.hostname.includes("expedia.com")
-                ? "expedia"
-                : "stay22",
+          partner: resolveAffiliatePartnerByUrl(adjusted) ?? "stay22",
         };
       }
     } catch {

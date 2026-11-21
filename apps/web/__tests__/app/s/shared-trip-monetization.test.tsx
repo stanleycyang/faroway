@@ -157,11 +157,18 @@ describe("SharedTripView monetization and brand polish (Feature #15)", () => {
       throw new Error(`Unexpected fetch to ${url}`);
     });
 
-    const openMock = vi.fn().mockReturnValue({ closed: false });
+    const popup = {
+      opener: { parent: true } as unknown,
+      closed: false,
+      location: { replace: vi.fn(), href: "" },
+      close: vi.fn(),
+    };
+    const openMock = vi.fn().mockReturnValue(popup);
+    const assignMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("window", {
       open: openMock,
-      location: { assign: vi.fn() },
+      location: { assign: assignMock },
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       localStorage: {
@@ -219,11 +226,12 @@ describe("SharedTripView monetization and brand polish (Feature #15)", () => {
         source: "shared_trip",
         itemId: "activity_gyg_77",
       });
-      expect(openMock).toHaveBeenCalledWith(
+      expect(openMock).toHaveBeenCalledWith("", "_blank");
+      expect(popup.opener).toBeNull();
+      expect(popup.location.replace).toHaveBeenCalledWith(
         "https://www.getyourguide.com/tokyo-l193/sensoji-t77/?cmp=shared-click-99",
-        "_blank",
-        "noopener,noreferrer",
       );
+      expect(assignMock).not.toHaveBeenCalled();
     } finally {
       await act(async () => renderer?.unmount());
     }

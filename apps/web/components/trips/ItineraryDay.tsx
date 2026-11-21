@@ -33,6 +33,8 @@ import { useTripCheckout } from "./TripCheckoutContext";
 import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
 import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
 import { useAffiliateTracking } from "@/components/affiliates/AffiliateTrackingContext";
+import { useViatorContentEnabled } from "./ViatorContentPolicy";
+import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 import React, { useMemo, useState } from "react";
 import {
   ChevronDown,
@@ -154,6 +156,7 @@ export function ItineraryDay({
 }: ItineraryDayProps) {
   const checkout = useTripCheckout();
   const affiliateCtx = useAffiliateTracking();
+  const viatorContentEnabled = useViatorContentEnabled();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const timingDay = { date, morning, afternoon, evening, tips, timingProposal };
   const validTiming = readDayTiming(timingDay);
@@ -197,8 +200,20 @@ export function ItineraryDay({
   const countBookable = () => {
     let count = 0;
     for (const block of [safeMorning, safeAfternoon, safeEvening]) {
-      count += block.activities.filter((a) => a.bookingInfo?.bookingUrl).length;
-      count += block.meals.filter((m) => m.reservationInfo?.url).length;
+      count += block.activities.filter(
+        (a) =>
+          canDisplayViatorContent(a, viatorContentEnabled) &&
+          Boolean(
+            a.bookingInfo?.bookingUrl &&
+            isAllowedAffiliateUrl(a.bookingInfo.bookingUrl),
+          ),
+      ).length;
+      count += block.meals.filter((m) =>
+        Boolean(
+          m.reservationInfo?.url &&
+          isAllowedAffiliateUrl(m.reservationInfo.url),
+        ),
+      ).length;
     }
     return count;
   };

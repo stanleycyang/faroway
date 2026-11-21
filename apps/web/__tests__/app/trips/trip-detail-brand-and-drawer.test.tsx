@@ -214,6 +214,146 @@ describe("TripDetailClient BookingsSheet drawer and Brand/Contrast compliance", 
     }
   });
 
+  it("routes FeaturedFlights Book return leg through TripCheckout modal", async () => {
+    vi.stubGlobal("window", {
+      scrollY: 0,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      location: { origin: "http://localhost" },
+    });
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ enabled: false, attempts: [] }),
+      }),
+    );
+
+    const itinerary = {
+      tripId: "11111111-1111-4111-8111-111111111111",
+      destination: "Tokyo",
+      startDate: "2026-11-01",
+      endDate: "2026-11-05",
+      overview: "Tokyo highlights",
+      totalEstimatedCost: { amount: 2200, currency: "USD" },
+      generatedAt: "2026-10-01T00:00:00Z",
+      days: [
+        {
+          dayNumber: 1,
+          date: "2026-11-01",
+          title: "Arrival",
+          summary: "Fly in",
+          morning: { activities: [], meals: [] },
+          afternoon: { activities: [], meals: [] },
+          evening: { activities: [], meals: [] },
+          transport: {
+            id: "transport_duffel_out",
+            type: "flight",
+            provider: "JAL",
+            departure: {
+              airport: "SFO",
+              city: "San Francisco",
+              dateTime: "2026-11-01T10:00:00-08:00",
+            },
+            arrival: {
+              airport: "HND",
+              city: "Tokyo",
+              dateTime: "2026-11-02T14:00:00+09:00",
+            },
+            duration: 660,
+            stops: 0,
+            price: 900,
+            currency: "USD",
+            affiliatePartner: "duffel",
+            affiliateUrl: "https://links.duffel.com/outbound",
+            expiresAt: "2099-01-01T00:00:00Z",
+          },
+          tips: [],
+        },
+        {
+          dayNumber: 2,
+          date: "2026-11-05",
+          title: "Departure",
+          summary: "Fly home",
+          morning: { activities: [], meals: [] },
+          afternoon: { activities: [], meals: [] },
+          evening: { activities: [], meals: [] },
+          transport: {
+            id: "transport_duffel_ret",
+            type: "flight",
+            provider: "ANA",
+            departure: {
+              airport: "HND",
+              city: "Tokyo",
+              dateTime: "2026-11-05T16:00:00+09:00",
+            },
+            arrival: {
+              airport: "SFO",
+              city: "San Francisco",
+              dateTime: "2026-11-05T09:00:00-08:00",
+            },
+            duration: 540,
+            stops: 0,
+            price: 850,
+            currency: "USD",
+            affiliatePartner: "duffel",
+            affiliateUrl: "https://links.duffel.com/return-leg",
+            expiresAt: "2099-01-01T00:00:00Z",
+          },
+          tips: [],
+        },
+      ],
+    } as unknown as GeneratedItinerary;
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <TripDetailClient
+            tripId="11111111-1111-4111-8111-111111111111"
+            initialShareUrl={null}
+            initialData={{
+              itinerary,
+              trip: {
+                id: "11111111-1111-4111-8111-111111111111",
+                user_id: "owner-1",
+                destination: "Tokyo",
+                start_date: "2026-11-01",
+                end_date: "2026-11-05",
+                travelers: 2,
+                budget_tier: "moderate",
+                status: "completed",
+                vibes: [],
+                preferences: {},
+                created_at: "2026-10-01T00:00:00Z",
+                updated_at: "2026-10-01T00:00:00Z",
+                is_shared: false,
+                share_token: null,
+              },
+            }}
+          />,
+        );
+      });
+
+      const returnBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => textOf(b).includes("Book return leg"))!;
+      expect(returnBtn).toBeTruthy();
+
+      await act(async () => {
+        returnBtn.props.onClick({ currentTarget: { focus: vi.fn() } });
+      });
+
+      const dialog = renderer.root.findByProps({ role: "dialog" });
+      expect(textOf(dialog)).toContain("Your next step, with Duffel");
+      expect(textOf(dialog)).toContain("ANA (HND → SFO)");
+      expect(textOf(dialog)).toContain("Continue to Duffel");
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+  });
+
   it("enforces Brand 2.0 palette, WCAG AA tokens, <Logo />, and zero raw OS emojis across M3B trip surfaces", () => {
     const files = [
       ...walkTsxFiles(path.resolve("components/trips")),
@@ -228,6 +368,9 @@ describe("TripDetailClient BookingsSheet drawer and Brand/Contrast compliance", 
       expect(content).not.toMatch(/from-blue-|to-indigo-/);
       expect(content).not.toMatch(/from-primary-50 to-amber-50/);
       expect(content).not.toMatch(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u);
+      if (file.endsWith("ActivityCard.tsx")) {
+        expect(content).not.toContain("text-slate-400");
+      }
     }
   });
 });

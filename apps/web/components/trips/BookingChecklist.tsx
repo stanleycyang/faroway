@@ -19,6 +19,8 @@ import {
 import { useTripCheckout } from "./TripCheckoutContext";
 import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
 import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { useViatorContentEnabled } from "./ViatorContentPolicy";
+import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 
 type Status = BookingReportInput["status"];
 const ReportRow = z.object({
@@ -79,6 +81,7 @@ export function BookingChecklist({
   days?: TripDay[];
 }) {
   const checkout = useTripCheckout();
+  const viatorContentEnabled = useViatorContentEnabled();
   const [data, setData] = useState<Checklist | null>(null);
   const [unreadableRetry, setUnreadableRetry] = useState(false);
   const [pending, setPending] = useState<BookingReportInput | null>(null);
@@ -368,11 +371,15 @@ export function BookingChecklist({
       <ul className="mt-3 space-y-3">
         {data?.items.map((item) => {
           const matchedActivity = matchedActivities.get(item.id);
+          const viatorAllowed = matchedActivity
+            ? canDisplayViatorContent(matchedActivity, viatorContentEnabled)
+            : false;
           const bookingUrl = matchedActivity?.bookingInfo?.bookingUrl;
           const hasAllowedUrl = Boolean(
-            bookingUrl && isAllowedAffiliateUrl(bookingUrl),
+            viatorAllowed && bookingUrl && isAllowedAffiliateUrl(bookingUrl),
           );
           const isViatorHosted = Boolean(
+            viatorAllowed &&
             matchedActivity &&
             checkout?.mode === "owner" &&
             checkout.enabled &&
@@ -380,6 +387,7 @@ export function BookingChecklist({
             /^activity_v_[a-zA-Z0-9]+$/.test(matchedActivity.id),
           );
           const canBookNow =
+            viatorAllowed &&
             item.status !== "traveler_booked" &&
             Boolean(matchedActivity) &&
             (hasAllowedUrl || isViatorHosted);
