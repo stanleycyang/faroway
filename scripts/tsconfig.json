@@ -40,6 +40,7 @@
     "__tests__/dining-evidence-review.test.ts",
     "__tests__/traveler-holdout.test.ts",
     "__tests__/generation-quality.test.ts",
+    "__tests__/monetization-eval.test.ts",
     "uat/lib/traveler-holdout.ts",
     "uat/lib/generation-quality.ts",
     "uat/lib/itinerary-rubric.ts",
