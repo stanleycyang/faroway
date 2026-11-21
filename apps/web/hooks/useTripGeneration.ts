@@ -241,14 +241,12 @@ export function useTripGeneration(
 
   const [state, setState] = useState<TripGenerationState>(initialState);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
-  const autoRetriesRef = useRef(0);
   const jobKey = `${tripId}:${generationId || "current"}`;
   const activeJobRef = useRef(jobKey);
   const openedJob = useRef<string | null>(null);
   const specChapters = useRef(new Map<string, StreamingSpecBlock[]>());
   const explicitDiscoveryIds = useRef(new Set<string>());
   useEffect(() => {
-    autoRetriesRef.current = 0;
     if (activeJobRef.current !== jobKey) {
       activeJobRef.current = jobKey;
       specChapters.current.clear();
@@ -597,7 +595,6 @@ export function useTripGeneration(
     let terminal = false;
     source.addEventListener("open", () => {
       if (terminal) return;
-      autoRetriesRef.current = 0;
       const resuming = openedJob.current === job;
       if (!resuming) {
         specChapters.current.clear();
@@ -643,7 +640,6 @@ export function useTripGeneration(
         }
       });
     }
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     source.addEventListener("error", (event) => {
       if (terminal) return;
       terminal = true;
@@ -653,16 +649,6 @@ export function useTripGeneration(
         return;
       }
       source.close();
-      // Attempt up to 2 bounded automatic reconnects on transient network hiccups
-      // before surfacing a paused-updates error to the traveler.
-      if (autoRetriesRef.current < 2) {
-        autoRetriesRef.current += 1;
-        const delayMs = 1500 * autoRetriesRef.current;
-        retryTimer = setTimeout(() => {
-          setConnectionAttempt((attempt) => attempt + 1);
-        }, delayMs);
-        return;
-      }
       const message = "Live updates disconnected. Checking your saved plan…";
       setState((previous) =>
         previous.isComplete
@@ -678,7 +664,6 @@ export function useTripGeneration(
     });
     return () => {
       terminal = true;
-      if (retryTimer) clearTimeout(retryTimer);
       source.close();
     };
   }, [

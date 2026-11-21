@@ -700,9 +700,9 @@ function CreateTripPlanner({
         name: cover.name,
         lat: 0,
         lng: 0,
-        placeId: cover.slug,
-        isRecommended: true,
-        source: "catalog",
+        placeId: "",
+        isRecommended: false,
+        source: "user",
       };
     }
     return {
