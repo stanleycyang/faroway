@@ -511,6 +511,23 @@ describe("security, prototype-pollution & deduplication boundaries", () => {
       ).toBe(false);
     }
 
+    for (const nestedTpUrl of [
+      `https://tp.media/r?marker=394812&sub_id=clk1&u=${encodeURIComponent("https://tp.media/r?marker=999&u=javascript:alert(1)")}`,
+      `https://tp.media/r?marker=394812&sub_id=clk1&u=${encodeURIComponent("https://www.travelpayouts.com/?marker=999")}`,
+      "https://tp.media/r?marker=394812&u=https%3A%2F%2Ftp.media%2Fr%3Fu%3Dhttps%253A%252F%252Fevil.com&sub_id=clk1",
+    ]) {
+      expect(
+        validatePartnerHandoffUrl("travelpayouts", nestedTpUrl, {
+          partnerId: "394812",
+          requireSubId: true,
+        }),
+      ).toEqual({
+        ok: false,
+        reason:
+          "Travelpayouts target u URL must not wrap another Travelpayouts redirect",
+      });
+    }
+
     expect(
       validatePartnerHandoffUrl(
         "safetywing",

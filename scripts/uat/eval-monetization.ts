@@ -632,6 +632,30 @@ export function evaluateTier2Attribution(): TierReport {
       { allowTravelpayoutsWrapper: true },
     ).ok,
   );
+  t.control(
+    "tp-wrapper-nested-tp-js-rejected",
+    !validatePartnerHandoffUrl(
+      "travelpayouts",
+      `https://tp.media/r?marker=394812&sub_id=clk1&u=${encodeURIComponent("https://tp.media/r?marker=999&u=javascript:alert(1)")}`,
+      { partnerId: "394812", requireSubId: true },
+    ).ok,
+  );
+  t.control(
+    "tp-wrapper-nested-tp-root-rejected",
+    !validatePartnerHandoffUrl(
+      "travelpayouts",
+      `https://tp.media/r?marker=394812&sub_id=clk1&u=${encodeURIComponent("https://www.travelpayouts.com/?marker=999")}`,
+      { partnerId: "394812", requireSubId: true },
+    ).ok,
+  );
+  t.control(
+    "tp-wrapper-nested-tp-evil-rejected",
+    !validatePartnerHandoffUrl(
+      "travelpayouts",
+      "https://tp.media/r?marker=394812&u=https%3A%2F%2Ftp.media%2Fr%3Fu%3Dhttps%253A%252F%252Fevil.com&sub_id=clk1",
+      { partnerId: "394812", requireSubId: true },
+    ).ok,
+  );
 
   // Stay22 /embed/gm dedupe keys: www vs apex equivalence, distinct destinations & city/q fallback
   const s22Tokyo = validatePartnerHandoffUrl(

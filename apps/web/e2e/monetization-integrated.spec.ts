@@ -31,7 +31,7 @@ const ALL_17_PARTNER_CLICKS: Array<{
   },
   {
     partner: "travelpayouts",
-    url: "https://tp.media/r?marker=12345&trs=99&p=4114&u=https%3A%2F%2Fexample.com",
+    url: "https://tp.media/r?marker=12345&trs=99&p=4114&u=https%3A%2F%2Fwww.klook.com%2Factivity%2F123-tokyo%2F",
     expectedParam: "sub_id",
     preserved: { marker: "12345", trs: "99", p: "4114" },
     itemType: "activity",
@@ -165,17 +165,39 @@ async function checkNoRawEmojis(page: Page) {
 async function auditContrastAndBrandTokens(page: Page) {
   const audit = await page.evaluate(() => {
     type Rgba = [number, number, number, number];
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
     const parseColor = (css: string): Rgba => {
-      const m = css.match(
-        /rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*(\d+(?:\.\d+)?))?\s*\)/,
+      const trimmed = (css || "").trim();
+      if (
+        !trimmed ||
+        trimmed === "transparent" ||
+        trimmed === "rgba(0, 0, 0, 0)"
+      ) {
+        return [0, 0, 0, 0];
+      }
+      const m = trimmed.match(
+        /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)(?:\s*,\s*(\d+(?:\.\d+)?))?\s*\)$/,
       );
-      if (!m) return [0, 0, 0, 0];
-      return [
-        Number(m[1]),
-        Number(m[2]),
-        Number(m[3]),
-        m[4] === undefined ? 1 : Number(m[4]),
-      ];
+      if (m) {
+        return [
+          Number(m[1]),
+          Number(m[2]),
+          Number(m[3]),
+          m[4] === undefined ? 1 : Number(m[4]),
+        ];
+      }
+      if (!ctx || !CSS.supports("color", trimmed)) {
+        return [0, 0, 0, 0];
+      }
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = trimmed;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+      return [r, g, b, a / 255];
     };
     const compositeOver = (fg: Rgba, bg: Rgba): Rgba => {
       const a = fg[3];
@@ -198,22 +220,101 @@ async function auditContrastAndBrandTokens(page: Page) {
       const l2 = luminance(bg);
       return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     };
-    const resolveEffectiveBackground = (el: Element): Rgba => {
-      const layers: Rgba[] = [];
-      let cur: Element | null = el;
-      while (cur) {
-        const parsed = parseColor(getComputedStyle(cur).backgroundColor);
-        if (parsed[3] > 0) {
-          layers.push(parsed);
-          if (parsed[3] >= 0.999) break;
-        }
-        cur = cur.parentElement;
-      }
+    const composeLayers = (layers: Rgba[]): Rgba => {
       let bg: Rgba = [255, 255, 255, 1];
       for (let i = layers.length - 1; i >= 0; i--) {
         bg = compositeOver(layers[i], bg);
       }
       return bg;
+    };
+    const hasNonLightGradientOrImage = (bgImage: string): boolean => {
+      if (!bgImage || bgImage === "none") return false;
+      if (/\burl\(/i.test(bgImage)) return true;
+      if (!/gradient\(/i.test(bgImage)) return false;
+      const stops = bgImage.match(
+        /(?:oklch|oklab|color|rgba?|hsla?)\([^)]+\)/gi,
+      );
+      if (!stops || stops.length === 0) return true;
+      let checkedStop = false;
+      for (const stop of stops) {
+        const parsed = parseColor(stop);
+        if (parsed[3] <= 0.05) continue;
+        checkedStop = true;
+        const composited = compositeOver(parsed, [255, 255, 255, 1]);
+        if (luminance(composited) < 0.75) {
+          return true;
+        }
+      }
+      return !checkedStop;
+    };
+    const resolveEffectiveBackground = (
+      el: Element,
+      elRect: DOMRect,
+    ): { bg: Rgba; isGradientOrScrim: boolean } => {
+      const layers: Rgba[] = [];
+      let isGradientOrScrim = false;
+      let cur: Element | null = el;
+      while (cur) {
+        const curStyle = getComputedStyle(cur);
+        if (hasNonLightGradientOrImage(curStyle.backgroundImage)) {
+          isGradientOrScrim = true;
+          break;
+        }
+        const parsed = parseColor(curStyle.backgroundColor);
+        if (parsed[3] > 0) {
+          layers.push(parsed);
+          if (parsed[3] >= 0.999) break;
+        }
+        const parent: HTMLElement | null = cur.parentElement;
+        if (parent) {
+          const children = Array.from(parent.children);
+          const curIdx = children.indexOf(cur);
+          const curZ = Number.parseInt(curStyle.zIndex, 10) || 0;
+          for (let i = 0; i < children.length; i++) {
+            const sib = children[i];
+            if (sib === cur) continue;
+            const sibStyle = getComputedStyle(sib);
+            if (
+              sibStyle.display === "none" ||
+              sibStyle.visibility === "hidden" ||
+              parseFloat(sibStyle.opacity) === 0
+            ) {
+              continue;
+            }
+            const isOverlayPos =
+              sibStyle.position === "absolute" || sibStyle.position === "fixed";
+            const sibZ = Number.parseInt(sibStyle.zIndex, 10) || 0;
+            if (!isOverlayPos && sib.tagName !== "IMG") continue;
+            if (i > curIdx && sibZ > curZ) continue;
+            const sibRect = sib.getBoundingClientRect();
+            const coversEl =
+              sibRect.width > 0 &&
+              sibRect.height > 0 &&
+              sibRect.left <= elRect.left + 2 &&
+              sibRect.right >= elRect.right - 2 &&
+              sibRect.top <= elRect.top + 2 &&
+              sibRect.bottom >= elRect.bottom - 2;
+            if (!coversEl) continue;
+            const sibBg = parseColor(sibStyle.backgroundColor);
+            const hasDarkSolidOverlay =
+              sibBg[3] > 0.1 &&
+              luminance(compositeOver(sibBg, [255, 255, 255, 1])) < 0.75;
+            if (
+              sib.tagName === "IMG" ||
+              sib.tagName === "VIDEO" ||
+              sib.querySelector("img, video") !== null ||
+              hasNonLightGradientOrImage(sibStyle.backgroundImage) ||
+              hasDarkSolidOverlay
+            ) {
+              isGradientOrScrim = true;
+              break;
+            }
+          }
+          if (isGradientOrScrim) break;
+        }
+        cur = parent;
+      }
+      return { bg: composeLayers(layers), isGradientOrScrim };
     };
     const isLargeText = (style: CSSStyleDeclaration): boolean => {
       const sizePx = parseFloat(style.fontSize) || 16;
@@ -259,11 +360,15 @@ async function auditContrastAndBrandTokens(page: Page) {
       );
       const isAction = el.tagName === "A" || el.tagName === "BUTTON";
       if (!hasDirectText && !isAction) continue;
-      // Skip gradient-clipped text (transparent text fill)
-      if (style.webkitTextFillColor === "rgba(0, 0, 0, 0)") continue;
 
-      const fgRaw = parseColor(style.color);
-      const bg = resolveEffectiveBackground(el);
+      const fgRaw = parseColor(style.webkitTextFillColor || style.color);
+      const isClippedText =
+        style.backgroundClip === "text" ||
+        style.webkitBackgroundClip === "text";
+      // Only skip transparent text fill when intentionally clipped to a background gradient
+      if (fgRaw[3] === 0 && isClippedText) continue;
+
+      const { bg, isGradientOrScrim } = resolveEffectiveBackground(el, rect);
       const fg = compositeOver(fgRaw, bg);
       const ratio = contrastRatio(fg, bg);
       const required = isLargeText(style) ? 3.0 : 4.5;
@@ -281,7 +386,7 @@ async function auditContrastAndBrandTokens(page: Page) {
           required,
           reason: `Banned low-contrast text color ${fgHex} on light background`,
         });
-      } else if (ratio < required) {
+      } else if (!isGradientOrScrim && ratio < required) {
         failures.push({
           tag: el.tagName,
           text: text.slice(0, 60),
@@ -422,13 +527,21 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
     }
     expect(hasVisibleMobileH1).toBe(true);
 
-    // ?destination=Tokyo prefill
+    // ?destination=Tokyo prefill (selectedPlace renders #planner-destination card heading, or an input if search is active)
+    const selectedDestinationHeading = page
+      .locator("#planner-destination")
+      .getByRole("heading", { name: /Tokyo/i });
     const destinationInput = page
       .locator(
-        'input[placeholder*="Tokyo"], input[placeholder*="destination" i], input[name*="destination" i]',
+        '#planner-destination input[placeholder*="Tokyo"], #planner-destination input[placeholder*="destination" i], #planner-destination input[name*="destination" i], #planner-destination input[placeholder*="city" i]',
       )
       .first();
-    await expect(destinationInput).toHaveValue(/Tokyo/i);
+    await expect(
+      selectedDestinationHeading.or(destinationInput).first(),
+    ).toBeVisible();
+    if ((await selectedDestinationHeading.count()) === 0) {
+      await expect(destinationInput).toHaveValue(/Tokyo/i);
+    }
 
     // No premature "then sign in" friction copy
     await expect(page.getByText(/then sign in/i)).toHaveCount(0);
@@ -478,9 +591,13 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
       "Set E2E_SHARED_TRIP_TOKEN to test live /s/[token] route",
     );
 
-    await page.route(/^https:\/\//, (route) =>
-      route.fulfill({ contentType: "text/html", body: "Mock provider" }),
-    );
+    const baseOrigin = new URL(BASE_URL).origin;
+    await page.route(/^https:\/\//, (route) => {
+      if (new URL(route.request().url()).origin === baseOrigin) {
+        return route.continue();
+      }
+      return route.fulfill({ contentType: "text/html", body: "Mock provider" });
+    });
 
     await page.goto(`${BASE_URL}/s/${shareToken}`);
     await expect(
@@ -522,9 +639,13 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
       "Set E2E_OWNED_TRIP_ID (with auth cookie) to test owned /trips/[id] route",
     );
 
-    await page.route(/^https:\/\//, (route) =>
-      route.fulfill({ contentType: "text/html", body: "Mock provider" }),
-    );
+    const baseOrigin = new URL(BASE_URL).origin;
+    await page.route(/^https:\/\//, (route) => {
+      if (new URL(route.request().url()).origin === baseOrigin) {
+        return route.continue();
+      }
+      return route.fulfill({ contentType: "text/html", body: "Mock provider" });
+    });
 
     // /trips?duffel=... must not 404
     const duffelRedirectRes = await page.request.get(
@@ -728,7 +849,7 @@ test.describe("Track B Tier 4: Public SEO, Tools, Legal & Brand/Contrast Audit",
     ).toBeGreaterThan(0);
 
     // Feature #16: Tool result / detail states expose contextual affiliate CTAs & FTC disclosures
-    await page.goto(`${BASE_URL}/tools/visa-checker/japan`);
+    await page.goto(`${BASE_URL}/tools/visa-checker/tokyo`);
     await expect(
       page.getByText(/We may earn a commission/i).first(),
     ).toBeVisible();

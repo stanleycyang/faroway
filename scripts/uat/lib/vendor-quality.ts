@@ -276,6 +276,13 @@ function validateTravelpayoutsUrl(
         reason: "Travelpayouts target u host is not allowlisted",
       };
     }
+    if (resolveAffiliatePartnerByUrl(rawTarget) === "travelpayouts") {
+      return {
+        ok: false,
+        reason:
+          "Travelpayouts target u URL must not wrap another Travelpayouts redirect",
+      };
+    }
     if (
       options?.wrappedPartner &&
       resolveAffiliatePartnerByUrl(rawTarget) !== options.wrappedPartner
