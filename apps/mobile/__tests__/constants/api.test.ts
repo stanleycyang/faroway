@@ -5,7 +5,12 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-import { PRODUCTION_API_URL, resolveApiBaseUrl } from '../../constants/api';
+import {
+  PRODUCTION_API_URL,
+  PRODUCTION_WEB_URL,
+  resolveApiBaseUrl,
+  resolveWebBaseUrl,
+} from '../../constants/api';
 
 describe('API configuration', () => {
   it('ships with the release API origin as the production fallback', () => {
@@ -34,5 +39,30 @@ describe('API configuration', () => {
   it('keeps localhost fallback limited to development', () => {
     expect(resolveApiBaseUrl({ isDev: true })).toBe('http://localhost:3000');
     expect(resolveApiBaseUrl({ isDev: false })).toBe(PRODUCTION_API_URL);
+  });
+
+  it('ships with www.faroway.ai as the canonical web origin and separates api.* origins', () => {
+    expect(PRODUCTION_WEB_URL).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envWebUrl: 'https://preview.faroway.ai',
+        envApiUrl: 'https://api.faroway.ai',
+      })
+    ).toBe('https://preview.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envApiUrl: 'https://api.faroway.ai',
+      })
+    ).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envApiUrl: 'https://staging.faroway.ai/api',
+      })
+    ).toBe('https://staging.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envApiUrl: 'http://localhost:3000',
+      })
+    ).toBe('https://www.faroway.ai');
   });
 });

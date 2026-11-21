@@ -49,6 +49,7 @@ export interface Hotel {
   amenities: string[];
   images: string[];
   bookingUrl: string;
+  affiliatePartner?: string;
   location: {
     name: string;
     address: string;

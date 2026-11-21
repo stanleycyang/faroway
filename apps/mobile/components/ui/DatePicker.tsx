@@ -88,9 +88,9 @@ export function DateRangePicker({
       monthTextColor: '#0f172a',
       textMonthFontSize: 18,
       textMonthFontWeight: '600' as const,
-      todayTextColor: colors.primary[400],
+      todayTextColor: colors.action.primary,
       textDisabledColor: colors.surface[600],
-      textSectionTitleColor: colors.surface[400],
+      textSectionTitleColor: colors.surface[600],
       textDayHeaderFontSize: 12,
       textDayHeaderFontWeight: '600' as const,
       'stylesheet.calendar.header': {
@@ -123,7 +123,7 @@ export function DateRangePicker({
           accessibilityRole="button"
           accessibilityLabel={`Start date. ${formatDisplayDate(startDate)}`}
         >
-          <Ionicons name="calendar-outline" size={20} color={colors.primary[400]} />
+          <Ionicons name="calendar-outline" size={20} color={colors.action.primary} />
           <View style={styles.dateButtonText}>
             <Text style={styles.dateLabel}>Start</Text>
             <Text style={styles.dateValue}>{formatDisplayDate(startDate)}</Text>
@@ -141,7 +141,7 @@ export function DateRangePicker({
           accessibilityRole="button"
           accessibilityLabel={`End date. ${formatDisplayDate(endDate)}`}
         >
-          <Ionicons name="calendar-outline" size={20} color={colors.primary[400]} />
+          <Ionicons name="calendar-outline" size={20} color={colors.action.primary} />
           <View style={styles.dateButtonText}>
             <Text style={styles.dateLabel}>End</Text>
             <Text style={styles.dateValue}>{formatDisplayDate(endDate)}</Text>
@@ -168,7 +168,7 @@ export function DateRangePicker({
                 accessibilityRole="button"
                 accessibilityLabel="Close date picker"
               >
-                <Ionicons name="close" size={24} color={colors.surface[400]} />
+                <Ionicons name="close" size={24} color={colors.surface[600]} />
               </TouchableOpacity>
             </View>
 
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   dateButtonActive: {
-    borderColor: colors.primary[500],
+    borderColor: colors.action.primary,
     backgroundColor: '#FFF5F4',
   },
   dateButtonText: {
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   chipActive: {
-    borderColor: colors.primary[500],
+    borderColor: colors.action.primary,
     backgroundColor: '#FFF5F4',
   },
   chipLabel: {
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   chipLabelActive: {
-    color: colors.primary[400],
+    color: colors.primary[800],
   },
   chipDate: {
     fontSize: 14,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     color: colors.surface[600],
   },
   chipDateActive: {
-    color: colors.primary[600],
+    color: colors.primary[800],
   },
   calendar: {
     backgroundColor: '#ffffff',

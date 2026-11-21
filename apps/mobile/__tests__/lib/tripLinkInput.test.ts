@@ -44,3 +44,17 @@ it('clears an old destination identity when a suggestion has no provider place I
     { ...previous, ...tripInputFromLink({ destination: 'Custom place' }) }.country
   ).toBeUndefined();
 });
+
+it('normalizes legacy cultural vibe aliases and mixed case into canonical vibes', () => {
+  expect(
+    tripInputFromLink({
+      destination: 'Kyoto',
+      vibes: 'cultural,Culture,foodie',
+    })
+  ).toEqual({
+    destination: 'Kyoto',
+    country: undefined,
+    placeId: undefined,
+    vibes: ['culture', 'foodie'],
+  });
+});

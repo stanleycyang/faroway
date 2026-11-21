@@ -78,33 +78,53 @@ export const borderRadius = {
   full: 9999,
 };
 
+export const fontFamilies = {
+  sans: 'PlusJakartaSans',
+  display: 'PlayfairDisplay',
+  displayItalic: 'PlayfairDisplay-Italic',
+} as const;
+
+export const bookingButtons = {
+  primaryBg: '#C03A31',
+  primaryText: '#FFFFFF',
+  oceanGradient: ['#143D46', '#0F2E35'] as const,
+  inverseBg: '#FFFFFF',
+  inverseText: '#143D46',
+} as const;
+
 export const typography = {
   h1: {
+    fontFamily: fontFamilies.display,
     fontSize: 32,
     fontWeight: '700' as const,
     lineHeight: 40,
   },
   h2: {
+    fontFamily: fontFamilies.display,
     fontSize: 24,
     fontWeight: '600' as const,
     lineHeight: 32,
   },
   h3: {
+    fontFamily: fontFamilies.display,
     fontSize: 20,
     fontWeight: '600' as const,
     lineHeight: 28,
   },
   body: {
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
     fontWeight: '400' as const,
     lineHeight: 24,
   },
   bodySmall: {
+    fontFamily: fontFamilies.sans,
     fontSize: 14,
     fontWeight: '400' as const,
     lineHeight: 20,
   },
   caption: {
+    fontFamily: fontFamilies.sans,
     fontSize: 12,
     fontWeight: '400' as const,
     lineHeight: 16,
@@ -170,6 +190,7 @@ export const travel = {
   ocean: '#143D46',
   mist: '#EFF5F3',
   paper: '#FFFFFF',
+  paperBg: '#FAF8F3',
   muted: '#53676C',
   line: '#DCE5E3',
   pageGutter: 24,

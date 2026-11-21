@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
-import { colors } from '../../constants/theme';
+import { colors, fontFamilies } from '../../constants/theme';
 import { FontScaleText } from '../../lib/fontScaleEpoch';
 
 export default function TabLayout() {
@@ -39,6 +39,7 @@ export default function TabLayout() {
             maxFontSizeMultiplier={1.3}
             style={{
               color,
+              fontFamily: fontFamilies.sans,
               fontSize: 12,
               fontWeight: '600',
               textAlign: 'center',

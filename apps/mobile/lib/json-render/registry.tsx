@@ -4,12 +4,20 @@ import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { durationLabel } from '../durationLabel';
 import React from 'react';
 import { formatTripDate } from '../tripDate';
-import { formatPrice } from '@faroway/constants';
+import { formatPrice, isAllowedAffiliateUrl } from '@faroway/constants';
 import { View, Text as RNText, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { reviewSavedTripBooking } from '../savedTripBooking';
-import { colors, borderRadius, shadows, spacing, typography } from '../../constants/theme';
+import {
+  colors,
+  borderRadius,
+  shadows,
+  spacing,
+  typography,
+  bookingButtons,
+} from '../../constants/theme';
 import { z } from 'zod';
 import {
   TripSummarySchema,
@@ -28,11 +36,54 @@ import {
 } from './catalog';
 
 // =============================================================================
-// Helper Functions
+// Helper Functions & Streaming Trip Context
 // =============================================================================
 
-// Streaming cards have no owned, saved revision. Never open their generated URLs.
-const openURL = (_url: string) => reviewSavedTripBooking(undefined, async () => undefined);
+export const StreamingTripContext = React.createContext<string | undefined>(undefined);
+
+const openPreviewBrowser = async (url: string) => {
+  await WebBrowser.openBrowserAsync(url, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle?.AUTOMATIC,
+    controlsColor: colors.action.primary,
+  });
+};
+
+function usePreviewBookingAction() {
+  const tripId = React.useContext(StreamingTripContext);
+  return React.useCallback(
+    (options: {
+      url: string;
+      itemName: string;
+      itemType?: 'hotel' | 'activity' | 'restaurant' | 'flight' | 'transport';
+      partner?: string;
+      price?: number;
+      currency?: string;
+    }) => {
+      if (isAllowedAffiliateUrl(options.url)) {
+        // Lazy-require keeps expo-constants / services/api out of preview-only test trees.
+        const checkout = require('../affiliateCheckout') as typeof import('../affiliateCheckout');
+        const partner = checkout.resolveAffiliatePartnerForItem(options.url, options.partner);
+        checkout.confirmAndOpenAffiliateLink(
+          {
+            itemType: options.itemType ?? checkout.itemTypeForAffiliatePartner(partner),
+            itemId: options.itemName,
+            itemName: options.itemName,
+            affiliatePartner: partner,
+            affiliateUrl: options.url,
+            tripId,
+            price: options.price,
+            currency: options.currency,
+            source: 'itinerary',
+          },
+          openPreviewBrowser
+        );
+        return;
+      }
+      reviewSavedTripBooking(tripId, openPreviewBrowser);
+    },
+    [tripId]
+  );
+}
 
 // =============================================================================
 // TripSummary Component
@@ -49,7 +100,7 @@ export const TripSummary: React.FC<TripSummaryProps> = ({
   return (
     <View style={styles.tripSummary}>
       <LinearGradient
-        colors={[colors.primary[500], colors.primary[700]]}
+        colors={[colors.action.primary, colors.primary[800]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.tripSummaryGradient}
@@ -257,10 +308,11 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   location,
 }) => {
   const visitNote = proposedVisitNote(proposedVisitType);
+  const handleBooking = usePreviewBookingAction();
   return (
     <View style={[styles.card, styles.activityCard]}>
       <View style={styles.activityCardTime}>
-        <Ionicons name="time-outline" size={16} color={colors.primary[600]} />
+        <Ionicons name="time-outline" size={16} color={colors.action.primary} />
         <RNText style={styles.activityCardTimeText}>{time}</RNText>
       </View>
 
@@ -304,11 +356,21 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           {bookingUrl && (
             <TouchableOpacity
               style={styles.activityCardButton}
-              onPress={() => openURL(bookingUrl)}
+              onPress={() =>
+                handleBooking({
+                  url: bookingUrl,
+                  itemName: name,
+                  itemType: 'activity',
+                  price: typeof price === 'number' ? price : undefined,
+                  currency,
+                })
+              }
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Check availability for ${name}`}
             >
-              <RNText style={styles.activityCardButtonText}>Review activity</RNText>
-              <Ionicons name="arrow-forward" size={16} color={colors.primary[600]} />
+              <RNText style={styles.activityCardButtonText}>Check availability</RNText>
+              <Ionicons name="open-outline" size={15} color={bookingButtons.primaryText} />
             </TouchableOpacity>
           )}
         </View>
@@ -336,6 +398,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   description,
   time,
 }) => {
+  const handleBooking = usePreviewBookingAction();
   const priceLevelString =
     priceStatus !== 'unknown' && priceLevel ? `Est. ${'$'.repeat(priceLevel)}` : 'Price unknown';
 
@@ -343,7 +406,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
     <View style={[styles.card, styles.restaurantCard]}>
       {time && (
         <View style={styles.restaurantCardTime}>
-          <Ionicons name="restaurant-outline" size={16} color="#ef4444" />
+          <Ionicons name="restaurant-outline" size={16} color={colors.action.primary} />
           <RNText style={styles.restaurantCardTimeText}>{time}</RNText>
         </View>
       )}
@@ -374,11 +437,19 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           {reservationUrl && (
             <TouchableOpacity
               style={styles.restaurantCardButton}
-              onPress={() => openURL(reservationUrl)}
+              onPress={() =>
+                handleBooking({
+                  url: reservationUrl,
+                  itemName: name,
+                  itemType: 'restaurant',
+                })
+              }
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Check reservation options for ${name}`}
             >
-              <RNText style={styles.restaurantCardButtonText}>Review restaurant</RNText>
-              <Ionicons name="arrow-forward" size={16} color="#ef4444" />
+              <RNText style={styles.restaurantCardButtonText}>Check availability</RNText>
+              <Ionicons name="open-outline" size={15} color={bookingButtons.primaryText} />
             </TouchableOpacity>
           )}
         </View>
@@ -403,7 +474,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
       case 'rest':
         return '#8b5cf6';
       default:
-        return colors.primary[500];
+        return colors.action.primary;
     }
   };
 
@@ -462,10 +533,25 @@ export const BookingButton: React.FC<BookingButtonProps> = ({
   price,
   currency,
 }) => {
+  const handleBooking = usePreviewBookingAction();
   return (
-    <TouchableOpacity style={styles.bookingButton} onPress={() => openURL(url)} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.bookingButton}
+      onPress={() =>
+        handleBooking({
+          url,
+          itemName: label,
+          partner: provider,
+          price: typeof price === 'number' ? price : undefined,
+          currency,
+        })
+      }
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <LinearGradient
-        colors={[colors.primary[500], colors.primary[700]]}
+        colors={[colors.action.primary, colors.primary[800]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.bookingButtonGradient}
@@ -549,7 +635,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   return (
     <View style={styles.mapPreview}>
       <View style={styles.mapPreviewOverlay}>
-        <Ionicons name="location" size={20} color={colors.primary[600]} />
+        <Ionicons name="location" size={20} color={colors.action.primary} />
         <RNText style={styles.mapPreviewLabel}>
           {markers.length} mapped stop{markers.length === 1 ? '' : 's'}
           {previewNames.length > 0 ? ` · ${previewNames.join(', ')}` : ''}
@@ -796,11 +882,11 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 2,
-    borderBottomColor: colors.primary[500],
+    borderBottomColor: colors.action.primary,
   },
   itineraryDayBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
@@ -904,14 +990,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.primary[50],
+    minHeight: 44,
+    backgroundColor: bookingButtons.primaryBg,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
   },
   activityCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary[600],
+    fontWeight: '700',
+    color: bookingButtons.primaryText,
   },
 
   // RestaurantCard
@@ -928,7 +1016,7 @@ const styles = StyleSheet.create({
   restaurantCardTimeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#dc2626',
+    color: colors.primary[800],
   },
   restaurantCardBody: {
     gap: 12,
@@ -991,14 +1079,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    backgroundColor: '#fef2f2',
+    minHeight: 44,
+    backgroundColor: bookingButtons.primaryBg,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
   },
   restaurantCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#ef4444',
+    fontWeight: '700',
+    color: bookingButtons.primaryText,
   },
 
   // DayTimeline
@@ -1099,7 +1189,7 @@ const styles = StyleSheet.create({
   priceTagAmount: {
     fontSize: 24,
     fontWeight: '800',
-    color: colors.primary[600],
+    color: colors.primary[800],
   },
   priceTagPeriod: {
     fontSize: 14,

@@ -1,6 +1,6 @@
 import { useProfileRefresh } from '../../hooks/useProfileRefresh';
 import { useLocalCalendarDate } from '../../hooks/useLocalCalendarDate';
-import { tripDatePhase } from '@faroway/constants';
+import { BUDGET_TIERS, tripDatePhase } from '@faroway/constants';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -71,7 +71,7 @@ function MenuItem({
       accessibilityLabel={value ? `${label}. ${value}` : label}
     >
       <View style={[styles.menuIconContainer, danger && styles.menuIconContainerDanger]}>
-        <Ionicons name={icon} size={20} color={danger ? colors.error : colors.primary[500]} />
+        <Ionicons name={icon} size={20} color={danger ? '#B91C1C' : colors.action.primary} />
       </View>
       <View style={styles.menuContent}>
         <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>{label}</Text>
@@ -124,7 +124,7 @@ function GuestProfileCard() {
     <View style={styles.guestCard}>
       <View style={styles.guestAvatarContainer}>
         <LinearGradient colors={['#f1f5f9', '#e2e8f0']} style={styles.guestAvatar}>
-          <Ionicons name="person" size={40} color={'#94a3b8'} />
+          <Ionicons name="person" size={40} color={colors.surface[600]} />
         </LinearGradient>
       </View>
 
@@ -490,19 +490,13 @@ export default function ProfileScreen() {
                     placeholder="e.g., SFO, JFK, LHR"
                     placeholderTextColor="#64748b"
                     autoCapitalize="characters"
-                    maxLength={12}
+                    maxLength={10}
                     accessibilityLabel="Home airport code"
                   />
 
-                  <Text style={styles.memoryFieldLabel}>Default comfort tier</Text>
+                  <Text style={styles.memoryFieldLabel}>Default budget tier</Text>
                   <View style={styles.memoryTierRow}>
-                    {(
-                      [
-                        { id: 'budget', label: 'Budget' },
-                        { id: 'moderate', label: 'Comfort' },
-                        { id: 'luxury', label: 'Luxury' },
-                      ] as const
-                    ).map((tier) => {
+                    {BUDGET_TIERS.map((tier) => {
                       const selected = budgetDraft === tier.id;
                       return (
                         <TouchableOpacity
@@ -514,7 +508,7 @@ export default function ProfileScreen() {
                           }}
                           accessibilityRole="button"
                           accessibilityState={{ selected }}
-                          accessibilityLabel={`Default comfort: ${tier.label}`}
+                          accessibilityLabel={`Default budget: ${tier.label}`}
                         >
                           <Text
                             style={[
@@ -745,7 +739,7 @@ const styles = StyleSheet.create({
   emailSignInText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[400],
+    color: colors.action.primary,
   },
 
   // ─── Logged-In Profile Card ──────────
@@ -857,17 +851,17 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   menuLabelDanger: {
-    color: colors.error,
+    color: '#B91C1C',
   },
   menuValue: {
     fontSize: 13,
-    color: '#64748b',
+    color: '#475569',
     marginTop: 2,
   },
   versionText: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#94a3b8',
+    color: colors.surface[600],
     marginTop: 16,
   },
   memoryCard: {

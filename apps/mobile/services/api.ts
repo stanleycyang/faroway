@@ -3,6 +3,12 @@
  * Centralized API client for the mobile app
  */
 
+import {
+  injectAffiliateSubId,
+  isAllowedAffiliateUrl,
+  normalizeAffiliatePartner,
+  resolveAffiliatePartnerByUrl,
+} from '@faroway/constants';
 import { API_BASE_URL } from '../constants/api';
 import { requestWithTimeout, RequestTimeoutError } from './request';
 import { useUserStore } from '../stores/userStore';
@@ -281,29 +287,7 @@ export async function removePushToken(token?: string): Promise<ApiResponse<{ del
 // Affiliate URL allowlist
 // ============================================
 
-// Mirror of the backend allowlist (apps/web/app/api/track/click/route.ts).
-// Mobile validates before showing the confirm sheet so we don't ship a
-// trustworthy-looking CTA for a URL the backend will reject as SSRF.
-const ALLOWED_AFFILIATE_DOMAINS = [
-  'viator.com',
-  'getyourguide.com',
-  'tripadvisor.com',
-  'discovercars.com',
-  'hostelworld.com',
-  'duffel.com',
-];
-
-export function isAllowedAffiliateUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:') return false;
-    return ALLOWED_AFFILIATE_DOMAINS.some(
-      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
-    );
-  } catch {
-    return false;
-  }
-}
+export { isAllowedAffiliateUrl };
 
 // ============================================
 // Trips APIs
@@ -413,10 +397,29 @@ export async function getTrendingDestinations(
 }
 
 // ============================================
-// Search APIs (re-exported from searchService)
+// Search APIs (lazily loaded from searchService)
 // ============================================
 
-export { startSearch, getSearchStatus, pollSearchStatus } from './searchService';
+export async function startSearch(
+  ...args: Parameters<typeof import('./searchService').startSearch>
+): ReturnType<typeof import('./searchService').startSearch> {
+  const mod = await import('./searchService');
+  return mod.startSearch(...args);
+}
+
+export async function getSearchStatus(
+  ...args: Parameters<typeof import('./searchService').getSearchStatus>
+): ReturnType<typeof import('./searchService').getSearchStatus> {
+  const mod = await import('./searchService');
+  return mod.getSearchStatus(...args);
+}
+
+export async function pollSearchStatus(
+  ...args: Parameters<typeof import('./searchService').pollSearchStatus>
+): ReturnType<typeof import('./searchService').pollSearchStatus> {
+  const mod = await import('./searchService');
+  return mod.pollSearchStatus(...args);
+}
 
 // ============================================
 // Affiliate Tracking APIs
@@ -431,17 +434,85 @@ export async function trackAffiliateClick(
   });
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TRACK_CLICK_TIMEOUT_MS = 2500;
+
+function generateMobileClickId(): string {
+  return `mob_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 /**
- * Track click and open the booking URL
- * Use this when user taps on a booking button
+ * Track click and open the verified partner booking URL.
+ * Falls back immediately to client-side partner-native subID attribution
+ * if tracking fails or exceeds the short network timeout.
  */
 export async function openAffiliateLink(
   params: TrackClickParams,
-  openUrl: (url: string) => void
+  openUrl: (url: string) => void | Promise<unknown>
 ): Promise<void> {
-  // Legacy click tracking accepts client-supplied URLs. It is not a checkout
-  // authorization or a revision check, even when the tracking request succeeds.
-  void params;
-  void openUrl;
-  throw new Error('Review booking options from your saved trip on Faroway.');
+  if (!isAllowedAffiliateUrl(params.affiliateUrl)) {
+    throw new Error('This partner link could not be verified.');
+  }
+
+  const trimmedClickId = params.clickId?.trim();
+  const clickId =
+    trimmedClickId && !trimmedClickId.startsWith('checkout-')
+      ? trimmedClickId
+      : generateMobileClickId();
+
+  const partner =
+    normalizeAffiliatePartner(params.affiliatePartner) ??
+    resolveAffiliatePartnerByUrl(params.affiliateUrl) ??
+    params.affiliatePartner;
+
+  const hasValidPrice =
+    typeof params.price === 'number' &&
+    Number.isFinite(params.price) &&
+    params.price >= 0 &&
+    typeof params.currency === 'string' &&
+    params.currency.trim().length > 0;
+
+  const trackingPayload: TrackClickParams = {
+    itemType: params.itemType,
+    itemId: params.itemId,
+    itemName: params.itemName,
+    affiliatePartner: partner,
+    affiliateUrl: params.affiliateUrl,
+    clickId,
+    ...(params.tripId && UUID_RE.test(params.tripId) ? { tripId: params.tripId } : {}),
+    ...(hasValidPrice ? { price: params.price, currency: params.currency!.trim() } : {}),
+    ...(params.source ? { source: params.source } : {}),
+  };
+
+  let trackedRedirectUrl: string | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    const result = await Promise.race([
+      trackAffiliateClick(trackingPayload),
+      new Promise<null>((resolve) => {
+        timeoutId = setTimeout(() => resolve(null), TRACK_CLICK_TIMEOUT_MS);
+      }),
+    ]);
+    if (result && 'data' in result && result.data?.redirectUrl) {
+      trackedRedirectUrl = result.data.redirectUrl;
+    }
+  } catch {
+    // Non-blocking: fall back to direct subID-injected partner URL below.
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+
+  const targetUrl =
+    trackedRedirectUrl && isAllowedAffiliateUrl(trackedRedirectUrl)
+      ? trackedRedirectUrl
+      : (injectAffiliateSubId(params.affiliateUrl, partner, clickId, {
+          itemType: params.itemType,
+        }) ?? params.affiliateUrl);
+
+  if (!isAllowedAffiliateUrl(targetUrl)) {
+    throw new Error('This partner link could not be verified.');
+  }
+
+  await Promise.resolve(openUrl(targetUrl));
 }

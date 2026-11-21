@@ -312,8 +312,159 @@ describe('push token APIs', () => {
   });
 });
 
+describe('isAllowedAffiliateUrl', () => {
+  it.each([
+    'https://www.viator.com/tours/Paris',
+    'https://www.getyourguide.com/paris-l16/',
+    'https://www.stay22.com/embed/gm?aid=1',
+    'https://www.booking.com/hotel/fr/example.html',
+    'https://www.expedia.com/Paris-Hotels.d179898.Travel-Guide-Hotels',
+    'https://tp.media/r?marker=123',
+    'https://safetywing.com/nomad-insurance',
+    'https://www.airalo.com/',
+    'https://www.klook.com/activity/123/',
+    'https://www.discovercars.com/',
+    'https://www.hostelworld.com/',
+    'https://links.duffel.com/offer/1',
+    'https://www.tripadvisor.com/Attraction_Review',
+    'https://www.opentable.com/r/le-bistro',
+    'https://www.skyscanner.com/flights',
+    'https://www.ivisa.com/',
+    'https://wise.com/',
+  ])('allows all verified partner HTTPS URLs: %s', (url) => {
+    expect(isAllowedAffiliateUrl(url)).toBe(true);
+  });
+
+  it.each([
+    'http://www.viator.com/tours/Paris',
+    'https://user:pass@www.viator.com/tours/Paris',
+    'https://www.viator.com:8443/tours/Paris',
+    'https://evil.example/viator.com',
+    'javascript:alert(1)',
+  ])('rejects unsafe or unallowlisted URL: %s', (url) => {
+    expect(isAllowedAffiliateUrl(url)).toBe(false);
+  });
+});
+
 describe('openAffiliateLink', () => {
-  it('rejects legacy tracking-based checkout without fetching or opening a URL', async () => {
+  it('tracks clicks and opens the server redirectUrl when allowlisted', async () => {
+    const openUrl = jest.fn();
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          clickId: 'srv-1',
+          redirectUrl: 'https://www.viator.com/tours/Paris?campaign=srv-1',
+        }),
+    });
+
+    await openAffiliateLink(
+      {
+        itemType: 'activity',
+        itemId: 'act-1',
+        itemName: 'Louvre Tour',
+        affiliatePartner: 'viator',
+        affiliateUrl: 'https://www.viator.com/tours/Paris',
+        tripId: '11111111-1111-4111-8111-111111111111',
+        price: 45,
+        currency: 'USD',
+        source: 'itinerary',
+      },
+      openUrl
+    );
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [, options] = mockFetch.mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.tripId).toBe('11111111-1111-4111-8111-111111111111');
+    expect(body.clickId).not.toMatch(/^checkout-/);
+    expect(openUrl).toHaveBeenCalledWith('https://www.viator.com/tours/Paris?campaign=srv-1');
+  });
+
+  it('omits non-UUID tripIds and falls back to partner-native subID injection when tracking fails', async () => {
+    const openUrl = jest.fn();
+    mockFetch.mockRejectedValueOnce(new Error('Network offline'));
+
+    await openAffiliateLink(
+      {
+        itemType: 'hotel',
+        itemId: 'htl-1',
+        itemName: 'Paris Hotel',
+        affiliatePartner: 'stay22',
+        affiliateUrl: 'https://www.stay22.com/embed/gm?aid=123',
+        tripId: 'local_12345',
+        clickId: 'checkout-legacy',
+        source: 'itinerary',
+      },
+      openUrl
+    );
+
+    const [, options] = mockFetch.mock.calls[0];
+    const body = JSON.parse(options.body);
+    expect(body.tripId).toBeUndefined();
+    expect(body.clickId).toMatch(/^mob_/);
+    expect(openUrl).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/www\.stay22\.com\/embed\/gm\?aid=123&campaign=mob_/)
+    );
+  });
+
+  it.each([
+    ['getyourguide', 'https://www.getyourguide.com/paris-l16/', 'cmp='],
+    ['booking', 'https://www.booking.com/hotel/fr/example.html', 'label='],
+    ['safetywing', 'https://safetywing.com/nomad-insurance', 'referenceID='],
+    ['airalo', 'https://www.airalo.com/', 'sub_id='],
+  ] as const)(
+    'injects native subID for %s when tracking returns HTTP error',
+    async (partner, url, expectedParam) => {
+      const openUrl = jest.fn();
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: () => Promise.resolve({ error: 'Server error' }),
+      });
+
+      await openAffiliateLink(
+        {
+          itemType: 'activity',
+          itemId: 'item-1',
+          itemName: 'Item',
+          affiliatePartner: partner,
+          affiliateUrl: url,
+        },
+        openUrl
+      );
+
+      expect(openUrl).toHaveBeenCalledWith(expect.stringContaining(expectedParam));
+    }
+  );
+
+  it('does not hang on slow tracking requests and falls back after timeout', async () => {
+    jest.useFakeTimers();
+    try {
+      const openUrl = jest.fn();
+      mockFetch.mockImplementationOnce(() => new Promise(() => {}));
+
+      const promise = openAffiliateLink(
+        {
+          itemType: 'activity',
+          itemId: 'act-timeout',
+          itemName: 'Timed Tour',
+          affiliatePartner: 'viator',
+          affiliateUrl: 'https://www.viator.com/tours/Paris',
+        },
+        openUrl
+      );
+
+      await jest.advanceTimersByTimeAsync(2600);
+      await promise;
+      expect(openUrl).toHaveBeenCalledWith(
+        expect.stringMatching(/^https:\/\/www\.viator\.com\/tours\/Paris\?campaign=mob_/)
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects unallowlisted URLs without fetching or opening a browser', async () => {
     const openUrl = jest.fn();
     await expect(
       openAffiliateLink(
@@ -326,7 +477,7 @@ describe('openAffiliateLink', () => {
         },
         openUrl
       )
-    ).rejects.toThrow('saved trip');
+    ).rejects.toThrow('could not be verified');
     expect(openUrl).not.toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
   });

@@ -18,6 +18,7 @@ jest.mock('../../utils/haptics', () => ({
   },
 }));
 
+import { AFFILIATE_DISCLOSURE_SHORT } from '@faroway/constants';
 import { openAffiliateLink } from '../../services/api';
 import {
   buildAffiliateCheckoutCopy,
@@ -26,6 +27,7 @@ import {
   getBookableItemContextLabel,
   itemTypeForAffiliateActivityType,
   itemTypeForAffiliatePartner,
+  resolveAffiliatePartnerForItem,
 } from '../../lib/affiliateCheckout';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -34,10 +36,15 @@ describe('affiliate checkout confirmation', () => {
     jest.clearAllMocks();
   });
 
-  it('normalizes common affiliate partner names', () => {
+  it('normalizes common affiliate partner names across all partners', () => {
     expect(formatAffiliatePartnerName('viator')).toBe('Viator');
     expect(formatAffiliatePartnerName('Viator')).toBe('Viator');
     expect(formatAffiliatePartnerName('opentable')).toBe('OpenTable');
+    expect(formatAffiliatePartnerName('stay22')).toBe('Stay22');
+    expect(formatAffiliatePartnerName('booking')).toBe('Booking.com');
+    expect(formatAffiliatePartnerName('safetywing')).toBe('SafetyWing');
+    expect(formatAffiliatePartnerName('airalo')).toBe('Airalo');
+    expect(formatAffiliatePartnerName('travelpayouts')).toBe('Travelpayouts');
   });
 
   it('maps rendered itinerary activity types to affiliate tracking item types', () => {
@@ -51,7 +58,23 @@ describe('affiliate checkout confirmation', () => {
     expect(itemTypeForAffiliatePartner('Viator')).toBe('activity');
     expect(itemTypeForAffiliatePartner('OpenTable')).toBe('restaurant');
     expect(itemTypeForAffiliatePartner('Duffel')).toBe('transport');
+    expect(itemTypeForAffiliatePartner('stay22')).toBe('hotel');
+    expect(itemTypeForAffiliatePartner('booking')).toBe('hotel');
+    expect(itemTypeForAffiliatePartner('expedia')).toBe('hotel');
+    expect(itemTypeForAffiliatePartner('hostelworld')).toBe('hotel');
+    expect(itemTypeForAffiliatePartner('discovercars')).toBe('transport');
+    expect(itemTypeForAffiliatePartner('skyscanner')).toBe('flight');
     expect(itemTypeForAffiliatePartner('unknown-provider')).toBe('activity');
+  });
+
+  it('resolves partner from explicit alias or URL fallback', () => {
+    expect(resolveAffiliatePartnerForItem('https://www.stay22.com/embed/gm', 'gyg')).toBe(
+      'getyourguide'
+    );
+    expect(resolveAffiliatePartnerForItem('https://www.booking.com/hotel/fr/test.html')).toBe(
+      'booking'
+    );
+    expect(resolveAffiliatePartnerForItem('https://www.airalo.com/')).toBe('airalo');
   });
 
   it('labels sheet-level booking items without exposing day zero', () => {
@@ -61,7 +84,7 @@ describe('affiliate checkout confirmation', () => {
     expect(getBookableItemContextLabel(0, 'activity')).toBe('Trip option');
   });
 
-  it('builds copy with partner, price, cancellation, and next step context', () => {
+  it('builds copy with partner, price, cancellation, next step context, and FTC disclosure', () => {
     const copy = buildAffiliateCheckoutCopy({
       itemName: 'Hotel One',
       affiliatePartner: 'viator',
@@ -75,6 +98,7 @@ describe('affiliate checkout confirmation', () => {
     expect(copy.message).toContain('Estimated price: $240/night estimate');
     expect(copy.message).toContain('Room rules are confirmed by Viator.');
     expect(copy.message).toContain('Availability, payment, and booking changes happen');
+    expect(copy.message).toContain(AFFILIATE_DISCLOSURE_SHORT);
   });
 
   it('opens only after the user confirms', () => {

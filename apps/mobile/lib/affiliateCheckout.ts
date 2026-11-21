@@ -1,14 +1,13 @@
 import { Alert } from 'react-native';
+import {
+  AFFILIATE_DISCLOSURE_SHORT,
+  formatAffiliatePartnerName as sharedFormatAffiliatePartnerName,
+  itemTypeForAffiliatePartner as sharedItemTypeForAffiliatePartner,
+  normalizeAffiliatePartner,
+  resolveAffiliatePartnerByUrl,
+} from '@faroway/constants';
 import { isAllowedAffiliateUrl, openAffiliateLink, type TrackClickParams } from '../services/api';
 import { hapticFeedback } from '../utils/haptics';
-
-const PARTNER_NAMES: Record<string, string> = {
-  viator: 'Viator',
-  getyourguide: 'GetYourGuide',
-  tripadvisor: 'Tripadvisor',
-  opentable: 'OpenTable',
-  duffel: 'Duffel',
-};
 
 interface CheckoutCopyInput {
   itemName: string;
@@ -21,6 +20,37 @@ export interface ConfirmAffiliateOpenParams extends TrackClickParams {
   priceLabel?: string;
   cancellationLabel?: string;
 }
+
+export interface TripEssentialOption {
+  id: string;
+  title: string;
+  subtitle: string;
+  partner: 'airalo' | 'safetywing';
+  partnerLabel: string;
+  url: string;
+  icon: 'cellular-outline' | 'shield-checkmark-outline';
+}
+
+export const TRIP_ESSENTIALS: readonly TripEssentialOption[] = [
+  {
+    id: 'essential-airalo-esim',
+    title: 'Travel eSIM data',
+    subtitle: 'Local data plans before you land',
+    partner: 'airalo',
+    partnerLabel: 'Airalo',
+    url: 'https://www.airalo.com/',
+    icon: 'cellular-outline',
+  },
+  {
+    id: 'essential-safetywing-insurance',
+    title: 'Travel medical coverage',
+    subtitle: 'Flexible trip & medical insurance',
+    partner: 'safetywing',
+    partnerLabel: 'SafetyWing',
+    url: 'https://safetywing.com/nomad-insurance',
+    icon: 'shield-checkmark-outline',
+  },
+];
 
 export function itemTypeForAffiliateActivityType(
   activityType: string
@@ -38,17 +68,22 @@ export function itemTypeForAffiliateActivityType(
 }
 
 export function itemTypeForAffiliatePartner(partner: string): TrackClickParams['itemType'] {
-  const normalized = partner.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  if (normalized === 'opentable') return 'restaurant';
-  if (normalized === 'duffel') return 'transport';
-
-  return 'activity';
+  return sharedItemTypeForAffiliatePartner(partner);
 }
 
 export function formatAffiliatePartnerName(partner: string): string {
-  const normalized = partner.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return PARTNER_NAMES[normalized] || partner;
+  return sharedFormatAffiliatePartnerName(partner);
+}
+
+export function resolveAffiliatePartnerForItem(url?: string, explicitPartner?: string): string {
+  const normalizedExplicit = normalizeAffiliatePartner(explicitPartner);
+  if (normalizedExplicit) return normalizedExplicit;
+  if (url) {
+    const inferred = resolveAffiliatePartnerByUrl(url);
+    if (inferred) return inferred;
+  }
+  const trimmed = explicitPartner?.trim();
+  return trimmed || 'partner';
 }
 
 export function getBookableItemContextLabel(dayNumber: number, activityType?: string): string {
@@ -71,6 +106,7 @@ export function buildAffiliateCheckoutCopy({
     priceLabel ? `Estimated price: ${priceLabel}` : 'Final price: confirmed by the partner',
     cancellationLabel || 'Cancellation terms are confirmed by the partner before payment.',
     `Faroway will open ${partnerName} and keep your trip saved here. Availability, payment, and booking changes happen with the partner.`,
+    AFFILIATE_DISCLOSURE_SHORT,
   ];
 
   return {
@@ -82,7 +118,7 @@ export function buildAffiliateCheckoutCopy({
 
 export function confirmAndOpenAffiliateLink(
   params: ConfirmAffiliateOpenParams,
-  openUrl: (url: string) => void
+  openUrl: (url: string) => void | Promise<unknown>
 ): void {
   if (!isAllowedAffiliateUrl(params.affiliateUrl)) {
     hapticFeedback.warning();
@@ -110,8 +146,8 @@ export function confirmAndOpenAffiliateLink(
       onPress: () => {
         void openAffiliateLink(trackingParams, openUrl).catch(() => {
           Alert.alert(
-            'Review your saved trip',
-            'Open your saved trip on Faroway to review current booking options.'
+            'Couldn’t open partner site',
+            'Please try again or check your connection. Your trip stays saved in Faroway.'
           );
         });
       },

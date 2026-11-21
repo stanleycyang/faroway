@@ -46,7 +46,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['PlusJakartaSans', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        editorial: ['PlayfairDisplay', 'Playfair Display', 'Georgia', 'serif'],
       },
     },
   },

@@ -96,7 +96,7 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
                   <Ionicons
                     name="location"
                     size={18}
-                    color={colors.primary[400]}
+                    color={colors.action.primary}
                     style={styles.rowIcon}
                   />
                   <View style={styles.rowText}>
@@ -124,7 +124,7 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
                 accessibilityRole="button"
                 accessibilityLabel={`Use ${query} as destination`}
               >
-                <Ionicons name="add-circle-outline" size={16} color={colors.primary[400]} />
+                <Ionicons name="add-circle-outline" size={16} color={colors.action.primary} />
                 <Text style={styles.fallbackButtonText}>Use "{query}" as destination</Text>
               </TouchableOpacity>
             </View>
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   secondary: {
     fontSize: 13,
-    color: colors.surface[400],
+    color: colors.surface[600],
     marginTop: 2,
   },
   skeletonContainer: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: colors.surface[600],
   },
   fallbackButton: {
     flexDirection: 'row',
@@ -215,6 +215,6 @@ const styles = StyleSheet.create({
   fallbackButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[400],
+    color: colors.primary[800],
   },
 });

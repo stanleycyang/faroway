@@ -35,3 +35,26 @@ test('booking options include transport alongside activities without inventing a
   expect(options[1].activity.title).toBe('Museum');
   expect(collectBookingOptions({ days: [] } as unknown as Trip)).toEqual([]);
 });
+
+test('passes hotel affiliatePartner through booking options', () => {
+  const options = collectBookingOptions({
+    days: [],
+    hotel: {
+      id: 'htl-1',
+      name: 'Grand Stay',
+      description: 'Central',
+      pricePerNight: 210,
+      currency: 'USD',
+      totalPrice: 630,
+      rating: 4.5,
+      reviewCount: 100,
+      amenities: [],
+      images: [],
+      bookingUrl: 'https://www.stay22.com/embed/gm?aid=1',
+      affiliatePartner: 'stay22',
+      location: { name: 'Center', address: '1 Main', lat: 0, lng: 0 },
+    },
+  } as unknown as Trip);
+  expect(options).toHaveLength(1);
+  expect(options[0].activity.affiliatePartner).toBe('stay22');
+});

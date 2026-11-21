@@ -7,7 +7,7 @@ import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { VenuePhotoCredit } from '../../components/VenuePhotoCredit';
 import { venuePhotoSource } from '../../lib/venuePhotoAssets';
 import { DiningReviewOptions } from '../../components/DiningReviewOptions';
-import { flightQuoteIsCurrent } from '@faroway/constants';
+import { AFFILIATE_DISCLOSURE_SHORT, flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
 import React, {
   useEffect,
@@ -48,12 +48,22 @@ import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
 import { shareOwnedTrip, revokeOwnedTripShare } from '../../lib/tripSharing';
 import { useUserStore } from '../../stores/userStore';
-import { colors, borderRadius, shadows } from '../../constants/theme';
+import { colors, borderRadius, shadows, fontFamilies, bookingButtons } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTrips } from '../../hooks/useTrips';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
+import { isAllowedAffiliateUrl, openAffiliateLink } from '../../services/api';
+import {
+  TRIP_ESSENTIALS,
+  formatAffiliatePartnerName,
+  getBookableItemContextLabel,
+  itemTypeForAffiliateActivityType,
+  resolveAffiliatePartnerForItem,
+  type ConfirmAffiliateOpenParams,
+} from '../../lib/affiliateCheckout';
+import { AffiliateHandoffSheet } from '../../components/trip/AffiliateHandoffSheet';
 import { formatTripDate, formatTripTime } from '../../lib/tripDate';
 import { collectBookingOptions } from '../../lib/bookingOptions';
 import { selectTripDetail } from '../../lib/tripSummary';
@@ -69,11 +79,19 @@ import {
 } from '../../lib/tripCompanion';
 import type { TripDay } from '../../lib/itineraryTypes';
 
-const BookingTripContext = createContext<string | undefined>(undefined);
-const useBookingReview = () => {
-  const tripId = useContext(BookingTripContext);
-  return () => reviewSavedTripBooking(tripId, openURL);
-};
+interface BookingHandoffContextValue {
+  tripId: string | undefined;
+  startHandoff: (params: ConfirmAffiliateOpenParams) => void;
+  fallbackReview: () => void;
+}
+
+const BookingHandoffContext = createContext<BookingHandoffContextValue>({
+  tripId: undefined,
+  startHandoff: () => undefined,
+  fallbackReview: () => undefined,
+});
+
+const useBookingHandoff = () => useContext(BookingHandoffContext);
 
 const HEADER_HEIGHT = 300;
 
@@ -81,14 +99,10 @@ const HEADER_HEIGHT = 300;
  * Helper function to open URLs using expo-web-browser
  */
 const openURL = async (url: string) => {
-  try {
-    await WebBrowser.openBrowserAsync(url, {
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
-      controlsColor: colors.primary[600],
-    });
-  } catch (error) {
-    throw error;
-  }
+  await WebBrowser.openBrowserAsync(url, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+    controlsColor: colors.action.primary,
+  });
 };
 
 interface ActivityCardProps {
@@ -99,7 +113,7 @@ interface ActivityCardProps {
 
 function ActivityCard({ activity, rationale, shiftedTime }: ActivityCardProps) {
   const visitNote = proposedVisitNote(activity.proposedVisitType);
-  const reviewBooking = useBookingReview();
+  const { tripId, startHandoff, fallbackReview } = useBookingHandoff();
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'restaurant':
@@ -120,23 +134,50 @@ function ActivityCard({ activity, rationale, shiftedTime }: ActivityCardProps) {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'restaurant':
-        return '#ef4444';
+        return '#C03A31';
       case 'transport':
-        return '#3b82f6';
+        return '#143D46';
       case 'accommodation':
-        return '#8b5cf6';
+        return '#6D28D9';
       case 'attraction':
-        return '#f59e0b';
+        return '#B45309';
       case 'experience':
-        return '#10b981';
+        return '#0F766E';
       default:
-        return colors.primary[500];
+        return colors.action.primary;
     }
   };
 
+  const resolvedPartner = resolveAffiliatePartnerForItem(
+    activity.bookingUrl,
+    activity.affiliatePartner
+  );
+  const partnerLabel =
+    resolvedPartner && resolvedPartner !== 'partner'
+      ? formatAffiliatePartnerName(resolvedPartner)
+      : undefined;
+
   const handleBooking = () => {
     if (!activity.bookingUrl) return;
-    reviewBooking();
+    if (!isAllowedAffiliateUrl(activity.bookingUrl)) {
+      fallbackReview();
+      return;
+    }
+    startHandoff({
+      itemType: itemTypeForAffiliateActivityType(activity.type),
+      itemId: activity.id,
+      itemName: activity.title,
+      affiliatePartner: resolvedPartner,
+      affiliateUrl: activity.bookingUrl,
+      tripId,
+      price: activity.estimatedCost?.amount,
+      currency: activity.estimatedCost?.currency,
+      priceLabel: activity.price,
+      cancellationLabel: activity.freeCancellation
+        ? 'Free cancellation may apply — confirm exact terms with the partner.'
+        : undefined,
+      source: 'itinerary',
+    });
   };
 
   return (
@@ -207,32 +248,28 @@ function ActivityCard({ activity, rationale, shiftedTime }: ActivityCardProps) {
           <TouchableOpacity
             style={styles.bookButton}
             onPress={handleBooking}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Review booking options for ${activity.title}`}
+            accessibilityLabel={
+              partnerLabel
+                ? `Check options on ${partnerLabel} for ${activity.title}`
+                : `Check availability for ${activity.title}`
+            }
           >
-            <LinearGradient
-              colors={
-                activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
             <Ionicons
-              name={
-                activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'
-              }
+              name={activity.type === 'restaurant' ? 'restaurant-outline' : 'ticket-outline'}
               size={16}
-              color="#fff"
+              color={bookingButtons.primaryText}
             />
-            <Text style={styles.bookButtonText}>Review booking options</Text>
-            <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.bookButtonText}>
+              {partnerLabel ? `Book on ${partnerLabel}` : 'Check availability'}
+            </Text>
+            <Ionicons name="open-outline" size={14} color={bookingButtons.primaryText} />
           </TouchableOpacity>
         )}
         {activity.bookingUrl && activity.freeCancellation && (
           <View style={styles.freeCancelRow}>
-            <Ionicons name="checkmark-circle" size={12} color="#22c55e" />
+            <Ionicons name="checkmark-circle" size={12} color="#0F766E" />
             <Text style={styles.freeCancelText}>Free cancellation</Text>
           </View>
         )}
@@ -246,10 +283,35 @@ function FeaturedHotelCard({
 }: {
   hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']>;
 }) {
-  const reviewBooking = useBookingReview();
+  const { tripId, startHandoff, fallbackReview } = useBookingHandoff();
+  const resolvedPartner = resolveAffiliatePartnerForItem(hotel.bookingUrl, hotel.affiliatePartner);
+  const partnerLabel =
+    resolvedPartner && resolvedPartner !== 'partner'
+      ? formatAffiliatePartnerName(resolvedPartner)
+      : undefined;
+
   const handleBooking = () => {
     if (!hotel.bookingUrl) return;
-    reviewBooking();
+    if (!isAllowedAffiliateUrl(hotel.bookingUrl)) {
+      fallbackReview();
+      return;
+    }
+    const priceLabel =
+      Number.isFinite(hotel.pricePerNight) && hotel.currency
+        ? `${formatKnownPrice(hotel.pricePerNight, hotel.currency)} / night`
+        : undefined;
+    startHandoff({
+      itemType: 'hotel',
+      itemId: hotel.id,
+      itemName: hotel.name,
+      affiliatePartner: resolvedPartner,
+      affiliateUrl: hotel.bookingUrl,
+      tripId,
+      price: Number.isFinite(hotel.pricePerNight) ? hotel.pricePerNight : undefined,
+      currency: hotel.currency,
+      priceLabel,
+      source: 'itinerary',
+    });
   };
 
   return (
@@ -300,12 +362,19 @@ function FeaturedHotelCard({
           <TouchableOpacity
             style={styles.hotelCardButton}
             onPress={handleBooking}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Review booking options for ${hotel.name}`}
+            accessibilityLabel={
+              partnerLabel
+                ? `Check hotel rates on ${partnerLabel} for ${hotel.name}`
+                : `Check availability for ${hotel.name}`
+            }
           >
-            <Text style={styles.hotelCardButtonText}>Review booking options</Text>
-            <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+            <Ionicons name="bed-outline" size={16} color={bookingButtons.primaryText} />
+            <Text style={styles.hotelCardButtonText}>
+              {partnerLabel ? `Book on ${partnerLabel}` : 'Check availability'}
+            </Text>
+            <Ionicons name="open-outline" size={14} color={bookingButtons.primaryText} />
           </TouchableOpacity>
         )}
       </View>
@@ -318,7 +387,7 @@ function TransportCard({
 }: {
   transport: NonNullable<import('../../stores/tripStore').TripDay['transport']>;
 }) {
-  const reviewBooking = useBookingReview();
+  const { tripId, startHandoff, fallbackReview } = useBookingHandoff();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
@@ -341,15 +410,42 @@ function TransportCard({
         ? 'Direct'
         : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
 
+  const resolvedPartner = resolveAffiliatePartnerForItem(
+    transport.bookingUrl,
+    transport.affiliatePartner || transport.provider
+  );
+  const partnerLabel =
+    resolvedPartner && resolvedPartner !== 'partner'
+      ? formatAffiliatePartnerName(resolvedPartner)
+      : undefined;
+
   const handleBooking = () => {
     if (!transport.bookingUrl) return;
-    reviewBooking();
+    if (!isAllowedAffiliateUrl(transport.bookingUrl)) {
+      fallbackReview();
+      return;
+    }
+    const priceLabel = flightQuoteIsCurrent(transport, now)
+      ? formatKnownPrice(transport.price, transport.currency)
+      : undefined;
+    startHandoff({
+      itemType: transport.type === 'flight' ? 'flight' : 'transport',
+      itemId: `transport-${transport.departure.airport}-${transport.arrival.airport}`,
+      itemName: `${transport.provider} (${transport.departure.airport} → ${transport.arrival.airport})`,
+      affiliatePartner: resolvedPartner,
+      affiliateUrl: transport.bookingUrl,
+      tripId,
+      price: flightQuoteIsCurrent(transport, now) ? transport.price : undefined,
+      currency: transport.currency,
+      priceLabel,
+      source: 'itinerary',
+    });
   };
 
   return (
     <View style={styles.transportCard}>
       <LinearGradient
-        colors={['#1e40af', '#3b82f6']}
+        colors={bookingButtons.oceanGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.transportCardGradient}
@@ -376,7 +472,7 @@ function TransportCard({
             <View style={styles.transportCardLine}>
               <View style={styles.transportCardLineDot} />
               <View style={styles.transportCardLinePath} />
-              <Ionicons name="airplane" size={12} color="rgba(255,255,255,0.7)" />
+              <Ionicons name="airplane" size={12} color="rgba(255,255,255,0.8)" />
               <View style={styles.transportCardLinePath} />
               <View style={styles.transportCardLineDot} />
             </View>
@@ -392,12 +488,14 @@ function TransportCard({
           <TouchableOpacity
             style={styles.transportCardButton}
             onPress={handleBooking}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={`Review flight options from ${transport.departure.airport} to ${transport.arrival.airport}`}
+            accessibilityLabel={`Check flight options from ${transport.departure.airport} to ${transport.arrival.airport}`}
           >
-            <Text style={styles.transportCardButtonText}>Review flight options</Text>
-            <Ionicons name="arrow-forward" size={16} color="#1e40af" />
+            <Text style={styles.transportCardButtonText}>
+              {partnerLabel ? `Check on ${partnerLabel}` : 'Check flight options'}
+            </Text>
+            <Ionicons name="open-outline" size={16} color={bookingButtons.inverseText} />
           </TouchableOpacity>
         )}
       </LinearGradient>
@@ -406,7 +504,7 @@ function TransportCard({
 }
 
 /**
- * Bottom sheet modal showing all bookable items across the trip.
+ * Bottom sheet modal showing all bookable items across the trip plus Trip Essentials.
  */
 function BookingsSheet({
   visible,
@@ -419,20 +517,45 @@ function BookingsSheet({
   bookableItems: { activity: Activity; dayNumber: number }[];
   costReferences: string[];
 }) {
-  const reviewBooking = useBookingReview();
+  const { tripId, startHandoff, fallbackReview } = useBookingHandoff();
   const reduceMotion = useReduceMotion();
 
   const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
     const { activity, dayNumber } = item;
+    const contextLabel = getBookableItemContextLabel(dayNumber, activity.type);
+    const resolvedPartner = resolveAffiliatePartnerForItem(
+      activity.bookingUrl,
+      activity.affiliatePartner
+    );
+    const partnerLabel =
+      resolvedPartner && resolvedPartner !== 'partner'
+        ? formatAffiliatePartnerName(resolvedPartner)
+        : undefined;
 
     const handleBook = () => {
-      reviewBooking();
+      onClose();
+      if (!activity.bookingUrl || !isAllowedAffiliateUrl(activity.bookingUrl)) {
+        fallbackReview();
+        return;
+      }
+      startHandoff({
+        itemType: itemTypeForAffiliateActivityType(activity.type),
+        itemId: activity.id,
+        itemName: activity.title,
+        affiliatePartner: resolvedPartner,
+        affiliateUrl: activity.bookingUrl,
+        tripId,
+        price: activity.estimatedCost?.amount,
+        currency: activity.estimatedCost?.currency,
+        priceLabel: activity.price,
+        source: 'itinerary',
+      });
     };
 
     return (
       <View style={styles.sheetItem}>
         <View style={styles.sheetItemInfo}>
-          <Text style={styles.sheetItemDay}>{dayNumber === 0 ? 'Hotel' : `Day ${dayNumber}`}</Text>
+          <Text style={styles.sheetItemDay}>{contextLabel}</Text>
           <Text style={styles.sheetItemTitle} numberOfLines={1}>
             {activity.title}
           </Text>
@@ -441,11 +564,15 @@ function BookingsSheet({
         <TouchableOpacity
           style={styles.sheetItemButton}
           onPress={handleBook}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel={`Review booking options for ${activity.title}`}
+          accessibilityLabel={
+            partnerLabel
+              ? `Open ${partnerLabel} for ${activity.title}`
+              : `Check options for ${activity.title}`
+          }
         >
-          <Text style={styles.sheetItemButtonText}>Review</Text>
+          <Text style={styles.sheetItemButtonText}>{partnerLabel ? partnerLabel : 'Check'}</Text>
           <Ionicons name="open-outline" size={14} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -474,12 +601,13 @@ function BookingsSheet({
           </TouchableOpacity>
         </View>
         <Text style={styles.sheetSubtitle}>
-          Review the saved plan on Faroway before continuing to a provider. Confirm current prices
-          and availability with the provider.
+          Continue directly to trusted partners to confirm live prices and availability. Your
+          itinerary stays saved in Faroway.
         </Text>
+        <Text style={styles.sheetDisclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
         <FlatList
           data={bookableItems}
-          ListHeaderComponent={
+          ListHeaderComponent={() =>
             costReferences.length ? (
               <View style={{ marginBottom: 20 }}>
                 <Text style={styles.sheetItemTitle}>Known price references</Text>
@@ -488,13 +616,49 @@ function BookingsSheet({
                     {reference}
                   </Text>
                 ))}
-                <Text style={styles.sheetSubtitle}>
+                <Text style={styles.sheetReferenceNote}>
                   Partial estimates, kept in their original currencies. These aren’t a total for
                   your travel party. Check final prices, taxes, and availability with each partner.
                 </Text>
               </View>
             ) : null
           }
+          ListFooterComponent={() => (
+            <View style={styles.sheetEssentialsSection}>
+              <Text style={styles.sheetEssentialsTitle}>Trip essentials</Text>
+              {TRIP_ESSENTIALS.map((essential) => (
+                <View key={essential.id} style={styles.sheetEssentialRow}>
+                  <View style={styles.sheetEssentialInfo}>
+                    <Text style={styles.sheetItemTitle}>{essential.title}</Text>
+                    <Text style={styles.sheetItemPrice}>
+                      {essential.subtitle} · {essential.partnerLabel}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.sheetItemButton}
+                    onPress={() => {
+                      onClose();
+                      startHandoff({
+                        itemType: 'activity',
+                        itemId: essential.id,
+                        itemName: essential.title,
+                        affiliatePartner: essential.partner,
+                        affiliateUrl: essential.url,
+                        tripId,
+                        source: 'itinerary',
+                      });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${essential.title} via ${essential.partnerLabel}`}
+                  >
+                    <Text style={styles.sheetItemButtonText}>{essential.partnerLabel}</Text>
+                    <Ionicons name="open-outline" size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <Text style={styles.sheetEssentialsDisclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
+            </View>
+          )}
           renderItem={renderBookableItem}
           keyExtractor={(item) => item.activity.id}
           contentContainerStyle={styles.sheetList}
@@ -548,6 +712,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [showBookingsSheet, setShowBookingsSheet] = useState(false);
+  const [handoffParams, setHandoffParams] = useState<ConfirmAffiliateOpenParams | null>(null);
+  const [openingHandoff, setOpeningHandoff] = useState(false);
   const [showRemixSheet, setShowRemixSheet] = useState(false);
   const [remixInitialAction, setRemixInitialAction] = useState<CopilotActionType | null>(null);
   const [scheduleShiftMinutes, setScheduleShiftMinutes] = useState(0);
@@ -572,6 +738,55 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const bookableItems = useMemo(() => (trip ? collectBookingOptions(trip) : []), [trip]);
 
   const bookableCount = bookableItems.length;
+
+  const handleStartHandoff = useCallback((params: ConfirmAffiliateOpenParams) => {
+    if (!isAllowedAffiliateUrl(params.affiliateUrl)) {
+      hapticFeedback.warning();
+      Alert.alert(
+        'Partner Link Unavailable',
+        'This partner link could not be verified. Try another booking option from the itinerary.'
+      );
+      return;
+    }
+    hapticFeedback.light();
+    setHandoffParams(params);
+  }, []);
+
+  const handleConfirmHandoff = useCallback(
+    async (params: ConfirmAffiliateOpenParams) => {
+      if (openingHandoff) return;
+      setOpeningHandoff(true);
+      const {
+        priceLabel: _priceLabel,
+        cancellationLabel: _cancellationLabel,
+        ...trackingParams
+      } = params;
+      try {
+        await openAffiliateLink(trackingParams, openURL);
+        if (isActive()) setHandoffParams(null);
+      } catch {
+        if (isActive()) {
+          Alert.alert(
+            'Couldn’t open partner site',
+            'Please try again or check your connection. Your trip stays saved in Faroway.'
+          );
+        }
+      } finally {
+        if (isActive()) setOpeningHandoff(false);
+      }
+    },
+    [isActive, openingHandoff]
+  );
+
+  const resolvedTripId = trip?.id;
+  const handoffContextValue = useMemo<BookingHandoffContextValue>(
+    () => ({
+      tripId: resolvedTripId,
+      startHandoff: handleStartHandoff,
+      fallbackReview: () => reviewSavedTripBooking(resolvedTripId, openURL),
+    }),
+    [resolvedTripId, handleStartHandoff]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -886,7 +1101,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   });
 
   return (
-    <BookingTripContext.Provider value={trip.id}>
+    <BookingHandoffContext.Provider value={handoffContextValue}>
       <View style={styles.container}>
         <StatusBar style="dark" />
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.navigationBar}>
@@ -1355,7 +1570,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
           <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
             <Text style={styles.bottomBarLabel}>Check availability and prices with providers</Text>
             <Button
-              title="Review options"
+              title="Booking options"
               onPress={() => {
                 hapticFeedback.light();
                 setShowBookingsSheet(true);
@@ -1363,6 +1578,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               size="md"
               fullWidth
             />
+            <Text style={styles.bottomBarDisclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
           </SafeAreaView>
         )}
 
@@ -1372,6 +1588,19 @@ function TripDetailSession({ id }: { id: string | undefined }) {
           onClose={() => setShowBookingsSheet(false)}
           bookableItems={bookableItems}
           costReferences={costReferences}
+        />
+
+        {/* Branded Affiliate Partner Handoff Sheet */}
+        <AffiliateHandoffSheet
+          visible={handoffParams !== null}
+          params={handoffParams}
+          opening={openingHandoff}
+          onClose={() => {
+            if (!openingHandoff) setHandoffParams(null);
+          }}
+          onConfirm={(params) => {
+            void handleConfirmHandoff(params);
+          }}
         />
 
         {/* Day Remix Bottom Sheet */}
@@ -1407,7 +1636,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
           onClose={() => setShowRatingPrompt(false)}
         />
       </View>
-    </BookingTripContext.Provider>
+    </BookingHandoffContext.Provider>
   );
 }
 
@@ -1524,6 +1753,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 32,
     fontWeight: '700',
     color: '#fff',
@@ -1619,10 +1849,10 @@ const styles = StyleSheet.create({
   },
   dayTabDate: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: colors.surface[600],
   },
   dayTabDateSelected: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.92)',
   },
   dayTip: {
     color: '#53676C',
@@ -1636,6 +1866,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   dayTheme: {
+    fontFamily: fontFamilies.display,
     fontSize: 22,
     fontWeight: '700',
     color: '#0f172a',
@@ -1712,7 +1943,7 @@ const styles = StyleSheet.create({
   activityPrice: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[400],
+    color: colors.primary[800],
   },
   activityDescription: {
     fontSize: 14,
@@ -1743,16 +1974,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
+    minHeight: 46,
+    backgroundColor: bookingButtons.primaryBg,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginHorizontal: 16,
-    marginBottom: 4,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    marginBottom: 8,
+    borderRadius: borderRadius.md,
   },
   bookButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
+    color: bookingButtons.primaryText,
   },
   freeCancelRow: {
     flexDirection: 'row',
@@ -1763,15 +1996,15 @@ const styles = StyleSheet.create({
   },
   freeCancelText: {
     fontSize: 11,
-    color: '#22c55e',
-    fontWeight: '500',
+    color: '#0F766E',
+    fontWeight: '600',
   },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    gap: 10,
+    gap: 8,
     backgroundColor: '#ffffff',
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -1784,8 +2017,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
-    color: '#64748b',
+    color: '#475569',
     marginBottom: 2,
+  },
+  bottomBarDisclosure: {
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 15,
+    color: '#475569',
   },
   bottomBarPrice: {
     fontSize: 16,
@@ -1880,15 +2119,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#FFF5F4',
+    gap: 8,
+    minHeight: 46,
+    backgroundColor: bookingButtons.primaryBg,
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: borderRadius.md,
   },
   hotelCardButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary[500],
+    fontSize: 15,
+    fontWeight: '700',
+    color: bookingButtons.primaryText,
   },
   // Transport Card
   transportCardWrapper: {
@@ -1986,14 +2227,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#fff',
+    minHeight: 46,
+    backgroundColor: bookingButtons.inverseBg,
     paddingVertical: 12,
     borderRadius: borderRadius.md,
   },
   transportCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e40af',
+    fontWeight: '700',
+    color: bookingButtons.inverseText,
   },
   // Bookings Sheet
   sheetContainer: {
@@ -2009,6 +2251,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   sheetTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 22,
     fontWeight: '700',
     color: '#0f172a',
@@ -2023,9 +2266,21 @@ const styles = StyleSheet.create({
   },
   sheetSubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#475569',
+    paddingHorizontal: 24,
+    marginBottom: 6,
+  },
+  sheetDisclosure: {
+    fontSize: 12,
+    color: '#475569',
     paddingHorizontal: 24,
     marginBottom: 16,
+  },
+  sheetReferenceNote: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#475569',
+    marginTop: 6,
   },
   sheetList: {
     paddingHorizontal: 24,
@@ -2046,8 +2301,8 @@ const styles = StyleSheet.create({
   },
   sheetItemDay: {
     fontSize: 11,
-    fontWeight: '600',
-    color: colors.primary[400],
+    fontWeight: '700',
+    color: colors.primary[800],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 2,
@@ -2061,21 +2316,47 @@ const styles = StyleSheet.create({
   sheetItemPrice: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#475569',
   },
   sheetItemButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.action.primary,
+    minHeight: 44,
+    backgroundColor: bookingButtons.primaryBg,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
   },
   sheetItemButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#fff',
+    color: bookingButtons.primaryText,
+  },
+  sheetEssentialsSection: {
+    marginTop: 24,
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    gap: 12,
+  },
+  sheetEssentialsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#143D46',
+  },
+  sheetEssentialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sheetEssentialInfo: {
+    flex: 1,
+  },
+  sheetEssentialsDisclosure: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#475569',
   },
   dayRouteMeta: {
     fontSize: 13,

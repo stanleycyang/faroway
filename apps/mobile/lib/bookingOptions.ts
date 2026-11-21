@@ -41,6 +41,7 @@ export function collectBookingOptions(trip: Trip): { activity: Activity; dayNumb
         type: 'accommodation',
         price: `${formatKnownPrice(hotel.pricePerNight, hotel.currency)} / night`,
         bookingUrl: hotel.bookingUrl,
+        affiliatePartner: hotel.affiliatePartner,
       },
     });
   }
