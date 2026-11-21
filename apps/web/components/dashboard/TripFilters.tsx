@@ -75,8 +75,8 @@ export function TripFilters({
             <span
               className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
                 currentFilter === filter.value
-                  ? "bg-primary-100 text-primary-700"
-                  : "bg-gray-200 text-gray-600"
+                  ? "bg-primary-100 text-primary-800"
+                  : "bg-gray-200 text-slate-700"
               }`}
             >
               {filter.count}
@@ -89,7 +89,7 @@ export function TripFilters({
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <label
           htmlFor="trip-sort"
-          className="text-sm text-gray-500 whitespace-nowrap"
+          className="text-sm text-slate-600 whitespace-nowrap"
         >
           Sort by:
         </label>
@@ -97,7 +97,7 @@ export function TripFilters({
           id="trip-sort"
           value={currentSort}
           onChange={(e) => updateParams("sort", e.target.value)}
-          className="flex-1 sm:flex-none px-3 py-2.5 min-h-[44px] bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          className="flex-1 sm:flex-none px-3 py-2.5 min-h-[44px] bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-700 focus:border-primary-700"
         >
           {sortOptions.map((option) => (
             <option key={option.value} value={option.value}>

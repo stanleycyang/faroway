@@ -169,7 +169,7 @@ export function EmailPasswordForm({
           placeholder="you@example.com"
           required
           disabled={disabled}
-          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-700 focus:border-transparent transition-all"
         />
       </div>
 
@@ -191,7 +191,7 @@ export function EmailPasswordForm({
           required
           disabled={disabled}
           minLength={mode === "signup" ? 8 : undefined}
-          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-700 focus:border-transparent transition-all"
         />
       </div>
 
@@ -214,7 +214,7 @@ export function EmailPasswordForm({
             required
             disabled={disabled}
             minLength={8}
-            className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+            className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-700 focus:border-transparent transition-all"
           />
         </div>
       )}

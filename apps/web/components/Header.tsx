@@ -96,7 +96,7 @@ export function Header() {
               </Link>
               <Link
                 href="/create"
-                className="inline-flex min-h-11 items-center gap-2 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white px-3.5 sm:px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
+                className="inline-flex min-h-11 items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-3.5 sm:px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-900/20 hover:shadow-primary-900/30 transition-all hover:-translate-y-0.5"
               >
                 <Sparkles className="w-4 h-4" aria-hidden="true" />
                 <span className="sm:hidden">Plan</span>
@@ -154,7 +154,7 @@ export function Header() {
                 <Link
                   href="/create"
                   onClick={closeMenu}
-                  className="mx-4 mt-2 inline-flex min-h-11 items-center justify-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25"
+                  className="mx-4 mt-2 inline-flex min-h-11 items-center justify-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-900/20"
                 >
                   <Sparkles className="w-4 h-4" aria-hidden="true" />
                   Plan My Trip

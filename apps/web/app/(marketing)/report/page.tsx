@@ -29,7 +29,7 @@ export default async function ReportPage({ searchParams }: ReportPageProps) {
       <main className="flex-1 pt-24">
         <section className="mx-auto max-w-2xl px-6 py-12">
           <div className="mb-8">
-            <p className="mb-3 text-sm font-bold uppercase tracking-wider text-primary">
+            <p className="mb-3 text-sm font-bold uppercase tracking-wider text-primary-700">
               Content Review
             </p>
             <h1 className="text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">

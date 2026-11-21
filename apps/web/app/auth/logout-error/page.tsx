@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function LogoutRecoveryPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f7f8fa] px-5 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-paper px-5 py-12">
       <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
         <h1 className="font-editorial text-3xl text-slate-900">
           Sign-out wasn’t confirmed

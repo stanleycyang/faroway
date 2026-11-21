@@ -80,8 +80,8 @@ const statusConfig: Record<
   },
   complete: {
     label: "Plan ready",
-    color: "text-green-700",
-    bg: "bg-green-100",
+    color: "text-emerald-800",
+    bg: "bg-emerald-100",
   },
   failed: {
     label: "Planning interrupted",
@@ -199,7 +199,7 @@ export function TripCard({ trip, today }: TripCardProps & { today?: string }) {
           {formatDateRange(trip.start_date, trip.end_date)}
         </p>
 
-        <div className="mt-auto pt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="mt-auto pt-4 flex items-center justify-between text-sm text-slate-600">
           <span className="flex items-center gap-1">
             <Users className="h-4 w-4" aria-hidden="true" />
             {trip.travelers} traveler{trip.travelers > 1 ? "s" : ""}

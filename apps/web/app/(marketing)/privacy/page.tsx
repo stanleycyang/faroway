@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AFFILIATE_DISCLOSURE_FULL } from "@faroway/constants";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
@@ -20,15 +21,15 @@ export default function PrivacyPolicyPage() {
       <main className="pt-24">
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="mb-12">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            <h1 className="font-editorial text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
               Privacy Policy
             </h1>
-            <p className="mt-4 text-lg text-gray-500">
-              Last updated: May 12, 2026
+            <p className="mt-4 text-lg text-slate-600">
+              Last updated: November 21, 2026
             </p>
           </div>
 
-          <div className="prose prose-lg prose-gray prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary hover:prose-a:text-primary-600 prose-a:underline-offset-2">
+          <div className="prose prose-lg prose-gray prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary-700 hover:prose-a:text-primary-800 prose-a:underline-offset-2">
             {/* 1. Introduction */}
             <h2>1. Introduction</h2>
             <p>
@@ -156,10 +157,11 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Affiliate tracking cookies</strong> &mdash; placed by
-                our affiliate partners (such as Viator) when you click an
-                affiliate link. These cookies allow the partner to attribute
-                your booking to Faroway. These cookies are governed by the
-                respective partner&apos;s cookie policy.
+                our affiliate partners (such as Viator, GetYourGuide, Stay22,
+                Booking.com, Travelpayouts, and other participating partners)
+                when you click an affiliate link. These cookies allow the
+                partner to attribute your booking to Faroway. These cookies are
+                governed by the respective partner&apos;s cookie policy.
               </li>
             </ul>
             <p>
@@ -234,10 +236,35 @@ export default function PrivacyPolicyPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Google Places API
+                  Google Maps &amp; Places API
                 </a>{" "}
-                &mdash; destination search and autocomplete. Your search queries
-                are sent to Google.
+                &mdash; destination search, autocomplete, and live venue
+                details. Your search queries and place requests are sent to
+                Google and are governed by the{" "}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Google Privacy Policy
+                </a>{" "}
+                and the{" "}
+                <a
+                  href="https://maps.google.com/help/terms_maps/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Google Maps / Google Earth Additional Terms of Service
+                </a>
+                . Itinerary map views also display map tiles from{" "}
+                <a
+                  href="https://www.openstreetmap.org/copyright"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  OpenStreetMap
+                </a>
+                .
               </li>
               <li>
                 <a
@@ -297,32 +324,45 @@ export default function PrivacyPolicyPage() {
 
             <h3>5.2 Affiliate Partners</h3>
             <p>
-              When you click an affiliate link, you are directed to a
-              third-party provider&apos;s website. At that point, the provider
-              may collect your information under their own privacy policy. Our
-              affiliate partners include:
+              <strong>{AFFILIATE_DISCLOSURE_FULL}</strong> When you click an
+              affiliate link, you are directed to a third-party provider&apos;s
+              website. At that point, the provider may collect your information
+              under their own privacy policy. Our affiliate partners span the
+              following travel categories:
             </p>
             <ul>
               <li>
+                <strong>Tours &amp; Activities</strong> &mdash;{" "}
                 <a
                   href="https://www.viator.com/support/privacyPolicy"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   Viator
-                </a>{" "}
-                &mdash; tours, activities, and experience bookings. When you
-                click a Viator link, a referral identifier is included in the
-                URL. Viator may set cookies on your device.
+                </a>
+                , GetYourGuide, Klook, and Tripadvisor.
+              </li>
+              <li>
+                <strong>Stays &amp; Lodging</strong> &mdash; Stay22,
+                Booking.com, Expedia, and Hostelworld.
+              </li>
+              <li>
+                <strong>Flights &amp; Ground Transport</strong> &mdash; Duffel,
+                Skyscanner, Travelpayouts (Aviasales), and DiscoverCars.
+              </li>
+              <li>
+                <strong>Dining &amp; Trip Essentials</strong> &mdash; OpenTable,
+                SafetyWing (travel insurance), Airalo (eSIMs), iVisa (visa
+                services), and Wise (travel currency).
               </li>
             </ul>
             <p>
               We do not share your name, email, or account information with
-              affiliate partners. The only data transmitted is the referral
-              identifier embedded in the link URL. If you previously visited or
-              booked through a former partner provider linked from Faroway, any
-              information you shared with that provider remains subject to that
-              provider&apos;s privacy policy.
+              affiliate partners. The only data transmitted is a non-personal
+              referral or click identifier embedded in the outbound link URL. If
+              you previously visited or booked through a former partner provider
+              linked from Faroway, any information you shared with that provider
+              remains subject to that provider&apos;s privacy policy.
             </p>
 
             <h3>5.3 AI Service Providers</h3>

@@ -253,7 +253,7 @@ export function PlacesAutocompleteInput({
   return (
     <div className="relative">
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
         <input
           ref={inputRef}
           type="text"
@@ -282,7 +282,7 @@ export function PlacesAutocompleteInput({
             if (query.length >= MIN_QUERY_LENGTH) setIsOpen(true);
           }}
           placeholder="Search any city worldwide..."
-          className="w-full pl-12 pr-10 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+          className="w-full pl-12 pr-10 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20 transition-all"
         />
         {query && (
           <button
@@ -291,7 +291,7 @@ export function PlacesAutocompleteInput({
             aria-label="Clear destination"
             className="absolute right-4 top-1/2 -translate-y-1/2"
           >
-            <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+            <X className="w-5 h-5 text-slate-600 hover:text-slate-900" />
           </button>
         )}
       </div>
@@ -303,7 +303,7 @@ export function PlacesAutocompleteInput({
           className="absolute top-full left-0 right-0 mt-2 max-h-[65vh] overflow-auto bg-white border border-gray-200 rounded-xl shadow-lg z-50"
         >
           {isSearchingEmpty ? (
-            <div className="px-4 py-6 flex items-center justify-center text-gray-500">
+            <div className="px-4 py-6 flex items-center justify-center text-slate-600">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
               Searching...
             </div>
@@ -330,12 +330,12 @@ export function PlacesAutocompleteInput({
                         : "hover:bg-gray-50"
                     }`}
                   >
-                    <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <MapPin className="w-4 h-4 text-slate-500 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900 truncate">
                         {d.name}
                       </p>
-                      <p className="text-sm text-gray-500 truncate">
+                      <p className="text-sm text-slate-600 truncate">
                         {d.country}
                       </p>
                     </div>
@@ -349,7 +349,7 @@ export function PlacesAutocompleteInput({
               >
                 <button
                   type="button"
-                  className={`w-full px-4 py-3 text-left text-sm font-medium text-primary ${
+                  className={`w-full px-4 py-3 text-left text-sm font-medium text-primary-700 ${
                     clampedActiveIndex === localResults.length
                       ? "bg-primary-50"
                       : "hover:bg-gray-50"

@@ -14,12 +14,17 @@ import {
   Check,
   ArrowRight,
 } from "lucide-react";
-import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
+import {
+  AFFILIATE_DISCLOSURE_FULL,
+  IMAGE_PATHS,
+  getImageUrl,
+} from "@faroway/constants";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 import { FAQAccordion } from "@/components/support/FAQAccordion";
 import { AppStoreButtons } from "@/components/AppStoreButtons";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { HAS_MOBILE_STORE_LINKS } from "@/lib/store-links";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -128,8 +133,7 @@ const quickStartSteps = [
 const faqItems = [
   {
     question: "Is Faroway really free?",
-    answer:
-      "Faroway is free to start. We earn revenue through affiliate commissions when you book a hotel or activity through a partner link in your itinerary. Partner prices, availability, and terms are shown by the provider before you book.",
+    answer: `Faroway is free to start. ${AFFILIATE_DISCLOSURE_FULL} Partner prices, availability, and terms are shown by the provider before you book.`,
   },
   {
     question: "How does AI trip planning work?",
@@ -159,7 +163,7 @@ const faqItems = [
   {
     question: "How are bookings handled?",
     answer:
-      "Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.",
+      "Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers such as Viator and GetYourGuide (tours and activities), Stay22 and Booking.com (stays), Duffel and Travelpayouts (flights), DiscoverCars (car rentals), SafetyWing (travel insurance), and Airalo (eSIMs). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.",
   },
   {
     question: "Is my data secure?",
@@ -256,13 +260,13 @@ export default function SupportPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <FadeInOnScroll>
               <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-1.5 mb-4 text-primary-600 text-sm font-medium">
+                <div className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-1.5 mb-4 text-primary-800 text-sm font-medium">
                   <Sparkles className="w-4 h-4" /> Help Topics
                 </div>
-                <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                  Find answers <span className="text-gradient">fast</span>
+                <h2 className="font-editorial text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
+                  Find answers <span className="text-[#C03A31]">fast</span>
                 </h2>
-                <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+                <p className="text-xl text-slate-600 max-w-2xl mx-auto">
                   Browse by topic to find the help you need.
                 </p>
               </div>
@@ -280,7 +284,7 @@ export default function SupportPage() {
                     <h3 className="text-xl font-bold text-slate-900 mb-2">
                       {category.title}
                     </h3>
-                    <p className="text-slate-500 mb-4 text-sm">
+                    <p className="text-slate-600 mb-4 text-sm">
                       {category.description}
                     </p>
                     <ul className="space-y-2">
@@ -289,7 +293,7 @@ export default function SupportPage() {
                           key={bullet}
                           className="flex items-start gap-2 text-sm text-slate-600"
                         >
-                          <ArrowRight className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <ArrowRight className="w-3.5 h-3.5 text-primary-700 mt-0.5 flex-shrink-0" />
                           <span>{bullet}</span>
                         </li>
                       ))}
@@ -302,18 +306,18 @@ export default function SupportPage() {
         </section>
 
         {/* ─── 3. Quick Start Guide — Visual Steps ───────────────────────── */}
-        <section className="py-20 lg:py-28 bg-slate-50">
+        <section className="py-20 lg:py-28 bg-[#FAF8F3]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <FadeInOnScroll>
               <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2 bg-accent-50 border border-accent-200 rounded-full px-4 py-1.5 mb-4 text-accent-600 text-sm font-medium">
+                <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-full px-4 py-1.5 mb-4 text-accent-700 text-sm font-medium">
                   <Rocket className="w-4 h-4" /> Quick Start
                 </div>
-                <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
+                <h2 className="font-editorial text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
                   Plan your first trip in{" "}
-                  <span className="text-gradient">3 easy steps</span>
+                  <span className="text-[#C03A31]">3 easy steps</span>
                 </h2>
-                <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+                <p className="text-xl text-slate-600 max-w-2xl mx-auto">
                   From destination to a structured itinerary draft.
                 </p>
               </div>
@@ -332,7 +336,7 @@ export default function SupportPage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-surface-950/95 via-surface-950/60 to-surface-950/20" />
                     <div className="relative z-10 p-8 flex flex-col justify-end h-full">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mb-4 text-white font-bold text-lg shadow-lg">
+                      <div className="w-10 h-10 rounded-full bg-primary-700 flex items-center justify-center mb-4 text-white font-bold text-lg shadow-lg">
                         {step.step}
                       </div>
                       <h3 className="text-xl font-bold text-white mb-2">
@@ -379,14 +383,14 @@ export default function SupportPage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <FadeInOnScroll>
               <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-full px-4 py-1.5 mb-4 text-amber-600 text-sm font-medium">
+                <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-full px-4 py-1.5 mb-4 text-amber-800 text-sm font-medium">
                   <MessageCircle className="w-4 h-4" /> FAQ
                 </div>
-                <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
+                <h2 className="font-editorial text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
                   Frequently asked{" "}
-                  <span className="text-gradient">questions</span>
+                  <span className="text-[#C03A31]">questions</span>
                 </h2>
-                <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+                <p className="text-xl text-slate-600 max-w-2xl mx-auto">
                   Quick answers to the most common questions about Faroway.
                 </p>
               </div>
@@ -399,17 +403,17 @@ export default function SupportPage() {
         </section>
 
         {/* ─── 6. Contact CTA ────────────────────────────────────────────── */}
-        <section className="py-20 lg:py-28 bg-slate-50">
+        <section className="py-20 lg:py-28 bg-[#FAF8F3]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <FadeInOnScroll>
               <div className="text-center mb-12">
-                <div className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-1.5 mb-4 text-primary-600 text-sm font-medium">
+                <div className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-1.5 mb-4 text-primary-800 text-sm font-medium">
                   <Mail className="w-4 h-4" /> Contact Us
                 </div>
-                <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                  Still need <span className="text-gradient">help</span>?
+                <h2 className="font-editorial text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
+                  Still need <span className="text-[#C03A31]">help</span>?
                 </h2>
-                <p className="text-xl text-slate-500 max-w-2xl mx-auto">
+                <p className="text-xl text-slate-600 max-w-2xl mx-auto">
                   Our team is here for you. Reach out and we&apos;ll get back to
                   you as soon as possible.
                 </p>
@@ -419,19 +423,19 @@ export default function SupportPage() {
             <div className="grid md:grid-cols-2 gap-5">
               <FadeInOnScroll delay={100}>
                 <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all text-center h-full">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mx-auto mb-5 shadow-lg">
+                  <div className="w-16 h-16 rounded-2xl bg-primary-700 flex items-center justify-center mx-auto mb-5 shadow-lg">
                     <Mail className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">
                     Email Support
                   </h3>
-                  <p className="text-slate-500 mb-5 text-sm leading-relaxed">
+                  <p className="text-slate-600 mb-5 text-sm leading-relaxed">
                     Send us an email and we&apos;ll get back to you within 24
                     hours. We read every message.
                   </p>
                   <a
                     href="mailto:support@faroway.ai"
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-semibold transition-all hover:-translate-y-0.5 shadow-md"
+                    className="inline-flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-6 py-3 rounded-xl font-semibold transition-all hover:-translate-y-0.5 shadow-md"
                   >
                     <Mail className="w-4 h-4" />
                     support@faroway.ai
@@ -447,7 +451,7 @@ export default function SupportPage() {
                   <h3 className="text-xl font-bold text-slate-900 mb-2">
                     Privacy Requests
                   </h3>
-                  <p className="text-slate-500 mb-5 text-sm leading-relaxed">
+                  <p className="text-slate-600 mb-5 text-sm leading-relaxed">
                     Ask for a copy of your data, request corrections, or get
                     help with account deletion and privacy rights.
                   </p>
@@ -486,17 +490,29 @@ export default function SupportPage() {
 
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <FadeInOnScroll>
-              <h2 className="text-3xl lg:text-5xl font-bold mb-6 text-white">
-                Better experience on{" "}
-                <span className="text-gradient-hero">mobile</span>
+              <h2 className="font-editorial text-3xl lg:text-5xl font-bold mb-6 text-white">
+                {HAS_MOBILE_STORE_LINKS ? (
+                  <>
+                    Better experience on{" "}
+                    <span className="text-gradient-hero">mobile</span>
+                  </>
+                ) : (
+                  <>
+                    Start planning on the{" "}
+                    <span className="text-gradient-hero">web</span>
+                  </>
+                )}
               </h2>
-              <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
-                Download Faroway for saved-trip offline access, partner options,
-                and itinerary-ready alerts. Your trips, available when you need
-                them.
+              <p className="text-xl text-white/80 mb-8 leading-relaxed max-w-2xl mx-auto">
+                {HAS_MOBILE_STORE_LINKS
+                  ? "Download Faroway for saved-trip offline access, partner options, and itinerary-ready alerts. Your trips, available when you need them."
+                  : "Create and revisit your day-by-day itineraries in any browser today. Mobile apps are in private preview."}
               </p>
 
-              <AppStoreButtons className="justify-center mb-8" />
+              <AppStoreButtons
+                className="justify-center mb-8"
+                variant="solid"
+              />
 
               <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
                 {[

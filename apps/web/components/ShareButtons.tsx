@@ -142,8 +142,8 @@ export function ShareButtons({
               >
                 {copied ? (
                   <>
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600">Copied!</span>
+                    <Check className="w-4 h-4 text-emerald-700" />
+                    <span className="text-sm text-emerald-700">Copied!</span>
                   </>
                 ) : (
                   <>
@@ -161,7 +161,7 @@ export function ShareButtons({
 
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
-      <span className="text-sm text-gray-500 mr-1">Share:</span>
+      <span className="text-sm text-slate-600 mr-1">Share:</span>
 
       <button
         onClick={() => openShareWindow(shareLinks.twitter)}
@@ -199,7 +199,7 @@ export function ShareButtons({
         onClick={handleCopyLink}
         className={`p-2.5 rounded-full transition-all ${
           copied
-            ? "bg-green-500 text-white"
+            ? "bg-emerald-700 text-white"
             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
         }`}
         aria-label={copied ? "Link copied" : "Copy link"}
