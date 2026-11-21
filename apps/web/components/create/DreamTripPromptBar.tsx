@@ -72,11 +72,58 @@ const VALID_ACCESSIBILITY: readonly AccessibilityOptionId[] = [
 ];
 import {
   hasTravelerMemoryValues,
-  summarizeTravelerMemory,
   type LearnedPreferenceSuggestion,
   type TravelerMemory,
   type TravelerPace,
 } from "@/lib/trips/traveler-memory";
+
+function formatTravelerMemoryChips(memory: TravelerMemory): string[] {
+  const chips: string[] = [];
+  if (memory.homeAirport) chips.push(`Home: ${memory.homeAirport}`);
+  if (memory.defaultBudget) {
+    const budgetId = normalizeBudgetTier(memory.defaultBudget) ?? "moderate";
+    chips.push(BUDGET_LABELS[budgetId]);
+  }
+  if (memory.defaultPace) {
+    chips.push(
+      `${memory.defaultPace[0].toUpperCase()}${memory.defaultPace.slice(1)} pace`,
+    );
+  }
+  if (memory.avoidEarlyStarts) chips.push("No early starts");
+  if (memory.defaultVibes.length > 0) {
+    chips.push(memory.defaultVibes.map((v) => getVibeLabel(v)).join(", "));
+  }
+  if (memory.dietaryPreferences.length > 0) {
+    chips.push(memory.dietaryPreferences.join(", "));
+  }
+  if (memory.allergies.length > 0) {
+    chips.push(`Allergies: ${memory.allergies.join(", ")}`);
+  }
+  if (memory.accessibility.length > 0) {
+    chips.push(
+      `${memory.accessibility.length} accessibility ${memory.accessibility.length === 1 ? "need" : "needs"}`,
+    );
+  }
+  return chips;
+}
+
+function formatLearnedSuggestionLabel(
+  suggestion: LearnedPreferenceSuggestion,
+): string {
+  if (suggestion.patch.defaultBudget || suggestion.id.startsWith("budget:")) {
+    const budgetId = normalizeBudgetTier(
+      suggestion.patch.defaultBudget ?? suggestion.id.slice("budget:".length),
+    );
+    if (budgetId) {
+      return `Default to ${BUDGET_LABELS[budgetId]}`;
+    }
+  }
+  if (suggestion.id.startsWith("vibe:")) {
+    const rawVibe = suggestion.id.slice("vibe:".length);
+    return `Add ${getVibeLabel(rawVibe)} as a default vibe`;
+  }
+  return suggestion.label;
+}
 
 const EXAMPLE_PROMPTS = [
   "5 days in Lisbon in October, foodie & cultural, relaxed mornings",
@@ -347,7 +394,7 @@ export function DreamTripPromptBar({
   };
 
   const memoryHasValues = hasTravelerMemoryValues(travelerMemory);
-  const memoryChips = summarizeTravelerMemory(travelerMemory);
+  const memoryChips = formatTravelerMemoryChips(travelerMemory);
 
   const handleSaveMemoryDraft = () => {
     const parsedAllergies = draftAllergies
@@ -864,34 +911,37 @@ export function DreamTripPromptBar({
             <span className="text-[11px] font-semibold text-slate-600">
               Learned from your trips:
             </span>
-            {learnedSuggestions.map((suggestion) => (
-              <div
-                key={suggestion.id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary-700/30 bg-primary-50/70 px-2.5 py-1 text-[11px] text-primary-900"
-              >
-                <span title={suggestion.reason}>{suggestion.label}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAcceptLearnedSuggestion(suggestion);
-                    setMemorySavedNotice(
-                      `Added "${suggestion.label}" to your defaults.`,
-                    );
-                  }}
-                  className="rounded-full bg-primary-700 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-primary-800"
+            {learnedSuggestions.map((suggestion) => {
+              const suggestionLabel = formatLearnedSuggestionLabel(suggestion);
+              return (
+                <div
+                  key={suggestion.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary-700/30 bg-primary-50/70 px-2.5 py-1 text-[11px] text-primary-900"
                 >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Dismiss ${suggestion.label}`}
-                  onClick={() => onDismissLearnedSuggestion(suggestion.id)}
-                  className="text-primary-700 hover:text-primary-950"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
+                  <span title={suggestion.reason}>{suggestionLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAcceptLearnedSuggestion(suggestion);
+                      setMemorySavedNotice(
+                        `Added "${suggestionLabel}" to your defaults.`,
+                      );
+                    }}
+                    className="rounded-full bg-primary-700 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-primary-800"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Dismiss ${suggestionLabel}`}
+                    onClick={() => onDismissLearnedSuggestion(suggestion.id)}
+                    className="text-primary-700 hover:text-primary-950"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 

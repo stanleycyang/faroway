@@ -305,4 +305,275 @@ describe("/create conversion & origin/flight consent", () => {
     );
     expect(layoutSource).not.toContain("then sign in");
   });
+
+  test.each([
+    "?destination=---",
+    "?destination=%20%20%20",
+    `?destination=${"x".repeat(250)}`,
+  ])(
+    "ignores invalid URL %s so canGenerate stays disabled without CreateTripSchema mismatch",
+    async (search) => {
+      stubPlannerGlobals(search);
+      let renderer!: ReturnType<typeof create>;
+      try {
+        await act(async () => {
+          renderer = create(<CreateTripPage />);
+        });
+
+        const generateBtn = renderer.root
+          .findAllByType("button")
+          .find((b) =>
+            b.children.some(
+              (c) => typeof c === "string" && c.includes("Generate itinerary"),
+            ),
+          )!;
+        expect(generateBtn.props.disabled).toBe(true);
+        expect(JSON.stringify(renderer.toJSON())).toContain(
+          "Choose a destination to get started",
+        );
+      } finally {
+        await act(async () => {
+          renderer?.unmount();
+        });
+      }
+    },
+  );
+
+  test("unauthenticated Plan Kyoto sign-in -> ?draft= roundtrip preserves Kyoto and keeps submit enabled", async () => {
+    mocks.owner = "";
+    const { localMap } = stubPlannerGlobals("");
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "/api/trips/suggest-destinations") {
+        return new Response(
+          JSON.stringify({
+            suggestions: [
+              {
+                slug: "kyoto",
+                name: "Kyoto",
+                country: "Japan",
+                heroImage: "/images/kyoto.jpg",
+                whyItFits: "Temples and food.",
+                seasonNote: "Great in spring.",
+                flightHint: "11h from SFO",
+                suggestedVibes: ["cultural", "foodie"],
+                suggestedBudget: "moderate",
+                prefillParams: {
+                  destination: "kyoto",
+                  vibes: ["cultural", "foodie"],
+                  budget: "moderate",
+                  startDate: "2099-09-01",
+                  endDate: "2099-09-05",
+                },
+              },
+            ],
+          }),
+        );
+      }
+      if (url === "/api/trips") {
+        const body = JSON.parse(String(init?.body));
+        return new Response(
+          JSON.stringify({
+            trip: { id: body.requestId, user_id: "owner-a" },
+          }),
+        );
+      }
+      return new Response(JSON.stringify({ success: true }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      const helpDecideBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Help me decide"),
+          ),
+        )!;
+      await act(async () => {
+        helpDecideBtn.props.onClick();
+      });
+
+      const queryInput = renderer.root.findByProps({
+        id: "decide-query-input",
+      });
+      await act(async () => {
+        queryInput.props.onChange({ target: { value: "walkable culture" } });
+      });
+
+      const suggestBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Suggest 3 places"),
+          ),
+        )!;
+      await act(async () => {
+        await suggestBtn.props.onClick();
+      });
+
+      const planKyotoBtn = renderer.root
+        .findAllByType("button")
+        .find(
+          (b) =>
+            b.children.filter((c) => typeof c === "string").join("") ===
+            "Plan Kyoto",
+        )!;
+      await act(async () => {
+        planKyotoBtn.props.onClick();
+      });
+
+      const signInBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) =>
+              typeof c === "string" &&
+              c.includes("Sign in & generate itinerary"),
+          ),
+        )!;
+      expect(signInBtn.props.disabled).toBe(false);
+
+      await act(async () => {
+        await signInBtn.props.onClick();
+      });
+
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+      const pushedUrl = String(mocks.push.mock.calls[0][0]);
+      const redirectTo = new URLSearchParams(pushedUrl.split("?")[1]).get(
+        "redirectTo",
+      )!;
+      expect(redirectTo).toMatch(/^\/create\?draft=/);
+
+      await act(async () => {
+        renderer.unmount();
+      });
+
+      // Return authenticated with ?draft=... and existing localStorage
+      mocks.owner = "owner-a";
+      vi.stubGlobal("window", {
+        location: { search: `?${redirectTo.split("?")[1]}` },
+        history: { replaceState: vi.fn(), length: 2 },
+      });
+      // Ensure localStorage retains the saved draft across remount
+      expect(localMap.size).toBeGreaterThan(0);
+
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      const restoredText = JSON.stringify(renderer.toJSON());
+      expect(restoredText).toContain("Kyoto");
+
+      const generateBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Generate itinerary"),
+          ),
+        )!;
+      expect(generateBtn.props.disabled).toBe(false);
+
+      await act(async () => {
+        await generateBtn.props.onClick();
+      });
+
+      const createCall = fetchMock.mock.calls.find(
+        ([url]) => url === "/api/trips",
+      )!;
+      expect(createCall).toBeDefined();
+      const createBody = JSON.parse(String(createCall[1]?.body));
+      expect(CreateTripSchema.safeParse(createBody).success).toBe(true);
+      expect(createBody.destination).toBe("Kyoto");
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+    }
+  });
+
+  test("prompt kickoff summary renders Moderate and Culture chips (never Comfort or Cultural)", async () => {
+    stubPlannerGlobals("");
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      const promptInput = renderer.root.findByProps({
+        id: "dream-trip-prompt-input",
+      });
+      await act(async () => {
+        promptInput.props.onChange({
+          target: {
+            value:
+              "5 days in Lisbon in October, moderate budget, foodie & cultural",
+          },
+        });
+      });
+
+      const fillBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Fill my trip"),
+          ),
+        )!;
+      await act(async () => {
+        await fillBtn.props.onClick();
+      });
+
+      const collectText = (
+        node:
+          | string
+          | number
+          | boolean
+          | null
+          | undefined
+          | { children?: unknown[] },
+      ): string => {
+        if (typeof node === "string" || typeof node === "number") {
+          return String(node);
+        }
+        if (
+          !node ||
+          typeof node !== "object" ||
+          !Array.isArray(node.children)
+        ) {
+          return "";
+        }
+        return node.children
+          .map((child) =>
+            collectText(
+              child as
+                | string
+                | number
+                | boolean
+                | null
+                | undefined
+                | { children?: unknown[] },
+            ),
+          )
+          .join("");
+      };
+
+      const statusBanner = renderer.root
+        .findAllByProps({ role: "status" })
+        .find((node) => collectText(node).includes("Filled from your prompt"))!;
+      const bannerText = collectText(statusBanner);
+      expect(bannerText).toContain("Lisbon");
+      expect(bannerText).toContain("Moderate");
+      expect(bannerText).toContain("Foodie, Culture");
+      expect(bannerText).not.toContain("Comfort");
+      expect(bannerText).not.toContain("Cultural");
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+    }
+  });
 });

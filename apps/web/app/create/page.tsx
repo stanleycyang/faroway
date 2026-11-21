@@ -50,6 +50,7 @@ import {
   getImageUrl,
   hotelGuestCounts,
   normalizeBudgetTier,
+  normalizeVibeId,
   normalizeVibeList,
   parseHotelChildrenAges,
   travelVibes,
@@ -86,7 +87,6 @@ import {
   type AppliedKickoffSummary,
 } from "@/components/create/DreamTripPromptBar";
 import {
-  summarizeParsedDreamTrip,
   type ParsedDreamTrip,
   type VibeId,
   type DietaryOption,
@@ -123,6 +123,25 @@ const allCatalogCovers = destinationCoverCatalog.map(
     heroImage: getImageUrl(IMAGE_PATHS.destinations[slug]),
   }),
 );
+
+const draftRestoreCatalog = [
+  ...destinations,
+  ...allCatalogCovers
+    .filter(
+      (cover) =>
+        !destinations.some(
+          (d) =>
+            d.id === cover.slug ||
+            d.name.toLowerCase() === cover.name.toLowerCase(),
+        ),
+    )
+    .map((cover) => ({
+      id: cover.slug,
+      name: cover.name,
+      lat: 0,
+      lng: 0,
+    })),
+];
 
 const allAutocompleteDestinations = [
   ...destinations.map((d) => ({ name: d.name, country: d.country })),
@@ -207,6 +226,85 @@ function toMemoryVibes(values: readonly string[]): VibeId[] {
   return normalizeVibeList(values, 5)
     .map((id) => PARSER_VIBE_MAP[id])
     .filter((id): id is VibeId => Boolean(id));
+}
+
+const PROMPT_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+const PROMPT_GROUP_LABELS: Record<
+  NonNullable<ParsedDreamTrip["travelerType"]>,
+  string
+> = {
+  solo: "Solo",
+  couple: "Couple",
+  family: "Family",
+  friends: "Friends",
+  business: "Business",
+};
+
+function getCanonicalVibeLabel(raw: string): string {
+  const canonical = normalizeVibeId(raw);
+  if (!canonical) return raw;
+  return travelVibes.find((v) => v.id === canonical)?.label ?? raw;
+}
+
+function formatParsedDreamTripChips(parsed: ParsedDreamTrip): string[] {
+  const summary: string[] = [];
+  if (parsed.destination) {
+    summary.push(parsed.destination.name);
+  }
+  if (parsed.startDate && parsed.endDate) {
+    const [, sm, sd] = parsed.startDate.split("-").map(Number);
+    const [, em, ed] = parsed.endDate.split("-").map(Number);
+    const startMonth = PROMPT_MONTH_NAMES[sm - 1];
+    const endMonth = PROMPT_MONTH_NAMES[em - 1];
+    if (startMonth && endMonth && Number.isFinite(sd) && Number.isFinite(ed)) {
+      const startLabel = `${startMonth.slice(0, 3)} ${sd}`;
+      const endLabel = sm === em ? `${ed}` : `${endMonth.slice(0, 3)} ${ed}`;
+      summary.push(`${startLabel}–${endLabel}`);
+    }
+  }
+  if (parsed.travelers !== undefined || parsed.travelerType) {
+    const parts: string[] = [];
+    if (parsed.travelers !== undefined) parts.push(`${parsed.travelers}`);
+    if (parsed.travelerType)
+      parts.push(PROMPT_GROUP_LABELS[parsed.travelerType]);
+    summary.push(parts.join(" · "));
+  }
+  if (parsed.budget) {
+    const budgetId = normalizeBudgetTier(parsed.budget) ?? "moderate";
+    summary.push(BUDGET_LABELS[budgetId]);
+  }
+  if (parsed.vibes.length > 0) {
+    summary.push(parsed.vibes.map((v) => getCanonicalVibeLabel(v)).join(", "));
+  }
+  if (parsed.dietaryPreferences.length > 0) {
+    summary.push(parsed.dietaryPreferences.join(", "));
+  }
+  if (parsed.allergies.length > 0) {
+    summary.push(`Allergies: ${parsed.allergies.join(", ")}`);
+  }
+  if (parsed.accessibility.length > 0) {
+    summary.push(
+      `${parsed.accessibility.length} accessibility ${parsed.accessibility.length === 1 ? "need" : "needs"}`,
+    );
+  }
+  if (parsed.mobilityNotes) {
+    summary.push(parsed.mobilityNotes);
+  }
+  return summary;
 }
 
 type SelectedPlace = PlannerDestination;
@@ -412,7 +510,9 @@ function CreateTripPlanner({
       const restoredStart = parseCreateDraftDate(draft.startDate);
       const restoredEnd = parseCreateDraftDate(draft.endDate);
 
-      setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
+      setSelectedPlace(
+        plannerDestination(draft.selectedPlace, draftRestoreCatalog),
+      );
       if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
         setStartDate(restoredStart);
       }
@@ -517,36 +617,41 @@ function CreateTripPlanner({
               guide.name.toLowerCase() === normalized,
           )
         : undefined;
-      setSelectedPlace(
-        recommended
-          ? {
-              name: recommended.name,
-              lat: recommended.lat,
-              lng: recommended.lng,
-              placeId: recommended.id,
-              isRecommended: true,
-              source: "catalog",
-            }
-          : guideMatch
-            ? {
-                name: guideMatch.name,
-                lat: 0,
-                lng: 0,
-                placeId: guideMatch.slug,
-                isRecommended: true,
-                source: "catalog",
-              }
-            : {
-                name: requestedDestination
-                  .replace(/-/g, " ")
-                  .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-                lat: 0,
-                lng: 0,
-                placeId: "",
-                isRecommended: false,
-                source: "user",
-              },
-      );
+      if (recommended) {
+        setSelectedPlace({
+          name: recommended.name,
+          lat: recommended.lat,
+          lng: recommended.lng,
+          placeId: recommended.id,
+          isRecommended: true,
+          source: "catalog",
+        });
+      } else if (guideMatch) {
+        setSelectedPlace({
+          name: guideMatch.name,
+          lat: 0,
+          lng: 0,
+          placeId: guideMatch.slug,
+          isRecommended: true,
+          source: "catalog",
+        });
+      } else {
+        const cleanedCustomName = requestedDestination
+          .replace(/-/g, " ")
+          .trim()
+          .replace(/\s+/g, " ")
+          .replace(/\b\w/g, (letter) => letter.toUpperCase());
+        if (cleanedCustomName.length >= 1 && cleanedCustomName.length <= 200) {
+          setSelectedPlace({
+            name: cleanedCustomName,
+            lat: 0,
+            lng: 0,
+            placeId: "",
+            isRecommended: false,
+            source: "user",
+          });
+        }
+      }
     }
 
     const validRequestedBudget =
@@ -730,8 +835,14 @@ function CreateTripPlanner({
       resolvedAdults + resolvedChildren === travelers &&
       validateFlightSearchDetails(flightSearchPayload, resolvedChildren));
 
-  const canGenerate =
+  const hasValidDestination = Boolean(
     selectedPlace &&
+    selectedPlace.name.trim().length >= 1 &&
+    selectedPlace.name.trim().length <= 200,
+  );
+
+  const canGenerate =
+    hasValidDestination &&
     startDate &&
     endDate &&
     (hotelSearch === null ||
@@ -753,14 +864,14 @@ function CreateTripPlanner({
   const handleSelectFromAutocomplete = (place: PlaceResult) => {
     const entry =
       place.source === "catalog"
-        ? destinations.find((d) => d.name === place.name)
+        ? draftRestoreCatalog.find((d) => d.name === place.name)
         : undefined;
     setSelectedPlace(
       plannerDestination(
         entry
           ? { source: "catalog", name: entry.name, placeId: entry.id }
           : { source: "user", name: place.name },
-        destinations,
+        draftRestoreCatalog,
       ),
     );
     setShowDestinations(false);
@@ -902,7 +1013,7 @@ function CreateTripPlanner({
       setShowAdvanced(true);
     }
     setAppliedKickoffSummary({
-      chips: summarizeParsedDreamTrip(parsed),
+      chips: formatParsedDreamTripChips(parsed),
       hasSafetyNotice:
         parsed.dietaryPreferences.length > 0 ||
         parsed.allergies.length > 0 ||
@@ -1036,7 +1147,7 @@ function CreateTripPlanner({
   const handleGenerate = async () => {
     if ((!canGenerate && !pendingRequest) || submissionLock.current) return;
     if (!session) {
-      if (!canGenerate) return;
+      if (!canGenerate || !selectedPlace || !startDate || !endDate) return;
       const draft: StoredCreateDraft = {
         selectedPlace,
         startDate: format(startDate, "yyyy-MM-dd"),
@@ -1093,7 +1204,7 @@ function CreateTripPlanner({
         .slice(0, 10);
       const candidate = pendingRequest ?? {
         requestId: crypto.randomUUID(),
-        destination: selectedPlace!.name,
+        destination: selectedPlace!.name.trim(),
         start_date: format(startDate!, "yyyy-MM-dd"),
         end_date: format(endDate!, "yyyy-MM-dd"),
         travelers,
@@ -1343,11 +1454,11 @@ function CreateTripPlanner({
     );
   };
 
-  const datesReady = Boolean(selectedPlace && startDate && endDate);
+  const datesReady = Boolean(hasValidDestination && startDate && endDate);
   const preview = selectedRecommendedDest || destinations[0];
   const hotelDetailsInvalid =
     hotelSearch !== null && !validateHotelSearchDetails(hotelSearch, travelers);
-  const missingMessage = !selectedPlace
+  const missingMessage = !hasValidDestination
     ? "Choose a destination to get started"
     : !startDate || !endDate
       ? "Choose your dates to continue"
@@ -2129,7 +2240,7 @@ function CreateTripPlanner({
                 scrollToSection(
                   pendingRequest || generateError
                     ? "planner-notices"
-                    : !selectedPlace
+                    : !hasValidDestination
                       ? "planner-destination"
                       : !startDate || !endDate
                         ? "planner-dates"

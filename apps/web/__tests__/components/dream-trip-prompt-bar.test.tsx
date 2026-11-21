@@ -9,6 +9,7 @@ vi.mock("next/image", () => ({
 
 import { DreamTripPromptBar } from "@/components/create/DreamTripPromptBar";
 import {
+  computeLearnedSuggestions,
   createEmptyTravelerMemory,
   sanitizeTravelerMemory,
 } from "@/lib/trips/traveler-memory";
@@ -114,6 +115,75 @@ describe("DreamTripPromptBar @faroway/constants parity", () => {
         "cultural",
         "foodie",
       ]);
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+    }
+  });
+
+  test("normalizes memoryChips, learnedSuggestions, and appliedSummary chips to Moderate and Culture (never Comfort or Cultural)", async () => {
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+
+    const memory = {
+      ...createEmptyTravelerMemory(),
+      defaultBudget: "moderate" as const,
+      defaultVibes: ["cultural" as const, "foodie" as const],
+    };
+    const learned = computeLearnedSuggestions(
+      [
+        {
+          budget: "moderate",
+          vibes: ["cultural"],
+          recordedAt: "2026-10-01T00:00:00Z",
+        },
+        {
+          budget: "moderate",
+          vibes: ["cultural"],
+          recordedAt: "2026-10-02T00:00:00Z",
+        },
+      ],
+      createEmptyTravelerMemory(),
+    );
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <DreamTripPromptBar
+            isAuthenticated={false}
+            travelerMemory={memory}
+            memoryAppliedFields={["Moderate", "Culture, Foodie"]}
+            learnedSuggestions={learned}
+            appliedSummary={{
+              chips: ["Lisbon", "Oct 10–14", "Moderate", "Foodie, Culture"],
+              hasSafetyNotice: false,
+              sourceLabel: "Filled from your prompt",
+            }}
+            canUndo={false}
+            onApplyParsedPrompt={vi.fn()}
+            onApplySuggestion={vi.fn()}
+            onUndo={vi.fn()}
+            onSaveMemory={vi.fn()}
+            onSaveCurrentAsMemory={vi.fn()}
+            onClearMemory={vi.fn()}
+            onAcceptLearnedSuggestion={vi.fn()}
+            onDismissLearnedSuggestion={vi.fn()}
+          />,
+        );
+      });
+
+      const renderedText = JSON.stringify(renderer.toJSON());
+      expect(renderedText).toContain("Moderate");
+      expect(renderedText).toContain("Culture, Foodie");
+      expect(renderedText).toContain("Default to Moderate");
+      expect(renderedText).toContain("Add Culture as a default vibe");
+      expect(renderedText).toContain("Foodie, Culture");
+      expect(renderedText).not.toContain("Comfort comfort");
+      expect(renderedText).not.toContain("Comfort");
+      expect(renderedText).not.toContain("Cultural");
     } finally {
       await act(async () => {
         renderer?.unmount();

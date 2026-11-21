@@ -31,7 +31,7 @@ import { HAS_MOBILE_STORE_LINKS } from "@/lib/store-links";
 const helpCategories = [
   {
     icon: Rocket,
-    gradient: "from-blue-500 to-indigo-500",
+    gradient: "from-blue-700 to-indigo-700",
     title: "Getting Started",
     description: "Start your first AI-powered trip with guided preferences.",
     bullets: [
@@ -43,7 +43,7 @@ const helpCategories = [
   },
   {
     icon: Map,
-    gradient: "from-emerald-500 to-teal-500",
+    gradient: "from-emerald-700 to-teal-700",
     title: "Trip Planning",
     description: "Review, save, and share generated itineraries.",
     bullets: [
@@ -55,7 +55,7 @@ const helpCategories = [
   },
   {
     icon: User,
-    gradient: "from-violet-500 to-purple-500",
+    gradient: "from-violet-700 to-purple-700",
     title: "Account & Login",
     description: "Manage your account, profile, and preferences.",
     bullets: [
@@ -67,7 +67,7 @@ const helpCategories = [
   },
   {
     icon: CreditCard,
-    gradient: "from-primary to-amber-500",
+    gradient: "bg-primary-700",
     title: "Bookings & Payments",
     description: "How affiliate bookings and pricing work.",
     bullets: [
@@ -79,7 +79,7 @@ const helpCategories = [
   },
   {
     icon: WifiOff,
-    gradient: "from-sky-500 to-blue-500",
+    gradient: "from-sky-700 to-blue-700",
     title: "Offline & Sync",
     description: "Revisit saved trips when connectivity is limited.",
     bullets: [
@@ -91,7 +91,7 @@ const helpCategories = [
   },
   {
     icon: Shield,
-    gradient: "from-rose-500 to-pink-500",
+    gradient: "from-rose-700 to-pink-700",
     title: "Privacy & Security",
     description: "How we protect your data and respect your privacy.",
     bullets: [
@@ -248,10 +248,10 @@ export default function SupportPage() {
           </div>
 
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-            <span className="text-white/60 text-xs font-medium tracking-widest uppercase">
+            <span className="text-white/80 text-xs font-medium tracking-widest uppercase">
               Browse Topics
             </span>
-            <ChevronDown className="w-5 h-5 text-white/40 animate-bounce" />
+            <ChevronDown className="w-5 h-5 text-white/75 animate-bounce" />
           </div>
         </section>
 
@@ -277,7 +277,7 @@ export default function SupportPage() {
                 <FadeInOnScroll key={category.title} delay={i * 80}>
                   <div className="bg-white rounded-2xl p-7 border border-slate-200 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all h-full group">
                     <div
-                      className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${category.gradient} flex items-center justify-center mb-5 shadow-lg group-hover:scale-105 transition-transform`}
+                      className={`w-14 h-14 rounded-2xl ${category.gradient.includes("from-") ? `bg-gradient-to-br ${category.gradient}` : category.gradient} flex items-center justify-center mb-5 shadow-lg group-hover:scale-105 transition-transform`}
                     >
                       <category.icon className="w-7 h-7 text-white" />
                     </div>
@@ -371,7 +371,7 @@ export default function SupportPage() {
                 &ldquo;The best journeys answer questions that in the beginning
                 you didn&apos;t even think to ask.&rdquo;
               </blockquote>
-              <cite className="text-white/60 text-lg font-medium not-italic">
+              <cite className="text-white/80 text-lg font-medium not-italic">
                 &mdash; Jeff Johnson
               </cite>
             </FadeInOnScroll>
@@ -445,7 +445,7 @@ export default function SupportPage() {
 
               <FadeInOnScroll delay={200}>
                 <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all text-center h-full">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-5 shadow-lg">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-700 to-purple-700 flex items-center justify-center mx-auto mb-5 shadow-lg">
                     <MessageCircle className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">

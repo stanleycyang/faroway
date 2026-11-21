@@ -33,6 +33,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import LandingPage from "@/app/(marketing)/page";
+import AboutPage from "@/app/(marketing)/about/page";
+import SupportPage from "@/app/(marketing)/support/page";
 import PrivacyPolicyPage from "@/app/(marketing)/privacy/page";
 import TermsOfServicePage from "@/app/(marketing)/terms/page";
 import { Footer } from "@/components/Footer";
@@ -94,5 +96,28 @@ describe("Marketing & Legal Pages", () => {
     expect(html).toContain('src="/icon.png"');
     expect(html).toContain(">Faroway<");
     expect(html).toContain(AFFILIATE_DISCLOSURE_FULL);
+  });
+
+  test("AboutPage and SupportPage render cleanly without low-contrast gradients, white/60 or white/40 scrim text, or *-500 white-text icon tiles", () => {
+    const aboutHtml = renderToStaticMarkup(<AboutPage />);
+    const supportHtml = renderToStaticMarkup(<SupportPage />);
+    expect(aboutHtml).toContain("Craftsmanship");
+    expect(supportHtml).toContain("Bookings &amp; Payments");
+
+    for (const relPath of [
+      "app/(marketing)/about/page.tsx",
+      "app/(marketing)/support/page.tsx",
+    ]) {
+      const source = fs.readFileSync(
+        path.resolve(process.cwd(), relPath),
+        "utf8",
+      );
+      expect(source).not.toContain("from-primary to-amber-500");
+      expect(source).not.toContain("text-white/60");
+      expect(source).not.toContain("text-white/40");
+      expect(source).not.toMatch(
+        /from-(?:teal|emerald|sky|blue|violet|rose)-500/,
+      );
+    }
   });
 });

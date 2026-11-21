@@ -95,21 +95,21 @@ const approachCards = [
 const values = [
   {
     icon: Globe,
-    gradient: "from-teal-500 to-emerald-500",
+    gradient: "from-teal-700 to-emerald-700",
     title: "Accessibility",
     description:
       "Great travel experiences shouldn't be reserved for the privileged few. Faroway is free to start — so everyone can plan thoughtfully without expensive agency fees.",
   },
   {
     icon: Shield,
-    gradient: "from-blue-500 to-indigo-500",
+    gradient: "from-blue-700 to-indigo-700",
     title: "Privacy First",
     description:
       "Your travel data stays yours. We never sell personal information, and we protect your account and saved trips with encryption in transit and at rest.",
   },
   {
     icon: Sparkles,
-    gradient: "from-primary to-amber-500",
+    gradient: "from-primary-700 to-primary-800",
     title: "Craftsmanship",
     description:
       "Every itinerary is crafted with care. We obsess over the details — the neighborhood flow, realistic pacing, and helpful local tips — so you don't have to.",
@@ -183,10 +183,10 @@ export default function AboutPage() {
           </div>
 
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-            <span className="text-white/60 text-xs font-medium tracking-widest uppercase">
+            <span className="text-white/80 text-xs font-medium tracking-widest uppercase">
               Our Story
             </span>
-            <ChevronDown className="w-5 h-5 text-white/40 animate-bounce" />
+            <ChevronDown className="w-5 h-5 text-white/75 animate-bounce" />
           </div>
         </section>
 
@@ -329,7 +329,7 @@ export default function AboutPage() {
                       <h3 className="text-xl font-bold text-white mb-2">
                         {card.title}
                       </h3>
-                      <p className="text-white/60 leading-relaxed text-sm">
+                      <p className="text-white/80 leading-relaxed text-sm">
                         {card.description}
                       </p>
                     </div>
@@ -358,7 +358,7 @@ export default function AboutPage() {
                 <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">
                   Built for real travelers
                 </h2>
-                <p className="text-white/60 text-lg">
+                <p className="text-white/80 text-lg">
                   Here&apos;s what Faroway delivers
                 </p>
               </div>
@@ -393,7 +393,7 @@ export default function AboutPage() {
                     <div className="text-2xl lg:text-3xl font-bold text-white mb-1">
                       {stat.value}
                     </div>
-                    <p className="text-white/60 text-sm font-medium">
+                    <p className="text-white/80 text-sm font-medium">
                       {stat.label}
                     </p>
                   </div>
@@ -475,7 +475,7 @@ export default function AboutPage() {
                       }`}
                     >
                       {/* Dot */}
-                      <div className="absolute left-6 lg:left-1/2 w-3 h-3 bg-gradient-to-br from-primary to-amber-500 rounded-full -translate-x-1.5 mt-2 shadow-lg shadow-primary/25 z-10" />
+                      <div className="absolute left-6 lg:left-1/2 w-3 h-3 bg-primary-700 rounded-full -translate-x-1.5 mt-2 shadow-lg shadow-primary/25 z-10" />
 
                       {/* Content */}
                       <div
