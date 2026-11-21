@@ -167,12 +167,14 @@ export function summarizeBudget(
       const rtKey = day.transport.affiliateUrl
         ? `rt:${day.transport.affiliatePartner ?? ""}:${day.transport.affiliateUrl}:${day.transport.price}:${day.transport.currency}`
         : undefined;
-      const alreadyCounted =
-        (idKey && countedRoundTrips.has(idKey)) ||
-        (rtKey && countedRoundTrips.has(rtKey));
+      const alreadyCounted = idKey
+        ? countedRoundTrips.has(idKey)
+        : rtKey
+          ? countedRoundTrips.has(rtKey)
+          : false;
       if (!alreadyCounted) {
         if (idKey) countedRoundTrips.add(idKey);
-        if (rtKey) countedRoundTrips.add(rtKey);
+        else if (rtKey) countedRoundTrips.add(rtKey);
         if (flightQuoteIsCurrent(day.transport, now))
           add("transport", day.transport.price, day.transport.currency);
         else unknownItems++;

@@ -209,5 +209,48 @@ describe("POST /api/track/conversion (expanded M2 webhooks)", () => {
       ),
     );
     expect(invalidDate.status).toBe(400);
+
+    const whitespaceClickId = await POST(
+      makeWebhookReq(
+        JSON.stringify({
+          partner: "viator",
+          clickId: "   ",
+          externalTransactionId: "tx-1",
+        }),
+      ),
+    );
+    expect(whitespaceClickId.status).toBe(400);
+    expect(mocks.upsertSpy).not.toHaveBeenCalled();
+  });
+
+  it("trims clickId consistently and merges mixed camelCase + snake_case fields", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-mixed-sec");
+    const payload = JSON.stringify({
+      partner: "viator",
+      clickId: "  click-1  ",
+      externalTransactionId: "tx-mixed-1",
+      booking_value: 250,
+      commission_value: 25,
+      conversion_date: "2026-06-15T10:00:00Z",
+      status: "cancelled",
+    });
+
+    const res = await POST(
+      makeWebhookReq(payload, sign(payload, "viator-mixed-sec")),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.clickId).toBe("click-1");
+    expect(mocks.upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        click_id: "click-1",
+        order_id: "tx-mixed-1",
+        booking_value: 250,
+        commission_value: 25,
+        status: "cancelled",
+        conversion_date: "2026-06-15T10:00:00Z",
+      }),
+      { onConflict: "partner,conversion_key" },
+    );
   });
 });

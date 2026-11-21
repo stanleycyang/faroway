@@ -1,7 +1,12 @@
-import { tripDayPassthroughSchema } from "@/lib/search/result-schemas";
+import {
+  hotelDataSchema,
+  parseHotelResult,
+  searchResultRowSchema,
+  tripDayPassthroughSchema,
+} from "@/lib/search/result-schemas";
 import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
-import type { GeneratedItinerary, HotelResult, TripDay } from "@faroway/types";
+import type { GeneratedItinerary, HotelResult } from "@faroway/types";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { getSupabase } from "@/lib/supabase/server";
 import { checkRateLimitAsync } from "@/lib/security/rate-limit";
@@ -23,22 +28,32 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_BODY_BYTES = 16_384;
 
-interface ItineraryRow {
-  id?: string;
-  days: unknown;
-  overview: string | null;
-  total_cost: unknown;
-  packing_list: string[] | null;
-  general_tips: string[] | null;
-  generated_at: string | null;
-}
+const itineraryJoinRowSchema = z
+  .object({
+    id: z.string().optional(),
+    days: z.unknown(),
+    overview: z.string().nullable().optional().default(null),
+    total_cost: z.unknown().optional(),
+    packing_list: z.array(z.string()).nullable().optional().default(null),
+    general_tips: z.array(z.string()).nullable().optional().default(null),
+    generated_at: z.string().nullable().optional().default(null),
+  })
+  .passthrough();
 
-interface SearchResultRow {
-  id: string;
-  category: string;
-  data: Record<string, unknown>;
-  vibe_score: number | null;
-}
+const copilotRpcOutcomeSchema = z
+  .object({
+    state: z.string().optional(),
+    restoredDays: z.unknown().optional(),
+    restoredOverview: z.string().optional(),
+    revision: z.string().optional(),
+    planRevision: z.string().optional(),
+    undoRevisionId: z.string().optional(),
+  })
+  .passthrough();
+
+const topHotelSchema = hotelDataSchema.extend({
+  name: z.string(),
+});
 
 const json = (
   data: unknown,
@@ -57,16 +72,17 @@ function readTotalEstimatedCost(raw: unknown): {
   if (typeof raw === "number" && Number.isFinite(raw)) {
     return { amount: raw, currency: "USD" };
   }
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    const rec = raw as Record<string, unknown>;
-    if (
-      typeof rec.amount === "number" &&
-      Number.isFinite(rec.amount) &&
-      typeof rec.currency === "string" &&
-      rec.currency.trim().length > 0
-    ) {
-      return { amount: rec.amount, currency: rec.currency.trim() };
-    }
+  const parsed = z
+    .object({
+      amount: z.number().finite(),
+      currency: z.string(),
+    })
+    .safeParse(raw);
+  if (parsed.success && parsed.data.currency.trim().length > 0) {
+    return {
+      amount: parsed.data.amount,
+      currency: parsed.data.currency.trim(),
+    };
   }
   return { amount: 0, currency: "USD" };
 }
@@ -186,11 +202,12 @@ export async function POST(request: NextRequest, context: Context) {
       );
     }
 
-    const joined = (
-      trip as typeof trip & {
-        itineraries: ItineraryRow[] | ItineraryRow | null;
-      }
-    ).itineraries;
+    const joinedResult = z
+      .union([z.array(itineraryJoinRowSchema), itineraryJoinRowSchema])
+      .nullable()
+      .optional()
+      .safeParse("itineraries" in trip ? trip.itineraries : null);
+    const joined = joinedResult.success ? joinedResult.data : null;
     const rawItinerary = Array.isArray(joined)
       ? (joined[0] ?? null)
       : (joined ?? null);
@@ -301,17 +318,35 @@ export async function POST(request: NextRequest, context: Context) {
         .maybeSingle();
 
       if (!searchError && search && search.user_id === auth.userId) {
-        const ir = filterViatorDisplay(
-          (search.intermediate_results as Record<string, unknown> | null) ?? {},
-        );
-        if (ir.topHotel && typeof ir.topHotel === "object") {
-          topHotel = ir.topHotel as HotelResult;
+        const irRecord = z
+          .record(z.string(), z.unknown())
+          .safeParse(search.intermediate_results);
+        const ir = filterViatorDisplay(irRecord.success ? irRecord.data : {});
+        const rawTopHotelRecord = z
+          .record(z.string(), z.unknown())
+          .safeParse(ir.topHotel);
+        if (rawTopHotelRecord.success) {
+          const parsedTopHotel = topHotelSchema.safeParse(
+            rawTopHotelRecord.data,
+          );
+          if (parsedTopHotel.success) {
+            topHotel = parseHotelResult(
+              rawTopHotelRecord.data,
+              typeof parsedTopHotel.data.id === "string"
+                ? parsedTopHotel.data.id
+                : "top-hotel",
+            );
+          }
         }
 
-        const rows = (
-          (search as typeof search & { search_results?: SearchResultRow[] })
-            .search_results ?? []
-        ).sort((a, b) => (b.vibe_score ?? 0) - (a.vibe_score ?? 0));
+        const rawResults = z
+          .array(searchResultRowSchema)
+          .safeParse(
+            "search_results" in search ? search.search_results : undefined,
+          );
+        const rows = (rawResults.success ? [...rawResults.data] : []).sort(
+          (a, b) => (b.vibe_score ?? 0) - (a.vibe_score ?? 0),
+        );
 
         for (const row of rows) {
           if (row.category !== "activity" || !row.data) continue;
@@ -373,7 +408,8 @@ export async function POST(request: NextRequest, context: Context) {
         );
       }
 
-      const outcome = (rpcResult ?? {}) as Record<string, unknown>;
+      const parsedOutcome = copilotRpcOutcomeSchema.safeParse(rpcResult ?? {});
+      const outcome = parsedOutcome.success ? parsedOutcome.data : {};
       if (outcome.state === "conflict") {
         return json(
           {
@@ -395,10 +431,13 @@ export async function POST(request: NextRequest, context: Context) {
         });
       }
 
+      const parsedRestoredDays = z
+        .array(tripDayPassthroughSchema)
+        .safeParse(outcome.restoredDays);
       const restoredItinerary: GeneratedItinerary = {
         ...currentItinerary,
-        days: Array.isArray(outcome.restoredDays)
-          ? (outcome.restoredDays as TripDay[])
+        days: parsedRestoredDays.success
+          ? parsedRestoredDays.data
           : currentItinerary.days,
         overview:
           typeof outcome.restoredOverview === "string"
@@ -443,7 +482,7 @@ export async function POST(request: NextRequest, context: Context) {
       });
     }
 
-    // Verify stamped days have no conflicting planItemIds before persisting
+    // Verify stamped days have no conflicting planItemIds and valid shapes before persisting
     let nextStampedDays: Record<string, unknown>[];
     try {
       nextStampedDays = stampPlanItems(id, result.updatedItinerary.days);
@@ -452,6 +491,19 @@ export async function POST(request: NextRequest, context: Context) {
         {
           error:
             "Could not verify updated plan item identities. Your previous itinerary is unchanged.",
+        },
+        409,
+      );
+    }
+
+    const validatedNextDays = z
+      .array(tripDayPassthroughSchema)
+      .safeParse(nextStampedDays);
+    if (!validatedNextDays.success) {
+      return json(
+        {
+          error:
+            "Could not verify updated itinerary days. Your previous itinerary is unchanged.",
         },
         409,
       );
@@ -487,7 +539,8 @@ export async function POST(request: NextRequest, context: Context) {
       );
     }
 
-    const outcome = (rpcResult ?? {}) as Record<string, unknown>;
+    const parsedOutcome = copilotRpcOutcomeSchema.safeParse(rpcResult ?? {});
+    const outcome = parsedOutcome.success ? parsedOutcome.data : {};
     if (outcome.state === "conflict") {
       return json(
         {
@@ -510,7 +563,7 @@ export async function POST(request: NextRequest, context: Context) {
 
     const persistedItinerary: GeneratedItinerary = {
       ...result.updatedItinerary,
-      days: z.array(tripDayPassthroughSchema).parse(nextStampedDays),
+      days: validatedNextDays.data,
       overview: "",
     };
 

@@ -11,6 +11,7 @@ import {
   buildDiscoverCarsUrl,
   buildExpediaHotelUrl,
   buildFlightFallbackLinks,
+  buildGYGAffiliateUrl,
   buildGYGSearchUrl,
   buildHostelworldUrl,
   buildHotelPartnerLinks,
@@ -26,6 +27,7 @@ import {
   buildWiseUrl,
   generateDuffelLink,
   parseDuffelReturnStatus,
+  resolveDestinationTravelMeta,
   searchDuffelFlights,
   searchViatorProducts,
 } from "@/lib/affiliates";
@@ -514,5 +516,192 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/search/freetext");
     expect(results[0]?.productCode).toBe("999P1");
+  });
+
+  it("counts distinct flight IDs sharing fallback affiliateUrl and price while deduplicating __return legs", () => {
+    const day1Transport = {
+      id: "flight_a",
+      type: "flight" as const,
+      provider: "Skyscanner",
+      departure: {
+        airport: "SFO",
+        city: "SF",
+        dateTime: "2026-07-01T10:00:00Z",
+      },
+      arrival: {
+        airport: "NRT",
+        city: "Tokyo",
+        dateTime: "2026-07-02T14:00:00Z",
+      },
+      duration: 600,
+      stops: 0,
+      price: 300,
+      currency: "USD",
+      affiliatePartner: "skyscanner",
+      affiliateUrl: "https://www.skyscanner.com/flights",
+    };
+    const day5DistinctFlight = {
+      ...day1Transport,
+      id: "flight_b",
+    };
+    const day6ReturnLeg = {
+      ...day1Transport,
+      id: "flight_a__return",
+    };
+
+    const makeDay = (dayNumber: number, transport: typeof day1Transport) =>
+      ({
+        dayNumber,
+        date: `2026-07-0${dayNumber}`,
+        title: `Day ${dayNumber}`,
+        summary: "Travel",
+        morning: { activities: [], meals: [] },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        transport,
+        tips: [],
+      }) as unknown as TripDay;
+
+    const budget = summarizeBudget(
+      [
+        makeDay(1, day1Transport),
+        makeDay(5, day5DistinctFlight),
+        makeDay(6, day6ReturnLeg),
+      ],
+      null,
+      1,
+      Date.parse("2026-06-01T00:00:00Z"),
+    );
+
+    expect(budget.groups).toEqual([
+      {
+        currency: "USD",
+        accommodation: 0,
+        activities: 0,
+        dining: 0,
+        transport: 600,
+        total: 600,
+      },
+    ]);
+  });
+
+  it("guards non-finite markupAmount in generateDuffelLink instead of sending NaN or Infinity", async () => {
+    vi.stubEnv("DUFFEL_API_TOKEN", "duffel_test_token");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({ data: { url: "https://links.duffel.com/s_ok" } }),
+            { status: 200 },
+          ),
+      );
+
+    await generateDuffelLink("off_1", Number.NaN, "USD");
+    await generateDuffelLink("off_1", Number.POSITIVE_INFINITY, "USD");
+    await generateDuffelLink("off_1", Number.NEGATIVE_INFINITY, "USD");
+
+    for (const call of fetchMock.mock.calls) {
+      const sent = JSON.parse(String(call[1]?.body));
+      expect(sent.data.markup_amount).toBe("5.00");
+    }
+  });
+
+  it("disambiguates homonymous US/Canadian cities before city substring matching in resolveDestinationTravelMeta", () => {
+    expect(resolveDestinationTravelMeta("Paris, Texas")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
+    expect(resolveDestinationTravelMeta("Paris, TX")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
+    expect(
+      resolveDestinationTravelMeta("London, Ontario, Canada"),
+    ).toMatchObject({
+      iso2: "CA",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("London, Ontario, CA")).toMatchObject({
+      iso2: "CA",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("Ontario, California")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
+    expect(resolveDestinationTravelMeta("Paris, France")).toMatchObject({
+      iso2: "FR",
+      currency: "EUR",
+    });
+    expect(resolveDestinationTravelMeta("Paris")).toMatchObject({
+      iso2: "FR",
+      currency: "EUR",
+    });
+  });
+
+  it("rejects impossible calendar dates in buildGYGAffiliateUrl and omits inverted end/return dates across builders", () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+    vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "approved-ref");
+    vi.stubEnv("VIATOR_PARTNER_ID", "P001234");
+    vi.stubEnv("VIATOR_MCID", "42383");
+    vi.stubEnv("TRAVELPAYOUTS_MARKER", "tp_mark_1");
+    vi.stubEnv("TRAVELPAYOUTS_TRS", "12345");
+    vi.stubEnv("SKYSCANNER_ASSOCIATE_ID", "sky-assoc");
+
+    const gygInvalidDate = buildGYGAffiliateUrl(
+      "12345",
+      "camp-1",
+      "GYG123",
+      "2026-02-30",
+    );
+    expect(gygInvalidDate).toBe(
+      "https://www.getyourguide.com/activity-t12345/?partner_id=GYG123&cmp=camp-1",
+    );
+
+    const skyInverted = buildSkyscannerFlightUrl({
+      originAirport: "SFO",
+      destinationAirport: "NRT",
+      departureDate: "2026-06-10",
+      returnDate: "2026-06-05",
+      adults: 2,
+    });
+    expect(skyInverted.url).toContain("/transport/flights/sfo/nrt/260610/");
+    expect(skyInverted.url).not.toContain("260605");
+
+    const aviaInverted = buildAviasalesFlightUrl({
+      originAirport: "SFO",
+      destinationAirport: "NRT",
+      departureDate: "2026-06-10",
+      returnDate: "2026-06-05",
+      adults: 2,
+    });
+    const aviaTarget = new URL(aviaInverted.url!).searchParams.get("u") ?? "";
+    expect(aviaTarget).toBe("https://www.aviasales.com/search/SFO1006NRT2");
+
+    const dcInverted = buildDiscoverCarsUrl({
+      destination: "Tokyo",
+      startDate: "2026-06-10",
+      endDate: "2026-06-05",
+    });
+    const dcTarget = new URL(dcInverted.url!).searchParams.get("u") ?? "";
+    expect(dcTarget).toContain("from=2026-06-10");
+    expect(dcTarget).not.toContain("to=2026-06-05");
+
+    const gygInverted = buildGYGSearchUrl({
+      destination: "Tokyo",
+      startDate: "2026-06-10",
+      endDate: "2026-06-05",
+    });
+    expect(gygInverted.url).toContain("date_from=2026-06-10");
+    expect(gygInverted.url).not.toContain("date_to=2026-06-05");
+
+    const viatorInverted = buildViatorSearchUrl({
+      destination: "Tokyo",
+      startDate: "2026-06-10",
+      endDate: "2026-06-05",
+    });
+    expect(viatorInverted).toContain("startDate=2026-06-10");
+    expect(viatorInverted).not.toContain("endDate=2026-06-05");
   });
 });

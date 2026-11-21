@@ -293,7 +293,7 @@ export function buildGYGAffiliateUrl(
     partner_id: partnerId,
     cmp: campaign,
   });
-  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) params.set("date", date);
+  if (date && isValidDateOnly(date)) params.set("date", date);
   return `https://www.getyourguide.com/activity-t${activityId}/?${params}`;
 }
 
@@ -310,6 +310,16 @@ export function generateGYGAffiliateUrl(
     getGygPartnerId(),
     options?.date,
   );
+}
+
+function validActivitySearchDates(startDate?: string, endDate?: string) {
+  const validStart =
+    startDate && isValidDateOnly(startDate) ? startDate : undefined;
+  const validEnd = endDate && isValidDateOnly(endDate) ? endDate : undefined;
+  if (validStart && validEnd && validEnd < validStart) {
+    return { startDate: validStart, endDate: undefined };
+  }
+  return { startDate: validStart, endDate: validEnd };
 }
 
 export function buildGYGSearchUrl(params: {
@@ -342,11 +352,15 @@ export function buildGYGSearchUrl(params: {
 
   const url = new URL("https://www.getyourguide.com/s/");
   url.searchParams.set("q", q);
-  if (params.startDate && isValidDateOnly(params.startDate)) {
-    url.searchParams.set("date_from", params.startDate);
+  const { startDate, endDate } = validActivitySearchDates(
+    params.startDate,
+    params.endDate,
+  );
+  if (startDate) {
+    url.searchParams.set("date_from", startDate);
   }
-  if (params.endDate && isValidDateOnly(params.endDate)) {
-    url.searchParams.set("date_to", params.endDate);
+  if (endDate) {
+    url.searchParams.set("date_to", endDate);
   }
   if (validPartnerId) {
     url.searchParams.set("partner_id", validPartnerId);

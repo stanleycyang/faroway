@@ -225,20 +225,190 @@ const COUNTRY_META_LIST: CountryTravelMeta[] = [
   },
 ];
 
-const COUNTRY_ALIASES: Record<string, string> = {
+const EXPLICIT_COUNTRY_ALIASES: Record<string, string> = {
   uk: "United Kingdom",
   gb: "United Kingdom",
   england: "United Kingdom",
   scotland: "United Kingdom",
+  wales: "United Kingdom",
   usa: "United States",
   us: "United States",
   america: "United States",
   uae: "United Arab Emirates",
-  dubai: "United Arab Emirates",
-  bali: "Indonesia",
   korea: "South Korea",
   czechia: "Czech Republic",
 };
+
+const CITY_COUNTRY_ALIASES: Record<string, string> = {
+  dubai: "United Arab Emirates",
+  bali: "Indonesia",
+};
+
+const US_STATE_NAMES = [
+  "alabama",
+  "alaska",
+  "arizona",
+  "arkansas",
+  "california",
+  "colorado",
+  "connecticut",
+  "delaware",
+  "florida",
+  "georgia",
+  "hawaii",
+  "idaho",
+  "illinois",
+  "indiana",
+  "iowa",
+  "kansas",
+  "kentucky",
+  "louisiana",
+  "maine",
+  "maryland",
+  "massachusetts",
+  "michigan",
+  "minnesota",
+  "mississippi",
+  "missouri",
+  "montana",
+  "nebraska",
+  "nevada",
+  "new hampshire",
+  "new jersey",
+  "new mexico",
+  "new york",
+  "north carolina",
+  "north dakota",
+  "ohio",
+  "oklahoma",
+  "oregon",
+  "pennsylvania",
+  "rhode island",
+  "south carolina",
+  "south dakota",
+  "tennessee",
+  "texas",
+  "utah",
+  "vermont",
+  "virginia",
+  "washington",
+  "west virginia",
+  "wisconsin",
+  "wyoming",
+  "district of columbia",
+] as const;
+
+const US_STATE_ABBR_SET = new Set([
+  "al",
+  "ak",
+  "az",
+  "ar",
+  "ca",
+  "co",
+  "ct",
+  "de",
+  "fl",
+  "ga",
+  "hi",
+  "id",
+  "il",
+  "in",
+  "ia",
+  "ks",
+  "ky",
+  "la",
+  "me",
+  "md",
+  "ma",
+  "mi",
+  "mn",
+  "ms",
+  "mo",
+  "mt",
+  "ne",
+  "nv",
+  "nh",
+  "nj",
+  "nm",
+  "ny",
+  "nc",
+  "nd",
+  "oh",
+  "ok",
+  "or",
+  "pa",
+  "ri",
+  "sc",
+  "sd",
+  "tn",
+  "tx",
+  "ut",
+  "vt",
+  "va",
+  "wa",
+  "wv",
+  "wi",
+  "wy",
+  "dc",
+]);
+
+const CANADIAN_PROVINCE_NAMES = [
+  "ontario",
+  "quebec",
+  "british columbia",
+  "alberta",
+  "manitoba",
+  "saskatchewan",
+  "nova scotia",
+  "new brunswick",
+  "newfoundland",
+  "prince edward island",
+] as const;
+
+const CANADIAN_PROVINCE_ABBR_SET = new Set([
+  "on",
+  "qc",
+  "bc",
+  "ab",
+  "mb",
+  "sk",
+  "ns",
+  "nb",
+  "nl",
+  "pe",
+]);
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasWordMatch(haystack: string, term: string): boolean {
+  return new RegExp(`\\b${escapeRegex(term)}\\b`, "i").test(haystack);
+}
+
+function findCountryMeta(canonicalName: string): CountryTravelMeta | null {
+  const lower = canonicalName.toLowerCase();
+  const aliasTarget = EXPLICIT_COUNTRY_ALIASES[lower];
+  const target = (aliasTarget ?? canonicalName).toLowerCase();
+  return (
+    COUNTRY_META_LIST.find((c) => c.countryName.toLowerCase() === target) ??
+    null
+  );
+}
+
+function matchCountryOrAlias(text: string): CountryTravelMeta | null {
+  for (const meta of COUNTRY_META_LIST) {
+    if (hasWordMatch(text, meta.countryName.toLowerCase())) {
+      return meta;
+    }
+  }
+  for (const [alias, canonical] of Object.entries(EXPLICIT_COUNTRY_ALIASES)) {
+    if (hasWordMatch(text, alias)) {
+      return findCountryMeta(canonical);
+    }
+  }
+  return null;
+}
 
 export function resolveDestinationTravelMeta(
   destinationOrCountry?: string,
@@ -247,37 +417,85 @@ export function resolveDestinationTravelMeta(
   if (!input) return null;
   const lower = input.toLowerCase();
 
-  // Check popularDestinations from @faroway/constants first
-  for (const dest of popularDestinations) {
-    if (
-      lower === dest.name.toLowerCase() ||
-      lower === dest.country.toLowerCase() ||
-      lower.includes(dest.name.toLowerCase()) ||
-      lower.includes(dest.country.toLowerCase())
-    ) {
-      const matched = COUNTRY_META_LIST.find(
-        (c) => c.countryName.toLowerCase() === dest.country.toLowerCase(),
-      );
-      if (matched) return matched;
-    }
-  }
-
-  for (const [alias, canonical] of Object.entries(COUNTRY_ALIASES)) {
-    if (new RegExp(`\\b${alias}\\b`, "i").test(lower)) {
-      const matched = COUNTRY_META_LIST.find(
-        (c) => c.countryName === canonical,
-      );
-      if (matched) return matched;
-    }
-  }
-
+  // 1. Exact full-string country, ISO2, or alias match
   for (const meta of COUNTRY_META_LIST) {
     if (
       lower === meta.countryName.toLowerCase() ||
-      lower === meta.iso2.toLowerCase() ||
-      lower.includes(meta.countryName.toLowerCase())
+      lower === meta.iso2.toLowerCase()
     ) {
       return meta;
+    }
+  }
+  if (Object.hasOwn(EXPLICIT_COUNTRY_ALIASES, lower)) {
+    return findCountryMeta(EXPLICIT_COUNTRY_ALIASES[lower]);
+  }
+  if (Object.hasOwn(CITY_COUNTRY_ALIASES, lower)) {
+    return findCountryMeta(CITY_COUNTRY_ALIASES[lower]);
+  }
+
+  const segments = lower
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const trailingSegments = segments.slice(1);
+
+  // 2. Explicit country / country-alias disambiguation (trailing segments first, then full text)
+  for (let i = trailingSegments.length - 1; i >= 0; i--) {
+    const seg = trailingSegments[i];
+    const isoExact = COUNTRY_META_LIST.find(
+      (c) => c.iso2.toLowerCase() === seg && !US_STATE_ABBR_SET.has(seg),
+    );
+    if (isoExact) return isoExact;
+    const countryMatch = matchCountryOrAlias(seg);
+    if (countryMatch) return countryMatch;
+  }
+  const fullCountryMatch = matchCountryOrAlias(lower);
+  if (fullCountryMatch) return fullCountryMatch;
+
+  // 3. Trailing region/state/province disambiguation (full names before 2-letter abbreviations)
+  for (let i = trailingSegments.length - 1; i >= 0; i--) {
+    const seg = trailingSegments[i];
+    if (US_STATE_NAMES.some((state) => hasWordMatch(seg, state))) {
+      return findCountryMeta("United States");
+    }
+    if (CANADIAN_PROVINCE_NAMES.some((prov) => hasWordMatch(seg, prov))) {
+      return findCountryMeta("Canada");
+    }
+  }
+  for (let i = trailingSegments.length - 1; i >= 0; i--) {
+    const seg = trailingSegments[i];
+    if (CANADIAN_PROVINCE_ABBR_SET.has(seg)) {
+      return findCountryMeta("Canada");
+    }
+    if (US_STATE_ABBR_SET.has(seg)) {
+      return findCountryMeta("United States");
+    }
+  }
+
+  // 4. Full-string word-boundary US state / Canadian province fallback (e.g. "New York", "Paris Texas")
+  if (US_STATE_NAMES.some((state) => hasWordMatch(lower, state))) {
+    return findCountryMeta("United States");
+  }
+  if (CANADIAN_PROVINCE_NAMES.some((prov) => hasWordMatch(lower, prov))) {
+    return findCountryMeta("Canada");
+  }
+
+  // 5. popularDestinations city & country word-boundary match
+  for (const dest of popularDestinations) {
+    if (
+      lower === dest.name.toLowerCase() ||
+      hasWordMatch(lower, dest.name.toLowerCase()) ||
+      hasWordMatch(lower, dest.country.toLowerCase())
+    ) {
+      const matched = findCountryMeta(dest.country);
+      if (matched) return matched;
+    }
+  }
+
+  // 6. Remaining city-level aliases (e.g. "Bali, Indonesia" or "Dubai")
+  for (const [alias, canonical] of Object.entries(CITY_COUNTRY_ALIASES)) {
+    if (hasWordMatch(lower, alias)) {
+      return findCountryMeta(canonical);
     }
   }
 
@@ -394,11 +612,21 @@ export function buildDiscoverCarsUrl(params: {
   if (params.destination.trim()) {
     url.searchParams.set("location", params.destination.trim());
   }
-  if (params.startDate && isValidDateOnly(params.startDate)) {
-    url.searchParams.set("from", params.startDate);
+  const validStart =
+    params.startDate && isValidDateOnly(params.startDate)
+      ? params.startDate
+      : undefined;
+  const validEnd =
+    params.endDate && isValidDateOnly(params.endDate)
+      ? params.endDate
+      : undefined;
+  const safeEnd =
+    validStart && validEnd && validEnd < validStart ? undefined : validEnd;
+  if (validStart) {
+    url.searchParams.set("from", validStart);
   }
-  if (params.endDate && isValidDateOnly(params.endDate)) {
-    url.searchParams.set("to", params.endDate);
+  if (safeEnd) {
+    url.searchParams.set("to", safeEnd);
   }
 
   if (aid) {

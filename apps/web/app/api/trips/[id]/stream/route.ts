@@ -142,9 +142,16 @@ const searchStreamRecordSchema = z
   .object({
     status: z.string(),
     progress: z
-      .record(z.string(), z.string())
+      .record(z.string(), z.string().nullish())
       .nullish()
-      .transform((v) => v ?? null),
+      .transform((record) => {
+        if (!record) return null;
+        const normalized: Record<string, string> = {};
+        for (const [key, val] of Object.entries(record)) {
+          if (typeof val === "string") normalized[key] = val;
+        }
+        return normalized;
+      }),
     error_message: z.string().nullable().optional().default(null),
     intermediate_results: z
       .record(z.string(), z.unknown())
@@ -546,8 +553,12 @@ async function pollAndStream(
       : undefined;
 
     if (!sentHotels && ir.hotels) {
-      const parsedHotels = z.array(hotelInputSchema).safeParse(ir.hotels);
-      const hotels = parsedHotels.success ? parsedHotels.data : [];
+      const hotels = Array.isArray(ir.hotels)
+        ? ir.hotels.flatMap((entry) => {
+            const parsedHotel = hotelInputSchema.safeParse(entry);
+            return parsedHotel.success ? [parsedHotel.data] : [];
+          })
+        : [];
       send("hotels", {
         topHotel: validTopHotel || hotels[0] || null,
         count: hotels.length,
@@ -578,11 +589,19 @@ async function pollAndStream(
         terminalEventSent = true;
         break;
       }
+      let mappedDays: ReturnType<typeof mappedDaysToSpec>;
+      try {
+        mappedDays = mappedDaysToSpec(days);
+      } catch {
+        send("error", { message: "Malformed itinerary partial output" });
+        terminalEventSent = true;
+        break;
+      }
       const itineraryJson = JSON.stringify(days);
       if (itineraryJson !== lastItineraryJson) {
         lastItineraryJson = itineraryJson;
-        send("itinerary", { days, topHotel: ir.topHotel || null });
-        const itineraryBlocks = buildItineraryBlocks(mappedDaysToSpec(days));
+        send("itinerary", { days, topHotel: validTopHotel ?? null });
+        const itineraryBlocks = buildItineraryBlocks(mappedDays);
         if (itineraryBlocks.length > 0) {
           send("spec-block", { chapter: "itinerary", blocks: itineraryBlocks });
         }
@@ -592,15 +611,15 @@ async function pollAndStream(
               new Date(tripMeta.startDate).getTime()) /
               (1000 * 60 * 60 * 24),
           );
-          const parsedActivities = z
-            .array(activityInputSchema)
-            .safeParse(ir.activities);
+          const activities = Array.isArray(ir.activities)
+            ? ir.activities.flatMap((entry) => {
+                const parsedActivity = activityInputSchema.safeParse(entry);
+                return parsedActivity.success ? [parsedActivity.data] : [];
+              })
+            : [];
           const budgetBlocks = buildBudgetBlocks({
             topHotel: validTopHotel,
-            activities: (parsedActivities.success
-              ? parsedActivities.data
-              : []
-            ).slice(0, 20),
+            activities: activities.slice(0, 20),
             nights,
           });
           if (budgetBlocks.length > 0) {
@@ -668,7 +687,7 @@ function normalizeItineraryDays(value: unknown): unknown[] | null {
   if (typeof value !== "string") return null;
 
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed) ? filterViatorDisplay(parsed) : null;
   } catch {
     return null;

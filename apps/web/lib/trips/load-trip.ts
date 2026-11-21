@@ -8,6 +8,20 @@ import type { HotelResult } from "@faroway/types";
 import { getSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
 
+export type TripLifecycleStatus =
+  | "draft"
+  | "planning"
+  | "planned"
+  | "generating"
+  | "generated"
+  | "failed"
+  | "active"
+  | "in_progress"
+  | "booked"
+  | "paid"
+  | "completed"
+  | "canceled";
+
 export interface Trip {
   id: string;
   user_id: string;
@@ -20,13 +34,7 @@ export interface Trip {
   dietary_restrictions?: string[] | null;
   mobility_needs?: string | null;
   vibes?: string[];
-  status:
-    | "draft"
-    | "generating"
-    | "planned"
-    | "generated"
-    | "completed"
-    | "failed";
+  status: TripLifecycleStatus;
   search_id?: string;
   plan_revision_id?: string | null;
   is_shared?: boolean;
@@ -42,7 +50,7 @@ export interface TripResponse {
 
 const itineraryJoinSchema = z
   .object({
-    days: z.unknown().optional(),
+    days: z.array(z.unknown()),
     overview: z.string().nullable().optional(),
     total_cost: z.unknown().nullable().optional(),
     packing_list: z.array(z.string()).nullable().optional(),
@@ -53,14 +61,29 @@ const itineraryJoinSchema = z
 
 const tripStatusSchema = z.enum([
   "draft",
-  "generating",
+  "planning",
   "planned",
+  "generating",
   "generated",
-  "completed",
   "failed",
+  "active",
+  "in_progress",
+  "booked",
+  "paid",
+  "completed",
+  "canceled",
 ]);
 
-const budgetTierSchema = z.enum(["budget", "moderate", "luxury"]);
+const canonicalBudgetTierSchema = z.enum(["budget", "moderate", "luxury"]);
+
+const budgetTierSchema = z.preprocess((val) => {
+  if (typeof val !== "string") return val;
+  const key = val.trim().toLowerCase();
+  if (key === "comfort" || key === "mid_range" || key === "mid-range") {
+    return "moderate";
+  }
+  return key;
+}, canonicalBudgetTierSchema);
 
 const tripRowSchema = z
   .object({
@@ -113,7 +136,13 @@ const searchTopHotelRowSchema = z
   .passthrough();
 
 const generatedItinerarySchema = z.custom<GeneratedItinerary>((val) =>
-  Boolean(val && typeof val === "object" && !Array.isArray(val)),
+  Boolean(
+    val &&
+    typeof val === "object" &&
+    !Array.isArray(val) &&
+    "days" in val &&
+    Array.isArray(val.days),
+  ),
 );
 
 export async function loadTripForUserUncached(

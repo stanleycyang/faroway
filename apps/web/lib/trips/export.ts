@@ -121,6 +121,7 @@ export function buildTripExportText(
     const essentials = sanitizeExportEssentials(
       options?.essentials,
       "export_txt",
+      options?.viatorContentEnabled,
     );
     if (essentials.length > 0) {
       lines.push(
@@ -250,6 +251,7 @@ export function buildTripExportText(
   const essentials = sanitizeExportEssentials(
     options?.essentials,
     "export_txt",
+    options?.viatorContentEnabled,
   );
   if (essentials.length > 0) {
     lines.push(

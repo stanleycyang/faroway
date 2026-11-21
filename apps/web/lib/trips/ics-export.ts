@@ -336,6 +336,7 @@ function scheduleDayEvents(
     const essentials = sanitizeExportEssentials(
       options.essentials,
       "export_ics",
+      options.viatorContentEnabled,
     );
     if (essentials.length > 0) {
       const lines = essentials.map((item) => `${item.label}: ${item.url}`);

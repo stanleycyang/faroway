@@ -74,8 +74,15 @@ export function sanitizeExportAffiliateUrl(
 export function sanitizeExportEssentials(
   essentials: TripEssentialExportLink[] | undefined,
   medium: "export_ics" | "export_txt" = "export_ics",
+  viatorContentEnabled?: boolean,
 ): TripEssentialExportLink[] {
   if (!Array.isArray(essentials)) return [];
+  const viatorAllowed =
+    viatorContentEnabled !== undefined
+      ? viatorContentEnabled
+      : typeof window === "undefined"
+        ? isViatorContentEnabled()
+        : false;
   const results: TripEssentialExportLink[] = [];
   for (const item of essentials) {
     if (
@@ -88,13 +95,15 @@ export function sanitizeExportEssentials(
       continue;
     }
     const safeUrl = sanitizeExportAffiliateUrl(item.url, medium);
-    if (safeUrl) {
-      results.push({
-        label: item.label.trim(),
-        category: item.category.trim(),
-        url: safeUrl,
-      });
+    if (!safeUrl) continue;
+    if (resolveAffiliatePartnerByUrl(safeUrl) === "viator" && !viatorAllowed) {
+      continue;
     }
+    results.push({
+      label: item.label.trim(),
+      category: item.category.trim(),
+      url: safeUrl,
+    });
   }
   return results;
 }

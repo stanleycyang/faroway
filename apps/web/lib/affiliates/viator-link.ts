@@ -72,11 +72,22 @@ export function buildViatorSearchUrl(params: {
   url.searchParams.set("mcid", mcid);
   url.searchParams.set("medium", "link");
 
-  if (params.startDate && isValidDateOnly(params.startDate)) {
-    url.searchParams.set("startDate", params.startDate);
+  const validStart =
+    params.startDate && isValidDateOnly(params.startDate)
+      ? params.startDate
+      : undefined;
+  const validEnd =
+    params.endDate && isValidDateOnly(params.endDate)
+      ? params.endDate
+      : undefined;
+  const safeEnd =
+    validStart && validEnd && validEnd < validStart ? undefined : validEnd;
+
+  if (validStart) {
+    url.searchParams.set("startDate", validStart);
   }
-  if (params.endDate && isValidDateOnly(params.endDate)) {
-    url.searchParams.set("endDate", params.endDate);
+  if (safeEnd) {
+    url.searchParams.set("endDate", safeEnd);
   }
   if (params.campaign) {
     const cleanCampaign = params.campaign

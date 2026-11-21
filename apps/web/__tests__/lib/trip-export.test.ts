@@ -5,6 +5,7 @@ import {
   buildTripExportText,
   type TripExportTrip,
 } from "@/lib/trips/export";
+import { sanitizeExportEssentials } from "@/lib/trips/export-links";
 
 const trip: TripExportTrip = {
   destination: "Tokyo, Japan",
@@ -204,5 +205,36 @@ describe("trip export helpers", () => {
     expect(text).not.toContain("evil.example");
     expect(text).toContain("commission");
     expect(text.match(/Transport:/g)).toHaveLength(1);
+  });
+
+  it("blocks viator.com URLs in sanitizeExportEssentials and exports when viatorContentEnabled is false", () => {
+    const essentials = [
+      {
+        label: "Tours on Viator",
+        category: "activities",
+        url: "https://www.viator.com/tours/Tokyo/t1?pid=P1&mcid=1&medium=api",
+      },
+      {
+        label: "Airalo Japan eSIM",
+        category: "esim",
+        url: "https://www.airalo.com/japan-esim?ref=a1",
+      },
+    ];
+
+    const filtered = sanitizeExportEssentials(essentials, "export_txt", false);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.label).toBe("Airalo Japan eSIM");
+
+    const text = buildTripExportText(
+      trip,
+      null,
+      new Date("2026-04-08T12:00:00.000Z"),
+      {
+        viatorContentEnabled: false,
+        essentials,
+      },
+    );
+    expect(text).toContain("Airalo Japan eSIM");
+    expect(text).not.toContain("viator.com");
   });
 });

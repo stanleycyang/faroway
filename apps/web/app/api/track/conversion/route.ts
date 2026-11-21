@@ -73,8 +73,6 @@ function normalizeWebhookInput(raw: Record<string, unknown>): {
   legacyOrderId?: string;
   legacyBookingReference?: string;
 } {
-  const isLegacySnakeCase =
-    raw.click_id !== undefined && raw.clickId === undefined;
   const legacyOrderId =
     typeof raw.order_id === "string" && raw.order_id.trim()
       ? raw.order_id.trim()
@@ -84,44 +82,41 @@ function normalizeWebhookInput(raw: Record<string, unknown>): {
       ? raw.booking_reference.trim()
       : undefined;
 
-  const rawStatus = raw.status === "cancelled" ? "canceled" : raw.status;
+  const rawClickId = raw.clickId ?? raw.click_id;
+  const normalizedClickId =
+    typeof rawClickId === "string" ? rawClickId.trim() : rawClickId;
 
-  if (!isLegacySnakeCase) {
-    return {
-      schemaInput: {
-        ...raw,
-        ...(rawStatus !== undefined ? { status: rawStatus } : {}),
-      },
-      legacyOrderId,
-      legacyBookingReference,
-    };
-  }
-
-  const clickId = typeof raw.click_id === "string" ? raw.click_id : undefined;
+  const rawExternalTxId =
+    typeof raw.externalTransactionId === "string"
+      ? raw.externalTransactionId.trim()
+      : raw.externalTransactionId;
   const externalTransactionId =
-    raw.externalTransactionId ??
-    legacyOrderId ??
-    legacyBookingReference ??
-    (clickId && clickId.trim() ? clickId.trim() : undefined);
+    rawExternalTxId !== undefined && rawExternalTxId !== ""
+      ? rawExternalTxId
+      : (legacyOrderId ??
+        legacyBookingReference ??
+        (raw.click_id !== undefined &&
+        typeof normalizedClickId === "string" &&
+        normalizedClickId
+          ? normalizedClickId
+          : undefined));
+
+  const rawStatus = raw.status === "cancelled" ? "canceled" : raw.status;
+  const bookingAmount = raw.bookingAmount ?? raw.booking_value;
+  const commissionAmount = raw.commissionAmount ?? raw.commission_value;
+  const occurredAt = raw.occurredAt ?? raw.conversion_date;
 
   return {
     schemaInput: {
-      partner: raw.partner,
-      clickId,
-      externalTransactionId,
+      ...raw,
+      ...(normalizedClickId !== undefined
+        ? { clickId: normalizedClickId }
+        : {}),
+      ...(externalTransactionId !== undefined ? { externalTransactionId } : {}),
       ...(rawStatus !== undefined ? { status: rawStatus } : {}),
-      ...(raw.bookingAmount !== undefined || raw.booking_value !== undefined
-        ? { bookingAmount: raw.bookingAmount ?? raw.booking_value }
-        : {}),
-      ...(raw.commissionAmount !== undefined ||
-      raw.commission_value !== undefined
-        ? { commissionAmount: raw.commissionAmount ?? raw.commission_value }
-        : {}),
-      ...(raw.currency !== undefined ? { currency: raw.currency } : {}),
-      ...(raw.occurredAt !== undefined || raw.conversion_date !== undefined
-        ? { occurredAt: raw.occurredAt ?? raw.conversion_date }
-        : {}),
-      ...(raw.metadata !== undefined ? { metadata: raw.metadata } : {}),
+      ...(bookingAmount !== undefined ? { bookingAmount } : {}),
+      ...(commissionAmount !== undefined ? { commissionAmount } : {}),
+      ...(occurredAt !== undefined ? { occurredAt } : {}),
     },
     legacyOrderId,
     legacyBookingReference,
@@ -167,6 +162,14 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parseResult.data;
+    const clickId = data.clickId.trim();
+    const externalTransactionId = data.externalTransactionId.trim();
+    if (!clickId || !externalTransactionId) {
+      return NextResponse.json(
+        { error: "Invalid webhook payload" },
+        { status: 400 },
+      );
+    }
     const signature = request.headers.get("x-webhook-signature");
 
     // Verify webhook authenticity
@@ -185,11 +188,11 @@ export async function POST(request: NextRequest) {
     const { data: click, error: findError } = await getSupabase()
       .from("affiliate_clicks")
       .select("*")
-      .eq("id", data.clickId)
+      .eq("id", clickId)
       .single();
 
     if (findError || !click) {
-      console.error("[Conversion Webhook] Click not found:", data.clickId);
+      console.error("[Conversion Webhook] Click not found:", clickId);
       // Still record the conversion, but log the issue
     }
 
@@ -209,7 +212,7 @@ export async function POST(request: NextRequest) {
         {
           click_id: click?.id || null,
           partner: data.partner,
-          order_id: legacyOrderId ?? data.externalTransactionId,
+          order_id: legacyOrderId ?? externalTransactionId,
           booking_reference: legacyBookingReference ?? null,
           booking_value: bookingValue,
           commission_value: commissionValue,
@@ -237,7 +240,7 @@ export async function POST(request: NextRequest) {
           converted: dbStatus === "confirmed",
           conversion_value: dbStatus === "confirmed" ? commissionValue : null,
         })
-        .eq("id", data.clickId);
+        .eq("id", clickId);
 
       if (updateError) {
         console.error(
@@ -248,10 +251,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `[Conversion Webhook] Recorded: ${data.clickId} - $${commissionValue} from ${data.partner}`,
+      `[Conversion Webhook] Recorded: ${clickId} - $${commissionValue} from ${data.partner}`,
     );
 
-    return NextResponse.json({ success: true, clickId: data.clickId });
+    return NextResponse.json({ success: true, clickId });
   } catch (error) {
     console.error("[Conversion Webhook] Error:", error);
     return NextResponse.json(

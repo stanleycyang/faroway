@@ -398,6 +398,9 @@ export async function generateDuffelLink(
       }
       return url.toString();
     };
+    const safeMarkup = Number.isFinite(markupAmount)
+      ? Math.max(0, markupAmount)
+      : 5;
     const body = {
       data: {
         reference: clickId || offerId,
@@ -406,7 +409,7 @@ export async function generateDuffelLink(
         abandonment_url: makeReturnUrl("abandoned"),
         primary_color: "#0f172a",
         traveller_currency: markupCurrency,
-        markup_amount: Math.max(0, markupAmount).toFixed(2),
+        markup_amount: safeMarkup.toFixed(2),
         markup_currency: markupCurrency,
         flights: { enabled: "true" },
         stays: { enabled: "false" },

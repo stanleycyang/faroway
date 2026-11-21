@@ -4,6 +4,8 @@ import type {
   AgentStatus,
   DiningResult,
   HotelResult,
+  ItineraryActivity,
+  Restaurant,
   SearchProgress,
   SearchStatus,
   TransportResult,
@@ -11,6 +13,9 @@ import type {
   TripDayTransport,
 } from "@faroway/types";
 import type { ActivityInput, HotelInput } from "@/lib/json-render/build-spec";
+
+const nullToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  schema.nullish().transform((v) => v ?? undefined);
 
 export const searchStatusSchema = z.enum([
   "pending",
@@ -28,95 +33,97 @@ export const agentStatusSchema = z.enum([
 
 export const locationInfoSchema = z
   .object({
-    name: z.string().optional(),
-    address: z.string().optional(),
-    lat: z.number().optional(),
-    lng: z.number().optional(),
-    neighborhood: z.string().optional(),
+    name: nullToUndefined(z.string()),
+    address: nullToUndefined(z.string()),
+    lat: nullToUndefined(z.number()),
+    lng: nullToUndefined(z.number()),
+    neighborhood: nullToUndefined(z.string()),
   })
   .passthrough();
 
 export const hotelDataSchema = z
   .object({
-    id: z.string().optional(),
-    name: z.string().optional(),
-    description: z.string().optional(),
-    starRating: z.number().optional(),
-    userRating: z.number().optional(),
-    reviewCount: z.number().optional(),
-    pricePerNight: z.number().optional(),
-    totalPrice: z.number().optional(),
-    currency: z.string().optional(),
-    amenities: z.array(z.string()).optional(),
-    location: locationInfoSchema.optional(),
-    images: z.array(z.string()).optional(),
-    affiliateUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
-    vibeScore: z.number().optional(),
-    vibeMatch: z.array(z.string()).optional(),
-    priceStatus: z.enum(["unknown", "estimate"]).optional(),
-    dataSource: z.enum(["provider", "ai"]).optional(),
-    tripadvisorRating: z.number().optional(),
-    tripadvisorReviewCount: z.number().optional(),
-    tripadvisorUrl: z.string().optional(),
-    tripadvisorRankingString: z.string().optional(),
+    id: nullToUndefined(z.string()),
+    name: nullToUndefined(z.string()),
+    description: nullToUndefined(z.string()),
+    starRating: nullToUndefined(z.number()),
+    userRating: nullToUndefined(z.number()),
+    reviewCount: nullToUndefined(z.number()),
+    pricePerNight: nullToUndefined(z.number()),
+    totalPrice: nullToUndefined(z.number()),
+    currency: nullToUndefined(z.string()),
+    amenities: nullToUndefined(z.array(z.string())),
+    location: nullToUndefined(locationInfoSchema),
+    images: nullToUndefined(z.array(z.string())),
+    affiliateUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
+    vibeScore: nullToUndefined(z.number()),
+    vibeMatch: nullToUndefined(z.array(z.string())),
+    priceStatus: nullToUndefined(z.enum(["unknown", "estimate"])),
+    dataSource: nullToUndefined(z.enum(["provider", "ai"])),
+    tripadvisorRating: nullToUndefined(z.number()),
+    tripadvisorReviewCount: nullToUndefined(z.number()),
+    tripadvisorUrl: nullToUndefined(z.string()),
+    tripadvisorRankingString: nullToUndefined(z.string()),
   })
   .passthrough();
 
 export const activityDataSchema = z
   .object({
-    id: z.string().optional(),
-    name: z.string().optional(),
-    description: z.string().optional(),
-    category: z.string().optional(),
-    duration: z.number().optional(),
-    price: z.number().optional(),
-    currency: z.string().optional(),
-    rating: z.number().optional(),
-    reviewCount: z.number().optional(),
-    location: locationInfoSchema.optional(),
-    images: z.array(z.string()).optional(),
-    affiliateUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
-    bestTimeOfDay: z
-      .enum(["morning", "afternoon", "evening", "any"])
-      .optional(),
-    vibeScore: z.number().optional(),
-    vibeMatch: z.array(z.string()).optional(),
-    bookingRequired: z.boolean().optional(),
-    priceStatus: z.enum(["unknown", "estimate"]).optional(),
-    planningIdea: z.literal(true).optional(),
-    supplierCatalogOnly: z.literal(true).optional(),
-    tripadvisorRating: z.number().optional(),
-    tripadvisorReviewCount: z.number().optional(),
-    tripadvisorUrl: z.string().optional(),
+    id: nullToUndefined(z.string()),
+    name: nullToUndefined(z.string()),
+    description: nullToUndefined(z.string()),
+    category: nullToUndefined(z.string()),
+    duration: nullToUndefined(z.number()),
+    price: nullToUndefined(z.number()),
+    currency: nullToUndefined(z.string()),
+    rating: nullToUndefined(z.number()),
+    reviewCount: nullToUndefined(z.number()),
+    location: nullToUndefined(locationInfoSchema),
+    images: nullToUndefined(z.array(z.string())),
+    affiliateUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
+    bestTimeOfDay: nullToUndefined(
+      z.enum(["morning", "afternoon", "evening", "any"]),
+    ),
+    vibeScore: nullToUndefined(z.number()),
+    vibeMatch: nullToUndefined(z.array(z.string())),
+    bookingRequired: nullToUndefined(z.boolean()),
+    priceStatus: nullToUndefined(z.enum(["unknown", "estimate"])),
+    planningIdea: nullToUndefined(z.literal(true)),
+    supplierCatalogOnly: nullToUndefined(z.literal(true)),
+    tripadvisorRating: nullToUndefined(z.number()),
+    tripadvisorReviewCount: nullToUndefined(z.number()),
+    tripadvisorUrl: nullToUndefined(z.string()),
   })
   .passthrough();
 
 export const diningDataSchema = z
   .object({
-    id: z.string().optional(),
-    name: z.string().optional(),
-    description: z.string().optional(),
-    cuisineTypes: z.array(z.string()).optional(),
-    priceLevel: z
-      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
-      .optional(),
-    rating: z.number().optional(),
-    reviewCount: z.number().optional(),
-    location: locationInfoSchema.optional(),
-    images: z.array(z.string()).optional(),
-    reservationUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
-    mealTypes: z.array(z.enum(["breakfast", "lunch", "dinner"])).optional(),
-    vibeScore: z.number().optional(),
-    vibeMatch: z.array(z.string()).optional(),
-    dietaryOptions: z.array(z.string()).optional(),
-    priceStatus: z.enum(["unknown", "estimate"]).optional(),
-    planningIdea: z.literal(true).optional(),
-    tripadvisorRating: z.number().optional(),
-    tripadvisorReviewCount: z.number().optional(),
-    tripadvisorUrl: z.string().optional(),
+    id: nullToUndefined(z.string()),
+    name: nullToUndefined(z.string()),
+    description: nullToUndefined(z.string()),
+    cuisineTypes: nullToUndefined(z.array(z.string())),
+    priceLevel: nullToUndefined(
+      z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    ),
+    rating: nullToUndefined(z.number()),
+    reviewCount: nullToUndefined(z.number()),
+    location: nullToUndefined(locationInfoSchema),
+    images: nullToUndefined(z.array(z.string())),
+    reservationUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
+    mealTypes: nullToUndefined(
+      z.array(z.enum(["breakfast", "lunch", "dinner"])),
+    ),
+    vibeScore: nullToUndefined(z.number()),
+    vibeMatch: nullToUndefined(z.array(z.string())),
+    dietaryOptions: nullToUndefined(z.array(z.string())),
+    priceStatus: nullToUndefined(z.enum(["unknown", "estimate"])),
+    planningIdea: nullToUndefined(z.literal(true)),
+    tripadvisorRating: nullToUndefined(z.number()),
+    tripadvisorReviewCount: nullToUndefined(z.number()),
+    tripadvisorUrl: nullToUndefined(z.string()),
   })
   .passthrough();
 
@@ -125,14 +132,14 @@ const transportEndpointSchema = z
     airport: z.string(),
     city: z.string(),
     dateTime: z.string(),
-    terminal: z.string().optional(),
+    terminal: nullToUndefined(z.string()),
   })
   .passthrough();
 
 const transportSegmentSchema = z
   .object({
     carrier: z.string(),
-    flightNumber: z.string().optional(),
+    flightNumber: nullToUndefined(z.string()),
     departure: z
       .object({
         airport: z.string(),
@@ -146,32 +153,32 @@ const transportSegmentSchema = z
       })
       .passthrough(),
     duration: z.number(),
-    cabinClass: z.string().optional(),
+    cabinClass: nullToUndefined(z.string()),
   })
   .passthrough();
 
 export const transportDataSchema = z
   .object({
-    expiresAt: z.string().optional(),
-    id: z.string().optional(),
-    type: z.enum(["flight", "train", "bus", "ferry"]).optional(),
-    provider: z.string().optional(),
-    departure: transportEndpointSchema.optional(),
-    arrival: transportEndpointSchema.optional(),
-    duration: z.number().optional(),
-    stops: z.number().optional(),
-    price: z.number().optional(),
-    currency: z.string().optional(),
-    cabinClass: z
-      .enum(["economy", "premium_economy", "business", "first"])
-      .optional(),
-    airlines: z.array(z.string()).optional(),
-    segments: z.array(transportSegmentSchema).optional(),
-    affiliateUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
-    source: z.enum(["duffel", "liteapi"]).optional(),
-    vibeScore: z.number().optional(),
-    vibeMatch: z.array(z.string()).optional(),
+    expiresAt: nullToUndefined(z.string()),
+    id: nullToUndefined(z.string()),
+    type: nullToUndefined(z.enum(["flight", "train", "bus", "ferry"])),
+    provider: nullToUndefined(z.string()),
+    departure: nullToUndefined(transportEndpointSchema),
+    arrival: nullToUndefined(transportEndpointSchema),
+    duration: nullToUndefined(z.number()),
+    stops: nullToUndefined(z.number()),
+    price: nullToUndefined(z.number()),
+    currency: nullToUndefined(z.string()),
+    cabinClass: nullToUndefined(
+      z.enum(["economy", "premium_economy", "business", "first"]),
+    ),
+    airlines: nullToUndefined(z.array(z.string())),
+    segments: nullToUndefined(z.array(transportSegmentSchema)),
+    affiliateUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
+    source: nullToUndefined(z.enum(["duffel", "liteapi"])),
+    vibeScore: nullToUndefined(z.number()),
+    vibeMatch: nullToUndefined(z.array(z.string())),
   })
   .passthrough();
 
@@ -231,31 +238,42 @@ const savedSlotSchema = z
 
 export const savedDayScheduleSchema = z
   .object({
-    dayNumber: z.number().optional(),
-    date: z.string().optional(),
-    morning: savedSlotSchema.optional(),
-    afternoon: savedSlotSchema.optional(),
-    evening: savedSlotSchema.optional(),
+    dayNumber: nullToUndefined(z.number()),
+    date: nullToUndefined(z.string()),
+    morning: nullToUndefined(savedSlotSchema),
+    afternoon: nullToUndefined(savedSlotSchema),
+    evening: nullToUndefined(savedSlotSchema),
     transport: z.unknown().optional(),
   })
   .passthrough();
 
 export const intermediateResultsSchema = z
   .object({
-    days: z.array(savedDayScheduleSchema).optional(),
+    days: nullToUndefined(z.array(savedDayScheduleSchema)),
     topHotel: z.unknown().optional(),
   })
   .passthrough();
+
+export const searchProgressSchema = z
+  .record(z.string(), agentStatusSchema.nullish())
+  .nullish()
+  .transform((record) => {
+    if (!record) return {};
+    const normalized: Record<string, AgentStatus> = {};
+    for (const [key, val] of Object.entries(record)) {
+      if (val != null) {
+        normalized[key] = val;
+      }
+    }
+    return normalized;
+  });
 
 export const searchRecordRowSchema = z
   .object({
     id: z.string(),
     user_id: z.string().nullable(),
     status: searchStatusSchema,
-    progress: z
-      .record(z.string(), agentStatusSchema)
-      .nullish()
-      .transform((v) => v ?? {}),
+    progress: searchProgressSchema,
     created_at: z
       .string()
       .nullish()
@@ -276,11 +294,7 @@ export const searchRecordRowSchema = z
   .passthrough();
 
 export function parseSearchProgress(raw: unknown): SearchProgress {
-  const parsed = z
-    .record(z.string(), agentStatusSchema)
-    .optional()
-    .default({})
-    .parse(raw ?? {});
+  const parsed = searchProgressSchema.parse(raw ?? {});
   return {
     orchestrator: parsed.orchestrator ?? "pending",
     hotels: parsed.hotels ?? "pending",
@@ -407,64 +421,88 @@ export function parseTransportResult(
 
 export const hotelInputSchema = z
   .object({
-    id: z.string().optional(),
+    id: nullToUndefined(z.string()),
     name: z.string(),
-    rating: z.number().optional(),
-    reviewCount: z.number().optional(),
-    pricePerNight: z.number().optional(),
-    currency: z.string().optional(),
-    amenities: z.array(z.string()).optional(),
-    description: z.string().optional(),
-    affiliateUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
-    images: z.array(z.string()).optional(),
-    starRating: z.number().optional(),
+    rating: nullToUndefined(z.number()),
+    reviewCount: nullToUndefined(z.number()),
+    pricePerNight: nullToUndefined(z.number()),
+    currency: nullToUndefined(z.string()),
+    amenities: nullToUndefined(z.array(z.string())),
+    description: nullToUndefined(z.string()),
+    affiliateUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
+    images: nullToUndefined(z.array(z.string())),
+    starRating: nullToUndefined(z.number()),
   })
   .passthrough() satisfies z.ZodType<HotelInput>;
 
 export const activityInputSchema = z
   .object({
-    id: z.string().optional(),
+    id: nullToUndefined(z.string()),
     name: z.string(),
-    description: z.string().optional(),
-    duration: z.number().optional(),
-    price: z.number().optional(),
-    currency: z.string().optional(),
-    rating: z.number().optional(),
-    reviewCount: z.number().optional(),
-    category: z.string().optional(),
-    bestTimeOfDay: z.string().optional(),
-    bookingRequired: z.boolean().optional(),
-    affiliateUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
-    images: z.array(z.string()).optional(),
-    priceStatus: z.enum(["unknown", "estimate"]).optional(),
+    description: nullToUndefined(z.string()),
+    duration: nullToUndefined(z.number()),
+    price: nullToUndefined(z.number()),
+    currency: nullToUndefined(z.string()),
+    rating: nullToUndefined(z.number()),
+    reviewCount: nullToUndefined(z.number()),
+    category: nullToUndefined(z.string()),
+    bestTimeOfDay: nullToUndefined(z.string()),
+    bookingRequired: nullToUndefined(z.boolean()),
+    affiliateUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
+    images: nullToUndefined(z.array(z.string())),
+    priceStatus: nullToUndefined(z.enum(["unknown", "estimate"])),
   })
   .passthrough() satisfies z.ZodType<ActivityInput>;
 
+const itineraryActivityPassSchema = z.custom<ItineraryActivity>(
+  (val) => Boolean(val && typeof val === "object" && !Array.isArray(val)),
+  { message: "Invalid itinerary activity" },
+);
+
+const restaurantPassSchema = z.custom<Restaurant>(
+  (val) => Boolean(val && typeof val === "object" && !Array.isArray(val)),
+  { message: "Invalid restaurant" },
+);
+
 const tripDaySlotSchema = z
   .object({
-    activities: z.array(z.unknown()).default([]),
-    meals: z.array(z.unknown()).default([]),
+    activities: z
+      .array(itineraryActivityPassSchema)
+      .nullish()
+      .transform((v) => v ?? []),
+    meals: z
+      .array(restaurantPassSchema)
+      .nullish()
+      .transform((v) => v ?? []),
   })
   .passthrough();
 
+const emptyTripDaySlot = (): TripDay["morning"] => ({
+  activities: [],
+  meals: [],
+});
+
 const tripDayObjectSchema = z
   .object({
-    dayNumber: z.number(),
-    date: z.string(),
-    title: z.string(),
-    summary: z.string(),
-    morning: tripDaySlotSchema,
-    afternoon: tripDaySlotSchema,
-    evening: tripDaySlotSchema,
-    tips: z.array(z.string()).default([]),
+    dayNumber: z.number().finite().optional(),
+    date: z.string().optional(),
+    title: z.string().optional(),
+    summary: z.string().optional(),
+    morning: tripDaySlotSchema.nullish(),
+    afternoon: tripDaySlotSchema.nullish(),
+    evening: tripDaySlotSchema.nullish(),
+    tips: z
+      .array(z.string())
+      .nullish()
+      .transform((v) => v ?? []),
   })
   .passthrough();
 
 export const tripDayTransportSchema = z
   .object({
-    expiresAt: z.string().optional(),
+    expiresAt: nullToUndefined(z.string()),
     type: z.enum(["flight", "train", "bus", "ferry"]),
     provider: z.string(),
     departure: z
@@ -485,12 +523,20 @@ export const tripDayTransportSchema = z
     stops: z.number(),
     price: z.number(),
     currency: z.string(),
-    affiliateUrl: z.string().optional(),
-    affiliatePartner: z.string().optional(),
+    affiliateUrl: nullToUndefined(z.string()),
+    affiliatePartner: nullToUndefined(z.string()),
   })
   .passthrough() satisfies z.ZodType<TripDayTransport>;
 
-export const tripDayPassthroughSchema = z.custom<TripDay>(
-  (val) => tripDayObjectSchema.safeParse(val).success,
-  { message: "Invalid TripDay shape" },
-);
+export const tripDayPassthroughSchema: z.ZodType<TripDay> =
+  tripDayObjectSchema.transform((day) => ({
+    ...day,
+    dayNumber: day.dayNumber ?? 1,
+    date: day.date ?? "",
+    title: day.title ?? "",
+    summary: day.summary ?? "",
+    morning: day.morning ?? emptyTripDaySlot(),
+    afternoon: day.afternoon ?? emptyTripDaySlot(),
+    evening: day.evening ?? emptyTripDaySlot(),
+    tips: day.tips,
+  }));

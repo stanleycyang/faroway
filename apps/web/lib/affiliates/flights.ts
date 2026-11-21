@@ -21,6 +21,17 @@ function toDDMM(dateStr?: string): string | undefined {
   return `${dateStr.slice(8, 10)}${dateStr.slice(5, 7)}`;
 }
 
+function validFlightDates(departureDate?: string, returnDate?: string) {
+  const validOut =
+    departureDate && isValidDateOnly(departureDate) ? departureDate : undefined;
+  const validRet =
+    returnDate && isValidDateOnly(returnDate) ? returnDate : undefined;
+  if (validOut && validRet && validRet < validOut) {
+    return { departureDate: validOut, returnDate: undefined };
+  }
+  return { departureDate: validOut, returnDate: validRet };
+}
+
 export interface FlightFallbackParams {
   originAirport?: string;
   originCity?: string;
@@ -40,8 +51,12 @@ export function buildSkyscannerFlightUrl(
   const associateId = envTrim("SKYSCANNER_ASSOCIATE_ID");
   const origin = params.originAirport?.trim().toUpperCase();
   const dest = params.destinationAirport?.trim().toUpperCase();
-  const outYYMMDD = toYYMMDD(params.departureDate);
-  const retYYMMDD = toYYMMDD(params.returnDate);
+  const { departureDate, returnDate } = validFlightDates(
+    params.departureDate,
+    params.returnDate,
+  );
+  const outYYMMDD = toYYMMDD(departureDate);
+  const retYYMMDD = toYYMMDD(returnDate);
   const adults =
     typeof params.adults === "number" &&
     Number.isInteger(params.adults) &&
@@ -91,8 +106,12 @@ export function buildAviasalesFlightUrl(
 ): AffiliateLinkResult {
   const origin = params.originAirport?.trim().toUpperCase();
   const dest = params.destinationAirport?.trim().toUpperCase();
-  const outDDMM = toDDMM(params.departureDate);
-  const retDDMM = toDDMM(params.returnDate) ?? "";
+  const { departureDate, returnDate } = validFlightDates(
+    params.departureDate,
+    params.returnDate,
+  );
+  const outDDMM = toDDMM(departureDate);
+  const retDDMM = toDDMM(returnDate) ?? "";
   const adults =
     typeof params.adults === "number" &&
     Number.isInteger(params.adults) &&
