@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+import { AlertTriangle, Flame, Info, Lightbulb } from "lucide-react";
 
 export function Callout({
   type = "info",
@@ -14,15 +15,23 @@ export function Callout({
     tip: "bg-green-50 border-green-400 text-green-900",
     important: "bg-purple-50 border-purple-400 text-purple-900",
   };
-  const icons = { info: "ℹ️", warning: "⚠️", tip: "💡", important: "🔥" };
+  const icons = {
+    info: Info,
+    warning: AlertTriangle,
+    tip: Lightbulb,
+    important: Flame,
+  };
+  const Icon = icons[type];
 
   return (
     <div
       className={`my-6 rounded-xl border-l-4 p-4 md:p-6 ${styles[type]}`}
       role="note"
     >
-      <span className="mr-2">{icons[type]}</span>
-      {children}
+      <div className="flex items-start gap-2.5">
+        <Icon className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
     </div>
   );
 }
@@ -37,7 +46,10 @@ export function TipBox({
   return (
     <div className="my-6 rounded-xl bg-primary-50 border border-primary-200 p-4 md:p-6">
       {title && (
-        <p className="font-semibold text-primary-800 mb-2">💡 {title}</p>
+        <p className="font-semibold text-primary-800 mb-2 flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{title}</span>
+        </p>
       )}
       <div className="text-primary-900">{children}</div>
     </div>
@@ -62,7 +74,7 @@ export function ImageGallery({
             unoptimized
           />
           {img.caption && (
-            <figcaption className="text-sm text-gray-500 mt-2 text-center">
+            <figcaption className="text-sm text-slate-600 mt-2 text-center">
               {img.caption}
             </figcaption>
           )}
@@ -95,11 +107,11 @@ export function ProseWrapper({ html }: { html: string }) {
         prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-4
         prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
         prose-p:leading-relaxed prose-p:text-gray-700
-        prose-a:text-primary-600 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-primary-800
+        prose-a:text-primary-700 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-primary-800
         prose-strong:text-gray-900
         prose-ul:my-4 prose-li:my-1
         prose-img:rounded-xl prose-img:shadow-lg
-        prose-blockquote:border-primary-400 prose-blockquote:bg-gray-50 prose-blockquote:rounded-r-xl prose-blockquote:py-1
+        prose-blockquote:border-primary-700 prose-blockquote:bg-[#FAF8F3] prose-blockquote:rounded-r-xl prose-blockquote:py-1
         prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-primary-700 prose-code:before:content-none prose-code:after:content-none
         prose-pre:bg-gray-950 prose-pre:rounded-2xl prose-pre:shadow-lg
         prose-hr:my-12

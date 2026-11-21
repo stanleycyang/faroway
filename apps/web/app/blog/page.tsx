@@ -1,7 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getBlogIndexPage } from "@/lib/blog/pages";
+import { buildFlightFallbackLinks } from "@/lib/affiliates/flights";
+import {
+  buildAiraloUrl,
+  buildSafetyWingUrl,
+  buildWiseUrl,
+} from "@/lib/affiliates/essentials";
 import { BlogCard } from "@/components/blog/BlogCard";
+import { BlogEssentialsStrip } from "@/components/blog/BlogEssentialsStrip";
 import { FeaturedHero } from "@/components/blog/FeaturedHero";
 import { CategoryPills } from "@/components/blog/CategoryPills";
 import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
@@ -49,6 +56,13 @@ export default async function BlogIndex({
   } = await getBlogIndexPage(pageParam);
   const categories = [...new Set(allPosts.map((post) => post.category))];
   const isFirstPage = currentPage === 1;
+  const flightLinks = buildFlightFallbackLinks({
+    departureDate: "",
+    trackingId: "blog-index",
+  });
+  const esimLink = buildAiraloUrl({ trackingId: "blog-index" });
+  const fxLink = buildWiseUrl({});
+  const insuranceLink = buildSafetyWingUrl({ trackingId: "blog-index" });
 
   const collectionSchema = {
     "@context": "https://schema.org",
@@ -115,7 +129,7 @@ export default async function BlogIndex({
               {isFirstPage ? "Latest Articles" : `Page ${currentPage}`}
             </h2>
             {totalPages > 1 && (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-slate-600">
                 Page {currentPage} of {totalPages}
               </span>
             )}
@@ -147,12 +161,19 @@ export default async function BlogIndex({
           </p>
           <Link
             href="/destinations"
-            className="mt-6 inline-block rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white hover:bg-slate-800"
+            className="mt-6 inline-block rounded-xl bg-[#143D46] px-6 py-3 font-semibold text-white hover:bg-[#0E2C33]"
           >
             Explore destinations
           </Link>
         </section>
       )}
+
+      <BlogEssentialsStrip
+        flightLinks={flightLinks}
+        esim={esimLink}
+        fx={fxLink}
+        insurance={insuranceLink}
+      />
 
       {/* Newsletter — only on last page or single page */}
       {(currentPage === totalPages || totalPages <= 1) && (

@@ -9,9 +9,9 @@ const SEASON_STYLES: Record<
   string,
   { label: string; bg: string; text: string }
 > = {
-  peak: { label: "Peak", bg: "bg-primary/10", text: "text-primary" },
-  shoulder: { label: "Shoulder", bg: "bg-amber-50", text: "text-amber-600" },
-  off: { label: "Off-Season", bg: "bg-slate-100", text: "text-slate-500" },
+  peak: { label: "Peak", bg: "bg-primary-50", text: "text-primary-800" },
+  shoulder: { label: "Shoulder", bg: "bg-amber-50", text: "text-amber-800" },
+  off: { label: "Off-Season", bg: "bg-slate-100", text: "text-slate-700" },
 };
 
 export function MonthlyGrid({ months }: MonthlyGridProps) {
@@ -22,7 +22,7 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
         return (
           <div
             key={m.month}
-            className="p-4 rounded-2xl bg-white border border-slate-200/80 hover:shadow-md transition-shadow"
+            className="p-4 rounded-2xl bg-white border border-[#DCE5E3] hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-base font-bold text-slate-900">{m.month}</h4>
@@ -36,7 +36,7 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
             <div className="space-y-2">
               {/* Temperature */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">Temp</span>
+                <span className="text-xs text-slate-600">Temp</span>
                 <span className="text-sm font-semibold text-slate-900">
                   {m.avgTempC}°C / {m.avgTempF}°F
                 </span>
@@ -44,8 +44,8 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
 
               {/* Rainfall */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Droplets className="w-3 h-3" /> Rain
+                <span className="text-xs text-slate-600 flex items-center gap-1">
+                  <Droplets className="w-3 h-3" aria-hidden="true" /> Rain
                 </span>
                 <span className="text-sm font-medium text-slate-700">
                   {m.rainfallMm}mm
@@ -54,13 +54,15 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
 
               {/* Crowd level */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">Crowds</span>
+                <span className="text-xs text-slate-600">Crowds</span>
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((level) => (
                     <div
                       key={level}
                       className={`w-2.5 h-2.5 rounded-full ${
-                        level <= m.crowdLevel ? "bg-primary" : "bg-slate-200"
+                        level <= m.crowdLevel
+                          ? "bg-primary-700"
+                          : "bg-slate-200"
                       }`}
                     />
                   ))}
@@ -71,7 +73,7 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
               {m.events.length > 0 && (
                 <div className="pt-2 border-t border-slate-100">
                   {m.events.map((event) => (
-                    <p key={event} className="text-xs text-slate-500 truncate">
+                    <p key={event} className="text-xs text-slate-600 truncate">
                       {event}
                     </p>
                   ))}

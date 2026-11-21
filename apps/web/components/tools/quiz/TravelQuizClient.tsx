@@ -1,15 +1,21 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Compass } from "lucide-react";
 import { quizQuestions, type QuizOption } from "@/lib/tools/quiz-questions";
 import { scoreDestinations, type QuizResult } from "@/lib/tools/quiz-scoring";
 import { QuizQuestion } from "./QuizQuestion";
-import { QuizResults } from "./QuizResults";
+import { QuizResults, type QuizAffiliateBundle } from "./QuizResults";
 
 type QuizState = "intro" | "questions" | "results";
 
-export function TravelQuizClient() {
+export interface TravelQuizClientProps {
+  affiliateBundlesBySlug?: Record<string, QuizAffiliateBundle>;
+}
+
+export function TravelQuizClient({
+  affiliateBundlesBySlug,
+}: TravelQuizClientProps = {}) {
   const contentRef = useRef<HTMLDivElement>(null);
   const focusNextHeadingRef = useRef(false);
   const questionRef = useRef(0);
@@ -87,14 +93,14 @@ export function TravelQuizClient() {
       >
         {state === "intro" && (
           <div className="text-center animate-fade-in">
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
-              <Compass className="w-10 h-10" />
+            <div className="w-20 h-20 rounded-2xl bg-[#EFF5F3] text-[#143D46] flex items-center justify-center mx-auto mb-6">
+              <Compass className="w-10 h-10" aria-hidden="true" />
             </div>
             <h1
               tabIndex={-1}
-              className="text-4xl md:text-5xl font-bold text-slate-900 mb-4"
+              className="font-editorial text-4xl md:text-5xl font-bold text-slate-900 mb-4"
             >
-              Where Should <span className="text-gradient">You</span> Go?
+              Where Should <span className="text-[#C03A31]">You</span> Go?
             </h1>
             <p className="text-lg text-slate-600 mb-8 max-w-lg mx-auto">
               Answer 6 quick questions about your travel style and we&apos;ll
@@ -103,11 +109,11 @@ export function TravelQuizClient() {
             <button
               type="button"
               onClick={handleStart}
-              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 bg-[#143D46] hover:bg-[#0E2C33] text-white px-8 py-4 rounded-full text-lg font-semibold transition-all hover:-translate-y-0.5"
             >
               Take the Quiz
             </button>
-            <p className="text-sm text-slate-400 mt-4">
+            <p className="text-sm text-slate-600 mt-4">
               Takes about 60 seconds
             </p>
           </div>
@@ -126,7 +132,11 @@ export function TravelQuizClient() {
         )}
 
         {state === "results" && (
-          <QuizResults results={results} onRestart={handleRestart} />
+          <QuizResults
+            results={results}
+            onRestart={handleRestart}
+            affiliateBundlesBySlug={affiliateBundlesBySlug}
+          />
         )}
       </div>
     </main>

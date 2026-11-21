@@ -64,7 +64,7 @@ export async function generateMetadata({
 
 export default function WorldMapViewPage() {
   return (
-    <main className="min-h-screen pt-20 lg:pt-24 pb-16">
+    <main className="min-h-screen bg-[#FAF8F3] pt-20 lg:pt-24 pb-16">
       <Suspense fallback={<MapLoading />}>
         <WorldMapViewClient />
       </Suspense>

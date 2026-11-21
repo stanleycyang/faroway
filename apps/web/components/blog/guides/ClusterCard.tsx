@@ -25,12 +25,14 @@ export function ClusterCard({ cluster, postCount }: ClusterCardProps) {
 
       <div className="absolute bottom-0 left-0 right-0 p-6">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-white/70 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1">
+          <span className="text-xs text-white/95 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
             {postCount} {postCount === 1 ? "article" : "articles"}
           </span>
         </div>
-        <h2 className="text-xl font-bold text-white mb-1">{cluster.title}</h2>
-        <p className="text-white/70 text-sm line-clamp-2 mb-3">
+        <h2 className="font-editorial text-xl font-bold text-white mb-1">
+          {cluster.title}
+        </h2>
+        <p className="text-white/90 text-sm line-clamp-2 mb-3">
           {cluster.tagline}
         </p>
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90 group-hover:gap-2.5 transition-all">

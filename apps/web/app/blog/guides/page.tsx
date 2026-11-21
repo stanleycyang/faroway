@@ -53,17 +53,19 @@ export default async function GuidesIndexPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c"),
+        }}
       />
 
       {/* Hero */}
       <section className="pt-28 lg:pt-32 pb-12 lg:pb-16">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 text-primary-800 border border-primary-200 text-sm font-semibold mb-6">
             Blog Guides
           </span>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6">
-            Travel <span className="text-gradient">Guides</span>
+          <h1 className="font-editorial text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6">
+            Travel <span className="text-[#C03A31]">Guides</span>
           </h1>
           <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Deep-dive content collections organized by theme. Pick a topic and

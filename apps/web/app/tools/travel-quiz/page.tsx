@@ -1,4 +1,12 @@
 import type { Metadata } from "next";
+import { getAllGuides } from "@/lib/destination-guides";
+import { buildHotelPartnerLinks } from "@/lib/affiliates/hotels";
+import { buildActivityFallbackLinks } from "@/lib/affiliates/activities";
+import {
+  buildAiraloUrl,
+  buildSafetyWingUrl,
+} from "@/lib/affiliates/essentials";
+import type { QuizAffiliateBundle } from "@/components/tools/quiz/QuizResults";
 import { TravelQuizClient } from "@/components/tools/quiz/TravelQuizClient";
 
 export const metadata: Metadata = {
@@ -15,6 +23,26 @@ export const metadata: Metadata = {
 };
 
 export default function TravelQuizPage() {
+  const guides = getAllGuides();
+  const affiliateBundlesBySlug: Record<string, QuizAffiliateBundle> = {};
+  for (const dest of guides) {
+    const trackingId = `tool-travel-quiz-${dest.slug}`;
+    const hotels = buildHotelPartnerLinks({
+      destination: `${dest.name}, ${dest.country}`,
+      campaign: trackingId,
+    });
+    const activities = buildActivityFallbackLinks({
+      destination: dest.name,
+      trackingId,
+    });
+    affiliateBundlesBySlug[dest.slug] = {
+      stay: hotels.primary,
+      activity: activities[0] ?? null,
+      esim: buildAiraloUrl({ countryOrDestination: dest.country, trackingId }),
+      insurance: buildSafetyWingUrl({ destination: dest.name, trackingId }),
+    };
+  }
+
   const appSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -35,7 +63,7 @@ export default function TravelQuizPage() {
           __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
         }}
       />
-      <TravelQuizClient />
+      <TravelQuizClient affiliateBundlesBySlug={affiliateBundlesBySlug} />
     </>
   );
 }

@@ -1,12 +1,13 @@
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
-import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
+import type { ClusterDefinition } from "@/lib/blog/clusters";
+import { GUIDE_ACCENTS } from "./guide-accents";
 
 interface TopicGridProps {
   cluster: ClusterDefinition;
 }
 
 export function TopicGrid({ cluster }: TopicGridProps) {
-  const accent = ACCENT_COLORS[cluster.accent];
+  const accent = GUIDE_ACCENTS[cluster.accent];
 
   return (
     <section className="py-20 bg-white">
@@ -18,7 +19,7 @@ export function TopicGrid({ cluster }: TopicGridProps) {
             >
               Topics Covered
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+            <h2 className="font-editorial text-3xl md:text-4xl font-bold text-slate-900">
               What You&apos;ll Learn
             </h2>
           </div>
@@ -30,12 +31,15 @@ export function TopicGrid({ cluster }: TopicGridProps) {
             return (
               <FadeInOnScroll key={topic.title} delay={i * 100}>
                 <div
-                  className={`bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-xl ${accent.hoverShadow} transition-all duration-300`}
+                  className={`bg-white rounded-2xl border border-[#DCE5E3] p-6 hover:shadow-xl ${accent.hoverShadow} transition-all duration-300`}
                 >
                   <div
                     className={`w-12 h-12 rounded-xl ${accent.iconBg} flex items-center justify-center mb-4`}
                   >
-                    <Icon className={`w-6 h-6 ${accent.text}`} />
+                    <Icon
+                      className={`w-6 h-6 ${accent.text}`}
+                      aria-hidden="true"
+                    />
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-2">
                     {topic.title}

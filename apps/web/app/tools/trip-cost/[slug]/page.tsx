@@ -2,19 +2,27 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ChevronRight,
-  DollarSign,
-  Wallet,
-  Gem,
-  Coins,
   ArrowRight,
+  ChevronRight,
+  Coins,
+  DollarSign,
+  Gem,
   Info,
+  Wallet,
 } from "lucide-react";
-import { BUDGET_RANGES } from "@faroway/constants";
+import { BUDGET_RANGES, isAllowedAffiliateUrl } from "@faroway/constants";
 import { getGuideBySlug, getGuideSlugs } from "@/lib/destination-guides";
-import { getCostProfile, getCostLevel } from "@/lib/tools/cost-data";
+import { getCostLevel, getCostProfile } from "@/lib/tools/cost-data";
+import { buildHotelPartnerLinks } from "@/lib/affiliates/hotels";
+import { buildFlightFallbackLinks } from "@/lib/affiliates/flights";
+import { buildWiseUrl } from "@/lib/affiliates/essentials";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import { ToolCTA } from "@/components/tools/ToolCTA";
 import { RelatedTools } from "@/components/tools/RelatedTools";
+import {
+  ToolAffiliateCard,
+  type ToolAffiliateAction,
+} from "@/components/tools/ToolAffiliateCard";
 
 export function generateStaticParams() {
   return getGuideSlugs().map((slug) => ({ slug }));
@@ -53,18 +61,18 @@ export async function generateMetadata({
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  accommodation: { label: "Accommodation", color: "bg-primary" },
-  food: { label: "Food & Dining", color: "bg-amber-500" },
-  transport: { label: "Transport", color: "bg-teal-500" },
-  activities: { label: "Activities", color: "bg-violet-500" },
-  misc: { label: "Miscellaneous", color: "bg-slate-400" },
+  accommodation: { label: "Accommodation", color: "bg-primary-700" },
+  food: { label: "Food & Dining", color: "bg-amber-600" },
+  transport: { label: "Transport", color: "bg-[#143D46]" },
+  activities: { label: "Activities", color: "bg-violet-700" },
+  misc: { label: "Miscellaneous", color: "bg-slate-500" },
 };
 
 const COST_LEVEL_STYLES: Record<string, { bg: string; text: string }> = {
-  "Budget-Friendly": { bg: "bg-emerald-50", text: "text-emerald-700" },
-  Moderate: { bg: "bg-amber-50", text: "text-amber-700" },
-  "Above Average": { bg: "bg-orange-50", text: "text-orange-700" },
-  Expensive: { bg: "bg-red-50", text: "text-red-700" },
+  "Budget-Friendly": { bg: "bg-emerald-50", text: "text-emerald-800" },
+  Moderate: { bg: "bg-amber-50", text: "text-amber-800" },
+  "Above Average": { bg: "bg-orange-50", text: "text-orange-800" },
+  Expensive: { bg: "bg-red-50", text: "text-red-800" },
 };
 
 export default async function TripCostDestinationPage({
@@ -92,6 +100,55 @@ export default async function TripCostDestinationPage({
   const luxuryDaily = Math.round(
     BUDGET_RANGES.luxury.daily * cost.costMultiplier,
   );
+
+  const trackingId = `tool-trip-cost-${slug}`;
+  const hotelResult = buildHotelPartnerLinks({
+    destination: `${dest.name}, ${dest.country}`,
+    adults: 2,
+    budgetTier: level === "Budget-Friendly" ? "budget" : "moderate",
+    campaign: trackingId,
+  });
+  const stays = [hotelResult.primary, ...hotelResult.alternatives]
+    .filter((l): l is AffiliateLinkResult => Boolean(l?.url))
+    .slice(0, 2);
+  const flights = buildFlightFallbackLinks({
+    destinationCity: dest.name,
+    departureDate: "",
+    adults: 2,
+    trackingId,
+  });
+  const wiseLink = buildWiseUrl({
+    sourceCurrency: "USD",
+    targetCurrency: cost.currency,
+    destination: dest.country,
+  });
+
+  const affiliateActions: ToolAffiliateAction[] = [
+    ...stays
+      .filter((s) => s.url && isAllowedAffiliateUrl(s.url))
+      .map((s) => ({
+        key: `${trackingId}-stay-${s.partner}`,
+        link: s,
+        itemType: "hotel" as const,
+      })),
+    ...flights
+      .filter((f) => f.url && isAllowedAffiliateUrl(f.url))
+      .slice(0, 1)
+      .map((f) => ({
+        key: `${trackingId}-flight-${f.partner}`,
+        link: f,
+        itemType: "flight" as const,
+      })),
+    ...(wiseLink.url && isAllowedAffiliateUrl(wiseLink.url)
+      ? [
+          {
+            key: `${trackingId}-wise-fx`,
+            link: wiseLink,
+            itemType: "activity" as const,
+          },
+        ]
+      : []),
+  ];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -132,23 +189,23 @@ export default async function TripCostDestinationPage({
         <section className="pt-28 lg:pt-32 pb-12 lg:pb-16">
           <div className="max-w-7xl mx-auto px-6">
             {/* Breadcrumb */}
-            <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6">
+            <nav className="flex items-center gap-2 text-sm text-slate-600 mb-6">
               <Link
                 href="/tools/trip-cost"
-                className="hover:text-primary transition-colors"
+                className="hover:text-primary-700 transition-colors"
               >
                 Trip Cost Estimator
               </Link>
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight className="w-3 h-3" aria-hidden="true" />
               <span className="text-slate-900 font-medium">{dest.name}</span>
             </nav>
 
-            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-primary-800 text-sm font-semibold mb-4">
               {dest.continent}
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+            <h1 className="font-editorial text-4xl md:text-5xl font-bold text-slate-900 mb-4">
               How Much Does a Trip to{" "}
-              <span className="text-gradient">{dest.name}</span> Cost?
+              <span className="text-[#C03A31]">{dest.name}</span> Cost?
             </h1>
             <p className="text-lg text-slate-600 max-w-3xl leading-relaxed">
               {dest.name} is a
@@ -166,10 +223,13 @@ export default async function TripCostDestinationPage({
         </section>
 
         {/* Cost overview cards */}
-        <section className="bg-gradient-to-br from-primary-50 via-white to-amber-50 border-y border-slate-200/80 py-10">
+        <section className="bg-gradient-to-br from-[#FAF8F3] via-white to-[#EFF5F3] border-y border-[#DCE5E3] py-10">
           <div className="max-w-7xl mx-auto px-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
+            <h2 className="font-editorial text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <DollarSign
+                className="w-5 h-5 text-primary-700"
+                aria-hidden="true"
+              />
               Daily Cost Overview
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -179,21 +239,21 @@ export default async function TripCostDestinationPage({
                   daily: budgetDaily,
                   icon: Wallet,
                   color: "border-emerald-200",
-                  badge: "bg-emerald-50 text-emerald-700",
+                  badge: "bg-emerald-50 text-emerald-800",
                 },
                 {
                   tier: "Mid-Range",
                   daily: moderateDaily,
                   icon: Coins,
                   color: "border-amber-200",
-                  badge: "bg-amber-50 text-amber-700",
+                  badge: "bg-amber-50 text-amber-800",
                 },
                 {
                   tier: "Luxury",
                   daily: luxuryDaily,
                   icon: Gem,
                   color: "border-violet-200",
-                  badge: "bg-violet-50 text-violet-700",
+                  badge: "bg-violet-50 text-violet-800",
                 },
               ].map(({ tier, daily, icon: Icon, color, badge }) => (
                 <div
@@ -204,28 +264,42 @@ export default async function TripCostDestinationPage({
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${badge}`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
+                      <Icon className="w-3.5 h-3.5" aria-hidden="true" />
                       {tier}
                     </span>
                   </div>
                   <p className="text-3xl font-bold text-slate-900 mb-1">
                     ${daily}
-                    <span className="text-base font-normal text-slate-500">
+                    <span className="text-base font-normal text-slate-600">
                       /day
                     </span>
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-600">
                     ~${daily * 5} for a 5-day trip
                   </p>
                 </div>
               ))}
             </div>
+
+            {affiliateActions.length > 0 && (
+              <div className="mt-6">
+                <ToolAffiliateCard
+                  title={`Check live stays, flights & ${cost.currency} rates for ${dest.name}`}
+                  subtitle="Compare hotel rates, airfare, and low-fee currency exchange before booking."
+                  placement="trip_cost_guide"
+                  campaign={trackingId}
+                  actions={affiliateActions}
+                  editorialNote="Exchange rates and card terms change over time; verify current pricing directly with Wise before transferring."
+                  className="bg-white"
+                />
+              </div>
+            )}
           </div>
         </section>
 
         {/* Budget breakdown */}
         <section className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
-          <h2 className="text-2xl font-bold text-slate-900 mb-8">
+          <h2 className="font-editorial text-2xl font-bold text-slate-900 mb-8">
             Where Your Money Goes
           </h2>
           <div className="space-y-4">
@@ -255,16 +329,16 @@ export default async function TripCostDestinationPage({
         </section>
 
         {/* Sample prices */}
-        <section className="bg-slate-50 border-y border-slate-200/80 py-12 lg:py-16">
+        <section className="bg-[#FAF8F3] border-y border-[#DCE5E3] py-12 lg:py-16">
           <div className="max-w-7xl mx-auto px-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8">
+            <h2 className="font-editorial text-2xl font-bold text-slate-900 mb-8">
               Sample Prices in {dest.name}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {cost.samplePrices.map((sp) => (
                 <div
                   key={sp.item}
-                  className="flex items-center justify-between p-4 rounded-xl bg-white border border-slate-200/60"
+                  className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#DCE5E3]"
                 >
                   <span className="text-sm text-slate-700">{sp.item}</span>
                   <div className="text-right">
@@ -272,7 +346,7 @@ export default async function TripCostDestinationPage({
                       ${sp.priceUSD}
                     </span>
                     {cost.exchangeRate !== 1 && (
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-xs text-slate-600">
                         {cost.currencySymbol}
                         {Math.round(
                           sp.priceUSD * cost.exchangeRate,
@@ -288,7 +362,7 @@ export default async function TripCostDestinationPage({
 
         {/* Quick facts */}
         <section className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">
+          <h2 className="font-editorial text-xl font-bold text-slate-900 mb-6">
             Quick Facts — {dest.name}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -317,9 +391,9 @@ export default async function TripCostDestinationPage({
             ].map((fact) => (
               <div
                 key={fact.label}
-                className="p-4 rounded-xl bg-slate-50 border border-slate-200/60"
+                className="p-4 rounded-xl bg-[#FAF8F3] border border-[#DCE5E3]"
               >
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide mb-1">
                   {fact.label}
                 </p>
                 <p className="text-sm font-semibold text-slate-900">
@@ -332,11 +406,14 @@ export default async function TripCostDestinationPage({
 
         {/* Interactive CTA */}
         <section className="max-w-7xl mx-auto px-6 pb-12 lg:pb-16">
-          <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-r from-primary-50 to-amber-50 border border-primary/10">
+          <div className="p-6 md:p-8 rounded-2xl bg-[#EFF5F3] border border-[#DCE5E3]">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-primary" />
+                  <Info
+                    className="w-5 h-5 text-primary-700"
+                    aria-hidden="true"
+                  />
                   Want a Custom Estimate?
                 </h3>
                 <p className="text-sm text-slate-600">
@@ -346,9 +423,10 @@ export default async function TripCostDestinationPage({
               </div>
               <Link
                 href="/tools/trip-cost"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-semibold text-sm hover:bg-primary-700 transition-colors shrink-0"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary-700 text-white font-semibold text-sm hover:bg-primary-800 transition-colors shrink-0"
               >
-                Try the Calculator <ArrowRight className="w-4 h-4" />
+                Try the Calculator{" "}
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </Link>
             </div>
           </div>
@@ -356,40 +434,40 @@ export default async function TripCostDestinationPage({
 
         {/* Cross-links */}
         <section className="max-w-7xl mx-auto px-6 pb-12 lg:pb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">
+          <h2 className="font-editorial text-xl font-bold text-slate-900 mb-4">
             More About {dest.name}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link
               href={`/destinations/${slug}`}
-              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+              className="p-4 rounded-xl border border-[#DCE5E3] bg-white hover:border-primary-700/30 hover:shadow-sm transition-all group"
             >
-              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary-700 transition-colors">
                 {dest.name} Destination Guide
               </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Highlights, itineraries & tips
+              <p className="text-xs text-slate-600 mt-1">
+                Highlights, itineraries &amp; tips
               </p>
             </Link>
             <Link
               href={`/tools/best-time-to-visit/${slug}`}
-              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+              className="p-4 rounded-xl border border-[#DCE5E3] bg-white hover:border-primary-700/30 hover:shadow-sm transition-all group"
             >
-              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary-700 transition-colors">
                 Best Time to Visit {dest.name}
               </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Climate & crowd data by month
+              <p className="text-xs text-slate-600 mt-1">
+                Climate &amp; crowd data by month
               </p>
             </Link>
             <Link
               href={`/tools/visa-checker/${slug}`}
-              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+              className="p-4 rounded-xl border border-[#DCE5E3] bg-white hover:border-primary-700/30 hover:shadow-sm transition-all group"
             >
-              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary-700 transition-colors">
                 Visa Requirements for {dest.name}
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 Check by passport country
               </p>
             </Link>

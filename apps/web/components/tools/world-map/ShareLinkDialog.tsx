@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, MessageCircle, Share2, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  MessageCircle,
+  Share2,
+  X,
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { useActiveProfile } from "@/lib/tools/world-map/store";
@@ -95,27 +102,27 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
         className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-slide-up max-h-[92vh] flex flex-col outline-none"
       >
         {/* Visual hero — the actual map */}
-        <div className="relative bg-gradient-to-br from-amber-50 via-white to-rose-50 px-6 pt-6 pb-4">
+        <div className="relative bg-gradient-to-br from-[#FAF8F3] via-white to-[#EFF5F3] px-6 pt-6 pb-4">
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur hover:bg-white flex items-center justify-center text-slate-500 shadow ring-1 ring-slate-200/50 z-10"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/90 backdrop-blur hover:bg-white flex items-center justify-center text-slate-600 shadow ring-1 ring-slate-200/50 z-10"
             aria-label="Close"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
 
           <h2
             id="share-map-title"
-            className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400"
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600"
           >
             Share your map
           </h2>
           <div className="mt-1.5 flex items-baseline gap-2">
-            <div className="text-4xl font-bold tabular-nums text-slate-900 font-serif">
+            <div className="text-4xl font-bold tabular-nums text-slate-900 font-editorial">
               {stats.totalVisited}
             </div>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-slate-600">
               {stats.totalVisited === 1 ? "country" : "countries"} ·{" "}
               {stats.continentsVisited}{" "}
               {stats.continentsVisited === 1 ? "continent" : "continents"}
@@ -170,7 +177,7 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
             className="w-full flex items-center gap-3 rounded-xl bg-slate-50 hover:bg-slate-100 ring-1 ring-slate-200/70 px-4 py-3 transition-colors text-left"
           >
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
                 Link
               </div>
               <div className="text-xs font-mono text-slate-700 truncate mt-0.5">
@@ -179,16 +186,16 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
             </div>
             <span
               className={`flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold ${
-                copied ? "text-emerald-600" : "text-slate-700"
+                copied ? "text-emerald-700" : "text-slate-700"
               }`}
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5" /> Copied
+                  <Check className="w-3.5 h-3.5" aria-hidden="true" /> Copied
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5" /> Copy
+                  <Copy className="w-3.5 h-3.5" aria-hidden="true" /> Copy
                 </>
               )}
             </span>
@@ -196,11 +203,12 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
 
           {/* QR — small, secondary */}
           <details className="group">
-            <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-700 list-none flex items-center justify-between">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-600 hover:text-slate-900 list-none flex items-center justify-between">
               <span>QR for in-person hand-off</span>
-              <span className="text-slate-400 group-open:rotate-180 transition-transform">
-                ▾
-              </span>
+              <ChevronDown
+                className="w-3.5 h-3.5 text-slate-600 group-open:rotate-180 transition-transform"
+                aria-hidden="true"
+              />
             </summary>
             <div className="mt-3 flex items-center justify-center bg-white p-3 rounded-xl ring-1 ring-slate-200">
               <QRCodeSVG

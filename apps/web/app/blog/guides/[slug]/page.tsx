@@ -118,11 +118,15 @@ export default async function ClusterPage({ params }: PageProps) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c"),
+        }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(collectionSchema).replace(/</g, "\\u003c"),
+        }}
       />
 
       {/* Section 1: Hero */}
@@ -139,10 +143,10 @@ export default async function ClusterPage({ params }: PageProps) {
         <div className="max-w-7xl mx-auto px-6">
           <FadeInOnScroll>
             <div className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-4">
+              <span className="inline-flex items-center gap-2 bg-primary-50 text-primary-800 border border-primary-200 rounded-full px-4 py-1.5 text-sm font-medium mb-4">
                 Latest Articles
               </span>
-              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+              <h2 className="font-editorial text-3xl md:text-4xl font-bold text-slate-900">
                 From the Blog
               </h2>
             </div>
@@ -158,11 +162,11 @@ export default async function ClusterPage({ params }: PageProps) {
             </div>
           ) : (
             <FadeInOnScroll>
-              <div className="text-center py-16 bg-slate-50 rounded-2xl border border-gray-200">
-                <p className="text-slate-500 text-lg mb-2">
+              <div className="text-center py-16 bg-[#FAF8F3] rounded-2xl border border-[#DCE5E3]">
+                <p className="text-slate-700 text-lg mb-2">
                   Articles coming soon
                 </p>
-                <p className="text-slate-400 text-sm">
+                <p className="text-slate-600 text-sm">
                   We&apos;re working on in-depth guides for this topic. Check
                   back soon!
                 </p>

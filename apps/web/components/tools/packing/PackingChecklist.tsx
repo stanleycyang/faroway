@@ -1,12 +1,78 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Printer } from "lucide-react";
+import {
+  Backpack,
+  Briefcase,
+  Building2,
+  Check,
+  CloudRain,
+  Droplets,
+  Heart,
+  MapPin,
+  Moon,
+  Mountain,
+  Package,
+  Printer,
+  Smartphone,
+  Snowflake,
+  Sun,
+  ThermometerSun,
+  type LucideIcon,
+} from "lucide-react";
 import type { PackingCategory } from "@/lib/tools/packing-data";
 
 interface PackingChecklistProps {
   categories: PackingCategory[];
   storageKey: string;
+}
+
+function getCategoryIcon(categoryName: string): LucideIcon {
+  const lower = categoryName.toLowerCase();
+  if (
+    lower.includes("essential") ||
+    lower.includes("document") ||
+    lower.includes("carry")
+  )
+    return Backpack;
+  if (
+    lower.includes("toilet") ||
+    lower.includes("hygiene") ||
+    lower.includes("skin")
+  )
+    return Droplets;
+  if (lower.includes("tech") || lower.includes("electr")) return Smartphone;
+  if (lower.includes("sleep") || lower.includes("comfort")) return Moon;
+  if (
+    lower.includes("beach") ||
+    lower.includes("swim") ||
+    lower.includes("sun")
+  )
+    return Sun;
+  if (lower.includes("city") || lower.includes("urban")) return Building2;
+  if (
+    lower.includes("hik") ||
+    lower.includes("outdoor") ||
+    lower.includes("gear")
+  )
+    return Mountain;
+  if (lower.includes("business") || lower.includes("work")) return Briefcase;
+  if (
+    lower.includes("health") ||
+    lower.includes("wellness") ||
+    lower.includes("med")
+  )
+    return Heart;
+  if (
+    lower.includes("warm") ||
+    lower.includes("hot") ||
+    lower.includes("summer")
+  )
+    return ThermometerSun;
+  if (lower.includes("cold") || lower.includes("winter")) return Snowflake;
+  if (lower.includes("rain") || lower.includes("weather")) return CloudRain;
+  if (lower.includes("destination") || lower.includes("local")) return MapPin;
+  return Package;
 }
 
 export function PackingChecklist({
@@ -89,21 +155,21 @@ function SavedPackingChecklist({
   return (
     <div>
       {/* Progress bar */}
-      <div className="sticky top-28 lg:top-32 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200/60 py-4 mb-6 print-static print-border-none">
+      <div className="sticky top-28 lg:top-32 z-30 bg-white/95 backdrop-blur-sm border-b border-[#DCE5E3] py-4 mb-6 print-static print-border-none">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold text-slate-900">
             {checkedCount}/{totalItems} packed
           </span>
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-primary">
+            <span className="text-sm font-semibold text-primary-700">
               {progressPercent}%
             </span>
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors print-hidden"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors print-hidden"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4" aria-hidden="true" />
               Print
             </button>
           </div>
@@ -117,7 +183,7 @@ function SavedPackingChecklist({
           className="h-2.5 bg-slate-100 rounded-full overflow-hidden"
         >
           <div
-            className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full transition-all duration-500 motion-reduce:transition-none"
+            className="h-full bg-primary-700 rounded-full transition-all duration-500 motion-reduce:transition-none"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -137,15 +203,18 @@ function SavedPackingChecklist({
           const categoryChecked = category.items.filter((i) =>
             checked.has(`${category.category}:${i.name}`),
           ).length;
+          const CategoryIcon = getCategoryIcon(category.category);
 
           return (
             <div key={category.category}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">{category.emoji}</span>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-[#EFF5F3] text-[#143D46] flex items-center justify-center shrink-0">
+                  <CategoryIcon className="w-4 h-4" aria-hidden="true" />
+                </div>
                 <h2 className="text-lg font-bold text-slate-900">
                   {category.category}
                 </h2>
-                <span className="text-xs text-slate-400 ml-auto">
+                <span className="text-xs font-medium text-slate-600 ml-auto">
                   {categoryChecked}/{category.items.length}
                 </span>
               </div>
@@ -164,23 +233,28 @@ function SavedPackingChecklist({
                       aria-pressed={isChecked}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all ${
                         isChecked
-                          ? "bg-primary/5 text-slate-400 line-through"
-                          : "hover:bg-slate-50 text-slate-700"
+                          ? "bg-primary-50 text-slate-600 line-through"
+                          : "hover:bg-[#EFF5F3]/60 text-slate-700"
                       }`}
                     >
                       <div
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                           isChecked
-                            ? "bg-primary border-primary"
+                            ? "bg-primary-700 border-primary-700"
                             : "border-slate-300"
                         }`}
                       >
-                        {isChecked && <Check className="w-3 h-3 text-white" />}
+                        {isChecked && (
+                          <Check
+                            className="w-3 h-3 text-white"
+                            aria-hidden="true"
+                          />
+                        )}
                       </div>
                       <span className="text-sm">
                         {item.name}
                         {item.essential && !isChecked && (
-                          <span className="ml-2 text-xs text-primary font-medium">
+                          <span className="ml-2 text-xs text-primary-800 font-semibold">
                             Essential
                           </span>
                         )}

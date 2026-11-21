@@ -1,18 +1,27 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronDown, MapPin, Trash2, X } from "lucide-react";
+import { ChevronDown, MapPin, Star, Trash2, X } from "lucide-react";
+import {
+  isAllowedAffiliateUrl,
+  itemTypeForAffiliatePartner,
+} from "@faroway/constants";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
-import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { CONTINENT_BY_ALPHA3 } from "@/lib/tools/world-map/continents";
 import type { CountryVisit } from "@/lib/tools/world-map/types";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
 import { PhotoUpload } from "./PhotoUpload";
+import type { WorldMapAffiliateBundle } from "./world-map-affiliates";
 
 interface Props {
   iso: string | null;
   name: string | null;
   onClose: () => void;
+  bundlesByCountryKey?: Record<string, WorldMapAffiliateBundle>;
+  defaultLinks?: WorldMapAffiliateBundle;
 }
 
 const EMPTY_DRAFT = (iso: string): CountryVisit => ({
@@ -20,7 +29,29 @@ const EMPTY_DRAFT = (iso: string): CountryVisit => ({
   status: "visited",
 });
 
-export function CountryDetailDrawer({ iso, name, onClose }: Props) {
+function buildClientSafeBookingFallback(
+  countryLabel: string,
+): AffiliateLinkResult | null {
+  const url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(countryLabel)}`;
+  if (!isAllowedAffiliateUrl(url)) return null;
+  return {
+    partner: "booking",
+    label: `Explore stays in ${countryLabel}`,
+    vertical: "hotels",
+    url,
+    configured: false,
+    isSearchFallback: true,
+    disclosure: "We may earn a commission at no extra cost to you.",
+  };
+}
+
+export function CountryDetailDrawer({
+  iso,
+  name,
+  onClose,
+  bundlesByCountryKey,
+  defaultLinks,
+}: Props) {
   const open = Boolean(iso);
   const visit = useWorldMapStore((s) => {
     if (!iso) return undefined;
@@ -51,6 +82,42 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
   if (!open || !iso || !draft) return null;
 
   const isPinned = Boolean(visit);
+  const countryLabel = name || iso;
+  const matchedBundle = bundlesByCountryKey?.[countryLabel.toLowerCase()];
+  const fallbackBooking = buildClientSafeBookingFallback(countryLabel);
+  const stayLink =
+    matchedBundle?.stay?.url && isAllowedAffiliateUrl(matchedBundle.stay.url)
+      ? matchedBundle.stay
+      : defaultLinks?.stay?.url && isAllowedAffiliateUrl(defaultLinks.stay.url)
+        ? (fallbackBooking ?? defaultLinks.stay)
+        : fallbackBooking;
+  const flightLink =
+    matchedBundle?.flight?.url &&
+    isAllowedAffiliateUrl(matchedBundle.flight.url)
+      ? matchedBundle.flight
+      : defaultLinks?.flight?.url &&
+          isAllowedAffiliateUrl(defaultLinks.flight.url)
+        ? defaultLinks.flight
+        : null;
+  const esimLink =
+    matchedBundle?.esim?.url && isAllowedAffiliateUrl(matchedBundle.esim.url)
+      ? matchedBundle.esim
+      : defaultLinks?.esim?.url && isAllowedAffiliateUrl(defaultLinks.esim.url)
+        ? defaultLinks.esim
+        : null;
+  const insuranceLink =
+    matchedBundle?.insurance?.url &&
+    isAllowedAffiliateUrl(matchedBundle.insurance.url)
+      ? matchedBundle.insurance
+      : defaultLinks?.insurance?.url &&
+          isAllowedAffiliateUrl(defaultLinks.insurance.url)
+        ? defaultLinks.insurance
+        : null;
+
+  const hasPartnerLinks = Boolean(
+    stayLink || flightLink || esimLink || insuranceLink,
+  );
+  const campaign = `tool-world-map-${iso.toLowerCase()}`;
 
   function save() {
     if (!draft || !iso) return;
@@ -104,24 +171,21 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
         <div className="flex items-start justify-between px-5 pt-4 pb-4 border-b border-slate-100">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <span className="text-3xl leading-none" aria-hidden>
-                {flagEmoji(iso)}
+              <span className="font-mono text-xs font-bold px-2 py-1 rounded-lg bg-[#EFF5F3] text-[#143D46] border border-[#DCE5E3]">
+                {iso}
               </span>
               <h2
                 id="country-drawer-title"
                 className="text-2xl font-bold text-ink font-editorial truncate"
               >
-                {name || iso}
+                {countryLabel}
               </h2>
             </div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-              <span className="font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
-                {iso}
-              </span>
-              {continent ? <span>· {continent}</span> : null}
+            <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
+              {continent ? <span>{continent}</span> : null}
               {isPinned ? (
-                <span className="inline-flex items-center gap-1 text-red-600 font-semibold ml-1">
-                  <MapPin className="w-3 h-3" /> Pinned
+                <span className="inline-flex items-center gap-1 text-primary-800 font-semibold ml-1">
+                  <MapPin className="w-3 h-3" aria-hidden="true" /> Pinned
                 </span>
               ) : null}
             </p>
@@ -129,19 +193,97 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
+            className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {!isPinned && (
             <p className="text-sm text-slate-600 leading-relaxed">
-              You haven&apos;t pinned {name || iso} yet. Pin it now, and
+              You haven&apos;t pinned {countryLabel} yet. Pin it now, and
               optionally add when you went, who you were with, and a photo.
             </p>
+          )}
+
+          {hasPartnerLinks && (
+            <div className="rounded-xl border border-[#DCE5E3] bg-[#EFF5F3] p-4 space-y-3">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#143D46]">
+                  Plan &amp; book for {countryLabel}
+                </h3>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Compare stays, flights, and travel essentials for your next
+                  visit.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {stayLink?.url && (
+                  <TrackedAffiliateButton
+                    label={stayLink.label}
+                    variant="subtle"
+                    source="tool"
+                    placement="world_map_drawer"
+                    campaign={campaign}
+                    itemId={`map-${iso}-stay-${stayLink.partner}`}
+                    itemName={stayLink.label}
+                    itemType="hotel"
+                    affiliateUrl={stayLink.url}
+                    partner={stayLink.partner}
+                  />
+                )}
+                {flightLink?.url && (
+                  <TrackedAffiliateButton
+                    label={flightLink.label}
+                    variant="subtle"
+                    source="tool"
+                    placement="world_map_drawer"
+                    campaign={campaign}
+                    itemId={`map-${iso}-flight-${flightLink.partner}`}
+                    itemName={flightLink.label}
+                    itemType="flight"
+                    affiliateUrl={flightLink.url}
+                    partner={flightLink.partner}
+                  />
+                )}
+                {esimLink?.url && (
+                  <TrackedAffiliateButton
+                    label={esimLink.label}
+                    variant="subtle"
+                    source="tool"
+                    placement="world_map_drawer"
+                    campaign={campaign}
+                    itemId={`map-${iso}-esim-${esimLink.partner}`}
+                    itemName={esimLink.label}
+                    itemType={itemTypeForAffiliatePartner(esimLink.partner)}
+                    affiliateUrl={esimLink.url}
+                    partner={esimLink.partner}
+                  />
+                )}
+                {insuranceLink?.url && (
+                  <TrackedAffiliateButton
+                    label={insuranceLink.label}
+                    variant="subtle"
+                    source="tool"
+                    placement="world_map_drawer"
+                    campaign={campaign}
+                    itemId={`map-${iso}-ins-${insuranceLink.partner}`}
+                    itemName={insuranceLink.label}
+                    itemType={itemTypeForAffiliatePartner(
+                      insuranceLink.partner,
+                    )}
+                    affiliateUrl={insuranceLink.url}
+                    partner={insuranceLink.partner}
+                  />
+                )}
+              </div>
+              <AffiliateDisclosure
+                variant="short"
+                className="text-xs text-slate-600"
+              />
+            </div>
           )}
 
           <div>
@@ -157,6 +299,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                 className={`w-4 h-4 transition-transform ${
                   moreOpen ? "rotate-180" : ""
                 }`}
+                aria-hidden="true"
               />
             </button>
 
@@ -223,14 +366,18 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                                     : (r as 1 | 2 | 3 | 4 | 5),
                               })
                             }
-                            className={`text-xl leading-none transition-all ${
+                            className={`p-1 transition-all ${
                               active
-                                ? "text-amber-400 scale-110"
-                                : "text-slate-300 hover:text-slate-400"
+                                ? "text-amber-600 scale-110"
+                                : "text-slate-500 hover:text-slate-700"
                             }`}
                             aria-label={`Rate ${r} out of 5`}
                           >
-                            ★
+                            <Star
+                              className="w-4 h-4"
+                              fill={active ? "currentColor" : "none"}
+                              aria-hidden="true"
+                            />
                           </button>
                         );
                       })}
@@ -277,17 +424,17 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
           </div>
         </div>
 
-        <div className="border-t border-slate-100 px-5 py-3.5 flex items-center justify-between gap-3 bg-slate-50/60">
+        <div className="border-t border-slate-100 px-5 py-3.5 flex items-center justify-between gap-3 bg-[#FAF8F3]">
           {isPinned ? (
             <button
               type="button"
               onClick={unpin}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
             >
-              <Trash2 className="w-4 h-4" /> Remove pin
+              <Trash2 className="w-4 h-4" aria-hidden="true" /> Remove pin
             </button>
           ) : (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-600">
               {moreOpen ? "Save will pin and store details" : ""}
             </span>
           )}
@@ -303,7 +450,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
               <button
                 type="button"
                 onClick={save}
-                className="text-sm font-semibold text-white bg-gradient-to-r from-primary to-amber-500 hover:shadow-lg hover:shadow-primary/25 px-5 py-2 rounded-lg transition-all"
+                className="text-sm font-semibold text-white bg-primary-700 hover:bg-primary-800 px-5 py-2 rounded-lg transition-all"
               >
                 Save details
               </button>
@@ -311,9 +458,10 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
               <button
                 type="button"
                 onClick={moreOpen ? save : pinAndClose}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-gradient-to-r from-primary to-amber-500 hover:shadow-lg hover:shadow-primary/25 px-5 py-2 rounded-lg transition-all"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-primary-700 hover:bg-primary-800 px-5 py-2 rounded-lg transition-all"
               >
-                <MapPin className="w-4 h-4" /> Pin {name || iso}
+                <MapPin className="w-4 h-4" aria-hidden="true" /> Pin{" "}
+                {countryLabel}
               </button>
             )}
           </div>
@@ -324,7 +472,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
 }
 
 const inputClass =
-  "w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none";
+  "w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-700/40 focus:outline-none";
 
 function Field({
   label,
@@ -335,7 +483,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+      <label className="text-xs uppercase tracking-wider text-slate-600 font-semibold mb-1.5 block">
         {label}
       </label>
       {children}

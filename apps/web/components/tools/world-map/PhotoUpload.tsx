@@ -65,15 +65,15 @@ export function PhotoUpload({ value, onChange }: Props) {
   return (
     <div className="space-y-2">
       <label
-        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-primary/60 transition-colors py-8 cursor-pointer ${
+        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-[#FAF8F3] hover:bg-[#EFF5F3] hover:border-primary-700/60 transition-colors py-8 cursor-pointer ${
           busy ? "opacity-60 pointer-events-none" : ""
         }`}
       >
-        <Camera className="w-6 h-6 text-slate-400" />
-        <span className="text-sm text-slate-600 font-medium">
+        <Camera className="w-6 h-6 text-slate-600" aria-hidden="true" />
+        <span className="text-sm text-slate-700 font-medium">
           {busy ? "Compressing…" : "Click to upload photo"}
         </span>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-slate-600">
           JPEG/PNG · auto-compressed to ~120KB
         </span>
         <input

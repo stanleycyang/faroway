@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
-import { flagEmoji, NUMERIC_TO_ALPHA3 } from "@/lib/tools/world-map/iso";
+import { MapPin, Search, X } from "lucide-react";
+import { NUMERIC_TO_ALPHA3 } from "@/lib/tools/world-map/iso";
 
 interface CountryOption {
   iso: string;
@@ -136,7 +136,7 @@ export function CountrySearch({ onPick }: Props) {
     <div ref={containerRef} className="relative">
       {open ? (
         <div className="flex items-center gap-2 bg-white rounded-full ring-1 ring-slate-200 px-2 py-1 shadow-sm min-w-[240px]">
-          <Search className="w-4 h-4 text-slate-400 ml-1" />
+          <Search className="w-4 h-4 text-slate-600 ml-1" aria-hidden="true" />
           <input
             ref={inputRef}
             type="search"
@@ -159,10 +159,10 @@ export function CountrySearch({ onPick }: Props) {
               setOpen(false);
               setQuery("");
             }}
-            className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400"
+            className="w-6 h-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600"
             aria-label="Close search"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
       ) : (
@@ -192,7 +192,7 @@ export function CountrySearch({ onPick }: Props) {
               </p>
               <button
                 type="button"
-                className="mt-3 text-sm font-semibold text-primary"
+                className="mt-3 text-sm font-semibold text-primary-700 hover:underline"
                 onClick={() => {
                   setLoading(true);
                   setLoadError(false);
@@ -228,11 +228,14 @@ export function CountrySearch({ onPick }: Props) {
               }}
               className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-50 text-left transition-colors"
             >
-              <span className="text-xl leading-none">{flagEmoji(o.iso)}</span>
+              <MapPin
+                className="w-3.5 h-3.5 text-[#143D46] shrink-0"
+                aria-hidden="true"
+              />
               <span className="text-sm font-medium text-slate-900 flex-1 truncate">
                 {o.name}
               </span>
-              <span className="text-xs font-mono text-slate-400">{o.iso}</span>
+              <span className="text-xs font-mono text-slate-600">{o.iso}</span>
             </button>
           ))}
         </div>

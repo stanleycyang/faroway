@@ -1,15 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Clock, Info, AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Info, Shield } from "lucide-react";
+import { isAllowedAffiliateUrl } from "@faroway/constants";
 import { getAllGuides } from "@/lib/destination-guides";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import {
-  passportCountries,
   getVisaInfo,
+  passportCountries,
   visaStatusConfig,
   type VisaStatus,
 } from "@/lib/tools/visa-data";
 import { ToolHero } from "@/components/tools/ToolHero";
+import {
+  ToolAffiliateCard,
+  type ToolAffiliateAction,
+} from "@/components/tools/ToolAffiliateCard";
 
 const guides = getAllGuides();
 
@@ -20,7 +26,35 @@ const STATUS_ICONS: Record<VisaStatus, typeof Shield> = {
   "visa-required": AlertTriangle,
 };
 
-export function VisaCheckerClient() {
+export interface VisaCheckerClientProps {
+  visaLinksByDest?: Record<string, AffiliateLinkResult>;
+  insuranceLinksByDest?: Record<string, AffiliateLinkResult>;
+}
+
+function enrichIvisaNationality(
+  link: AffiliateLinkResult | undefined,
+  passportName: string,
+): AffiliateLinkResult | null {
+  if (!link?.url || !isAllowedAffiliateUrl(link.url)) return null;
+  try {
+    const parsed = new URL(link.url);
+    if (parsed.hostname.toLowerCase() === "www.ivisa.com") {
+      parsed.searchParams.set("nationality", passportName);
+      const nextUrl = parsed.toString();
+      if (isAllowedAffiliateUrl(nextUrl)) {
+        return { ...link, url: nextUrl };
+      }
+    }
+  } catch {
+    return link;
+  }
+  return link;
+}
+
+export function VisaCheckerClient({
+  visaLinksByDest,
+  insuranceLinksByDest,
+}: VisaCheckerClientProps = {}) {
   const [passportCode, setPassportCode] = useState("");
   const [destinationSlug, setDestinationSlug] = useState("");
 
@@ -31,6 +65,29 @@ export function VisaCheckerClient() {
 
   const destination = guides.find((g) => g.slug === destinationSlug);
   const passport = passportCountries.find((p) => p.code === passportCode);
+
+  const actions: ToolAffiliateAction[] = [];
+  if (destination && passport) {
+    const visaLink = enrichIvisaNationality(
+      visaLinksByDest?.[destination.slug],
+      passport.name,
+    );
+    if (visaLink?.url) {
+      actions.push({
+        key: `tool-visa-${destination.slug}-${visaLink.partner}`,
+        link: visaLink,
+        itemType: "activity",
+      });
+    }
+    const insLink = insuranceLinksByDest?.[destination.slug];
+    if (insLink?.url && isAllowedAffiliateUrl(insLink.url)) {
+      actions.push({
+        key: `tool-visa-${destination.slug}-insurance-${insLink.partner}`,
+        link: insLink,
+        itemType: "activity",
+      });
+    }
+  }
 
   return (
     <div>
@@ -54,12 +111,12 @@ export function VisaCheckerClient() {
             id="visa-passport"
             value={passportCode}
             onChange={(e) => setPassportCode(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-700/30 focus:border-primary-700"
           >
             <option value="">Select your passport country</option>
             {passportCountries.map((p) => (
               <option key={p.code} value={p.code}>
-                {p.flag} {p.name}
+                {p.name} ({p.code})
               </option>
             ))}
           </select>
@@ -77,7 +134,7 @@ export function VisaCheckerClient() {
             id="visa-destination"
             value={destinationSlug}
             onChange={(e) => setDestinationSlug(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-700/30 focus:border-primary-700"
           >
             <option value="">Select a destination</option>
             {guides.map((g) => (
@@ -93,10 +150,10 @@ export function VisaCheckerClient() {
           <div
             role="status"
             aria-live="polite"
-            className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-5"
           >
             <div
-              className={`rounded-2xl border-2 ${visaStatusConfig[visaInfo.status].border} ${visaStatusConfig[visaInfo.status].bg} p-6 mb-6`}
+              className={`rounded-2xl border-2 ${visaStatusConfig[visaInfo.status].border} ${visaStatusConfig[visaInfo.status].bg} p-6`}
             >
               {/* Status Badge */}
               <div className="flex items-center gap-3 mb-4">
@@ -108,6 +165,7 @@ export function VisaCheckerClient() {
                     >
                       <StatusIcon
                         className={`w-6 h-6 ${visaStatusConfig[visaInfo.status].color}`}
+                        aria-hidden="true"
                       />
                     </div>
                   );
@@ -122,13 +180,24 @@ export function VisaCheckerClient() {
               </div>
 
               {/* Details */}
-              <h2 className="text-lg font-bold text-slate-900 mb-1">
-                {passport.flag} {passport.name} → {destination.name}
+              <h2 className="text-lg font-bold text-slate-900 mb-1 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded bg-white/90 border border-[#DCE5E3] px-2 py-0.5 font-mono text-xs font-bold text-[#143D46]">
+                  {passport.code}
+                </span>
+                <span>{passport.name}</span>
+                <ArrowRight
+                  className="w-4 h-4 text-[#C03A31]"
+                  aria-hidden="true"
+                />
+                <span>{destination.name}</span>
               </h2>
 
               <div className="space-y-3 mt-4">
                 <div className="flex items-start gap-3">
-                  <Clock className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                  <Clock
+                    className="w-4 h-4 text-slate-600 mt-0.5 shrink-0"
+                    aria-hidden="true"
+                  />
                   <div>
                     <p className="text-sm font-medium text-slate-900">
                       Stay Duration
@@ -141,7 +210,10 @@ export function VisaCheckerClient() {
 
                 {visaInfo.notes && (
                   <div className="flex items-start gap-3">
-                    <Info className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
+                    <Info
+                      className="w-4 h-4 text-slate-600 mt-0.5 shrink-0"
+                      aria-hidden="true"
+                    />
                     <div>
                       <p className="text-sm font-medium text-slate-900">
                         Notes
@@ -153,9 +225,19 @@ export function VisaCheckerClient() {
               </div>
             </div>
 
+            {actions.length > 0 && (
+              <ToolAffiliateCard
+                title={`Prepare entry & protection for ${destination.name}`}
+                subtitle={`Verify official ${destination.country} entry rules or add travel medical coverage.`}
+                placement="visa_checker_result"
+                campaign="tool-visa-checker"
+                actions={actions}
+              />
+            )}
+
             {/* Disclaimer */}
-            <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
-              <p className="text-xs text-slate-500 leading-relaxed">
+            <div className="rounded-xl bg-[#FAF8F3] border border-[#DCE5E3] p-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
                 <strong>Disclaimer:</strong> Visa requirements change
                 frequently. Always verify with your country&apos;s embassy or
                 the destination&apos;s immigration authority before traveling.
@@ -168,9 +250,12 @@ export function VisaCheckerClient() {
 
         {/* Empty State */}
         {(!passportCode || !destinationSlug) && (
-          <div className="text-center py-12 rounded-2xl border-2 border-dashed border-slate-200">
-            <Shield className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-500">
+          <div className="text-center py-12 rounded-2xl border-2 border-dashed border-[#DCE5E3] bg-white">
+            <Shield
+              className="w-12 h-12 text-[#143D46]/40 mx-auto mb-3"
+              aria-hidden="true"
+            />
+            <p className="text-sm text-slate-600">
               Select your passport and destination to check visa requirements
             </p>
           </div>
@@ -179,12 +264,12 @@ export function VisaCheckerClient() {
         {passportCode && destinationSlug && !visaInfo && (
           <div
             role="status"
-            className="rounded-2xl border border-slate-200 p-6 text-center"
+            className="rounded-2xl border border-[#DCE5E3] bg-white p-6 text-center"
           >
             <h2 className="font-semibold text-slate-900">
               Guidance unavailable
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-slate-600">
               We do not have guidance for this combination yet. Check the
               destination&apos;s official immigration authority before travel.
             </p>

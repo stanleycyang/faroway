@@ -12,6 +12,22 @@ import { BlogCard } from "@/components/blog/BlogCard";
 import { ViewTracker } from "@/components/blog/ViewTracker";
 import { ProseWrapper } from "@/components/blog/MDXComponents";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import { isAllowedAffiliateUrl } from "@faroway/constants";
+import { buildHotelPartnerLinks } from "@/lib/affiliates/hotels";
+import { buildActivityFallbackLinks } from "@/lib/affiliates/activities";
+import { buildFlightFallbackLinks } from "@/lib/affiliates/flights";
+import {
+  buildAiraloUrl,
+  buildSafetyWingUrl,
+  buildTripEssentials,
+  buildWiseUrl,
+} from "@/lib/affiliates/essentials";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
+import {
+  BlogAffiliateSection,
+  type BlogEssentialEntry,
+} from "@/components/blog/BlogAffiliateSection";
+import { extractBlogMonetizationContext } from "@/components/blog/blog-context";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
@@ -326,6 +342,98 @@ export default async function BlogPostPage({
     isFinancialContent &&
     referencedYear !== undefined &&
     Number(referencedYear) < new Date().getFullYear();
+
+  const monetization = extractBlogMonetizationContext(post);
+  const trackingId = `blog-${post.slug}`;
+  const keepAllowed = (
+    link: AffiliateLinkResult | null | undefined,
+  ): AffiliateLinkResult | null =>
+    link && link.url && isAllowedAffiliateUrl(link.url) ? link : null;
+
+  const stayLinks = monetization.destination
+    ? (() => {
+        const result = buildHotelPartnerLinks({
+          destination: monetization.destination,
+          campaign: trackingId,
+        });
+        return [result.primary, ...result.alternatives]
+          .filter((l): l is AffiliateLinkResult => Boolean(keepAllowed(l)))
+          .slice(0, 3);
+      })()
+    : [];
+
+  const activityLinks = monetization.destination
+    ? buildActivityFallbackLinks({
+        destination: monetization.destination,
+        trackingId,
+      })
+        .filter((l) => Boolean(keepAllowed(l)))
+        .slice(0, 3)
+    : [];
+
+  const flightLinks = buildFlightFallbackLinks({
+    destinationCity: monetization.destination,
+    departureDate: "",
+    trackingId,
+  }).filter((l) => Boolean(keepAllowed(l)));
+
+  const essentialsEntries: BlogEssentialEntry[] = monetization.destination
+    ? (() => {
+        const built = buildTripEssentials({
+          destination: monetization.destination,
+          country: monetization.country,
+          targetCurrency: monetization.currency,
+          trackingId,
+        });
+        const items: BlogEssentialEntry[] = [
+          { key: "esim", title: "eSIM Data", link: built.esim },
+          {
+            key: "insurance",
+            title: "Travel Insurance",
+            link: built.insurance,
+          },
+          { key: "carRental", title: "Car Rental", link: built.carRental },
+          { key: "visa", title: "Entry & Visas", link: built.visa },
+          { key: "fx", title: "Travel Money", link: built.fx },
+        ];
+        return items.filter((item) => Boolean(keepAllowed(item.link)));
+      })()
+    : (
+        [
+          {
+            key: "esim",
+            title: "eSIM Data",
+            link: buildAiraloUrl({ trackingId }),
+          },
+          {
+            key: "insurance",
+            title: "Travel Insurance",
+            link: buildSafetyWingUrl({ trackingId }),
+          },
+          {
+            key: "fx",
+            title: "Travel Money",
+            link: buildWiseUrl({}),
+          },
+        ] satisfies BlogEssentialEntry[]
+      ).filter((item) => Boolean(keepAllowed(item.link)));
+
+  const financialLinks = isFinancialContent
+    ? {
+        fx: keepAllowed(
+          buildWiseUrl({
+            destination: monetization.country,
+            targetCurrency: monetization.currency,
+          }),
+        ),
+        insurance: keepAllowed(
+          buildSafetyWingUrl({
+            destination: monetization.destination,
+            trackingId,
+          }),
+        ),
+      }
+    : undefined;
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -379,7 +487,7 @@ export default async function BlogPostPage({
           <div className="absolute inset-0 bg-black/50" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
-          <div className="absolute inset-0 bg-primary/5" />
+          <div className="absolute inset-0 bg-[#143D46]/15" />
 
           {/* Hero content overlay */}
           <div className="relative z-10 w-full pb-10 md:pb-16 pt-32">
@@ -402,18 +510,18 @@ export default async function BlogPostPage({
                 {/* Category pill */}
                 <Link
                   href={`/blog/category/${categorySlug}`}
-                  className="inline-block px-3.5 py-1.5 bg-primary/20 border border-primary/30 text-primary-200 backdrop-blur-sm rounded-full text-sm font-semibold mb-5 hover:bg-primary/30 transition-colors"
+                  className="inline-block px-3.5 py-1.5 bg-[#143D46]/90 border border-white/25 text-[#FFF5EE] backdrop-blur-sm rounded-full text-sm font-semibold mb-5 hover:bg-[#143D46] transition-colors"
                 >
                   {post.category}
                 </Link>
 
                 {/* Title */}
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold text-white leading-[1.1] tracking-tight mb-5">
+                <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold text-white leading-[1.1] tracking-tight mb-5">
                   {post.title}
                 </h1>
 
                 {/* Description */}
-                <p className="text-lg md:text-xl text-white/75 leading-relaxed mb-8 max-w-2xl">
+                <p className="text-lg md:text-xl text-white/90 leading-relaxed mb-8 max-w-2xl">
                   {post.description}
                 </p>
 
@@ -432,7 +540,7 @@ export default async function BlogPostPage({
                       <p className="font-semibold text-white text-sm">
                         {post.author.name}
                       </p>
-                      <div className="flex items-center gap-2 text-sm text-white/50">
+                      <div className="flex items-center gap-2 text-sm text-white/80">
                         <time dateTime={post.date}>
                           {new Date(post.date).toLocaleDateString("en-US", {
                             month: "long",
@@ -459,7 +567,7 @@ export default async function BlogPostPage({
 
         {/* ===== Decorative gradient separator ===== */}
         <div className="flex justify-center py-8">
-          <div className="h-1 w-24 bg-gradient-to-r from-primary to-amber-500 rounded-full" />
+          <div className="h-1 w-24 bg-gradient-to-r from-[#C03A31] to-[#143D46] rounded-full" />
         </div>
 
         {/* ===== Content + TOC ===== */}
@@ -483,16 +591,28 @@ export default async function BlogPostPage({
               )}
               <ProseWrapper html={contentHtml} />
 
+              <BlogAffiliateSection
+                postSlug={post.slug}
+                destinationLabel={monetization.destinationLabel}
+                plannerHref={monetization.plannerHref}
+                isFinancialContent={isFinancialContent}
+                stays={stayLinks}
+                activities={activityLinks}
+                flights={flightLinks}
+                essentials={essentialsEntries}
+                financialLinks={financialLinks}
+              />
+
               {/* Tags */}
               <div className="mt-14 pt-6 border-t border-gray-200">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
                   Topics
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200 hover:bg-primary-100 transition-colors"
+                      className="px-3 py-1.5 bg-primary-50 text-primary-800 rounded-full text-sm border border-primary-200 hover:bg-primary-100 transition-colors"
                     >
                       #{tag}
                     </span>
@@ -501,17 +621,17 @@ export default async function BlogPostPage({
               </div>
 
               {/* Author Bio — Editorial Card */}
-              <div className="mt-10 p-6 bg-gradient-to-br from-gray-50 to-primary-50/30 border border-gray-200 rounded-2xl flex gap-5 items-start">
+              <div className="mt-10 p-6 bg-[#FAF8F3] border border-[#DCE5E3] rounded-2xl flex gap-5 items-start">
                 <JournalImage
                   src={post.author.avatar}
                   fallbackSrc="/icon.png"
                   alt={post.author.name}
                   width={64}
                   height={64}
-                  className="rounded-2xl flex-shrink-0 ring-2 ring-gray-200"
+                  className="rounded-2xl flex-shrink-0 ring-2 ring-[#DCE5E3]"
                 />
                 <div>
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
                     Written by
                   </p>
                   <p className="font-bold text-slate-900 text-lg">
@@ -525,7 +645,7 @@ export default async function BlogPostPage({
                       href={`https://twitter.com/${post.author.twitter.replace("@", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 mt-2 transition-colors"
+                      className="inline-flex items-center gap-1.5 text-sm text-primary-700 hover:text-primary-800 mt-2 transition-colors"
                     >
                       <svg
                         className="w-4 h-4"
@@ -567,11 +687,11 @@ export default async function BlogPostPage({
 
               {/* Section badge pattern */}
               <div className="text-center mb-10">
-                <span className="inline-block px-4 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold border border-primary-200 mb-4">
+                <span className="inline-block px-4 py-1.5 bg-primary-50 text-primary-800 rounded-full text-sm font-semibold border border-primary-200 mb-4">
                   Keep Reading
                 </span>
-                <h2 className="text-3xl font-bold">
-                  <span className="text-gradient">You Might Also Like</span>
+                <h2 className="font-editorial text-3xl font-bold text-[#143D46]">
+                  You Might Also Like
                 </h2>
               </div>
 

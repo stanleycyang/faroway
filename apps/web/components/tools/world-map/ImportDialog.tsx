@@ -119,12 +119,12 @@ export function ImportDialog({ open, onClose }: Props) {
         </div>
 
         <div className="p-6 space-y-4">
-          <label className="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-primary/60 transition-colors py-8 cursor-pointer">
-            <Upload className="w-6 h-6 text-slate-400" />
-            <span className="text-sm text-slate-600 font-medium">
+          <label className="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-[#FAF8F3] hover:bg-[#EFF5F3] hover:border-primary-700/60 transition-colors py-8 cursor-pointer">
+            <Upload className="w-6 h-6 text-slate-600" aria-hidden="true" />
+            <span className="text-sm text-slate-700 font-medium">
               Choose a JSON backup file
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-600">
               Previously exported from this page
             </span>
             <input
@@ -139,7 +139,7 @@ export function ImportDialog({ open, onClose }: Props) {
           {error && (
             <div
               role="alert"
-              className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"
+              className="text-sm text-red-700 bg-red-50 rounded-lg px-3 py-2"
             >
               {error}
             </div>
@@ -168,7 +168,7 @@ export function ImportDialog({ open, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => doImport("merge")}
-                  className="py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
+                  className="py-2.5 rounded-xl bg-[#143D46] text-white text-sm font-semibold hover:bg-[#0E2C33] transition-colors"
                 >
                   Merge into current
                 </button>
@@ -180,7 +180,7 @@ export function ImportDialog({ open, onClose }: Props) {
                   Replace current
                 </button>
               </div>
-              <p className="text-xs text-slate-400 text-center">
+              <p className="text-xs text-slate-600 text-center">
                 Merge keeps existing pins where they overlap · Replace
                 overwrites them
               </p>

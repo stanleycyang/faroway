@@ -21,26 +21,26 @@ const CATEGORY_META = [
     key: "accommodation",
     label: "Accommodation",
     icon: Bed,
-    color: "bg-primary",
+    color: "bg-primary-700",
   },
   {
     key: "food",
     label: "Food & Drinks",
     icon: UtensilsCrossed,
-    color: "bg-amber-500",
+    color: "bg-amber-600",
   },
   {
     key: "transport",
     label: "Transport",
     icon: TrainFront,
-    color: "bg-teal-500",
+    color: "bg-[#143D46]",
   },
-  { key: "activities", label: "Activities", icon: Ticket, color: "bg-sky-500" },
+  { key: "activities", label: "Activities", icon: Ticket, color: "bg-sky-700" },
   {
     key: "misc",
     label: "Miscellaneous",
     icon: ShoppingBag,
-    color: "bg-slate-400",
+    color: "bg-slate-600",
   },
 ] as const;
 
@@ -72,8 +72,8 @@ export function CostBreakdown({
   return (
     <div>
       {/* Total hero */}
-      <div className="text-center p-8 rounded-2xl bg-gradient-to-br from-primary-50 via-white to-amber-50 border border-slate-200/80 mb-8">
-        <p className="text-sm text-slate-500 mb-1">
+      <div className="text-center p-8 rounded-2xl bg-gradient-to-br from-[#FAF8F3] via-white to-[#EFF5F3] border border-[#DCE5E3] mb-8">
+        <p className="text-sm text-slate-600 mb-1">
           Estimated total — {days} {days === 1 ? "day" : "days"}, {travelers}{" "}
           {travelers === 1 ? "traveler" : "travelers"} ({budgetLabel})
         </p>
@@ -81,11 +81,11 @@ export function CostBreakdown({
           {formatUSD(grandTotal)}
         </div>
         {profile.currency !== "USD" && (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-600">
             {formatLocal(grandTotal)} {profile.currency}
           </p>
         )}
-        <p className="text-sm text-slate-500 mt-2">
+        <p className="text-sm text-slate-600 mt-2">
           ~{formatUSD(adjustedDaily)}/day per person
         </p>
       </div>
@@ -124,7 +124,7 @@ export function CostBreakdown({
                       <h3 className="text-sm font-semibold text-slate-900">
                         {label}
                       </h3>
-                      <p className="text-xs text-slate-500">{pct}% of budget</p>
+                      <p className="text-xs text-slate-600">{pct}% of budget</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -132,7 +132,7 @@ export function CostBreakdown({
                       {formatUSD(amount)}
                     </p>
                     {profile.currency !== "USD" && (
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-600">
                         {formatLocal(amount)}
                       </p>
                     )}
@@ -158,13 +158,13 @@ export function CostBreakdown({
         {profile.samplePrices.map((sp) => (
           <div
             key={sp.item}
-            className="p-3 rounded-xl bg-slate-50 border border-slate-200/60"
+            className="p-3 rounded-xl bg-[#FAF8F3] border border-[#DCE5E3]"
           >
-            <p className="text-xs text-slate-500 mb-1">{sp.item}</p>
+            <p className="text-xs text-slate-600 mb-1">{sp.item}</p>
             <p className="text-sm font-bold text-slate-900">
               {formatUSD(sp.priceUSD)}
               {profile.currency !== "USD" && (
-                <span className="text-xs text-slate-400 font-normal ml-1">
+                <span className="text-xs text-slate-600 font-normal ml-1">
                   ({profile.currencySymbol}
                   {Math.round(
                     sp.priceUSD * profile.exchangeRate,
@@ -178,7 +178,7 @@ export function CostBreakdown({
       </div>
 
       {/* Disclaimer */}
-      <p className="text-xs text-slate-400 text-center">
+      <p className="text-xs text-slate-600 text-center">
         Estimates based on average traveler data. Actual costs vary by season,
         booking choices, and personal spending.
       </p>

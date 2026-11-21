@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { PackingListClient } from "@/components/tools/packing/PackingListClient";
+import { getAllGuides } from "@/lib/destination-guides";
+import { buildTripEssentials } from "@/lib/affiliates/essentials";
+import {
+  PackingListClient,
+  type PackingAffiliateBundle,
+} from "@/components/tools/packing/PackingListClient";
 
 export const metadata: Metadata = {
   title: "Packing List Generator — Never Forget Essentials",
@@ -15,6 +20,22 @@ export const metadata: Metadata = {
 };
 
 export default function PackingListPage() {
+  const guides = getAllGuides();
+  const essentialsBySlug: Record<string, PackingAffiliateBundle> = {};
+  for (const guide of guides) {
+    const built = buildTripEssentials({
+      destination: guide.name,
+      country: guide.country,
+      trackingId: `tool-packing-${guide.slug}`,
+    });
+    essentialsBySlug[guide.slug] = {
+      esim: built.esim,
+      insurance: built.insurance,
+      carRental: built.carRental,
+      visa: built.visa,
+    };
+  }
+
   const appSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -35,7 +56,7 @@ export default function PackingListPage() {
           __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
         }}
       />
-      <PackingListClient />
+      <PackingListClient essentialsBySlug={essentialsBySlug} />
     </>
   );
 }

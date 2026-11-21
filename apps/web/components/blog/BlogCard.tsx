@@ -37,12 +37,14 @@ export function BlogCard({
           <Link
             href={`/blog/category/${categorySlug}`}
             prefetch={false}
-            className="text-primary font-medium hover:text-primary-dark transition-colors"
+            className="text-primary-700 font-medium hover:text-primary-800 transition-colors"
           >
             {post.category}
           </Link>
-          <span className="text-slate-400">·</span>
-          <time className="text-gray-500" dateTime={post.date}>
+          <span className="text-slate-600" aria-hidden="true">
+            ·
+          </span>
+          <time className="text-slate-600" dateTime={post.date}>
             {new Date(post.date).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
@@ -55,7 +57,7 @@ export function BlogCard({
           prefetch={false}
           className="group/title"
         >
-          <Heading className="text-lg font-bold text-slate-900 group-hover/title:text-primary transition-colors line-clamp-2 mb-2">
+          <Heading className="text-lg font-bold text-slate-900 group-hover/title:text-primary-700 transition-colors line-clamp-2 mb-2">
             {post.title}
           </Heading>
         </Link>
@@ -72,8 +74,10 @@ export function BlogCard({
             className="rounded-full"
           />
           <span className="text-sm text-slate-600">{post.author.name}</span>
-          <span className="text-slate-400 ml-auto">·</span>
-          <span className="text-sm text-gray-500">
+          <span className="text-slate-600 ml-auto" aria-hidden="true">
+            ·
+          </span>
+          <span className="text-sm text-slate-600">
             {post.readingTime} min read
           </span>
         </div>
@@ -99,18 +103,18 @@ export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
           <div className="flex items-center gap-3 text-sm mb-3">
-            <span className="px-3 py-1 bg-gradient-to-r from-primary to-amber-500 text-white rounded-full text-xs font-semibold shadow-lg shadow-primary/25">
+            <span className="px-3 py-1 bg-primary-700 text-white rounded-full text-xs font-semibold shadow-lg shadow-primary-700/20">
               Featured
             </span>
-            <span className="text-gray-300">{post.category}</span>
+            <span className="text-slate-200">{post.category}</span>
           </div>
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-3 max-w-3xl">
+          <h2 className="font-editorial text-2xl md:text-4xl font-bold text-white mb-3 max-w-3xl">
             {post.title}
           </h2>
-          <p className="text-gray-300 text-base md:text-lg max-w-2xl line-clamp-2 mb-4">
+          <p className="text-slate-200 text-base md:text-lg max-w-2xl line-clamp-2 mb-4">
             {post.description}
           </p>
-          <div className="flex items-center gap-3 text-sm text-gray-400">
+          <div className="flex items-center gap-3 text-sm text-slate-200">
             <span>{post.author.name}</span>
             <span>·</span>
             <time dateTime={post.date}>

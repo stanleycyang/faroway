@@ -7,7 +7,7 @@ export default function DestinationsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white text-slate-900 min-h-screen">
+    <div className="bg-[#FAF8F3] text-slate-900 min-h-screen">
       <Header />
       {children}
       <Footer />

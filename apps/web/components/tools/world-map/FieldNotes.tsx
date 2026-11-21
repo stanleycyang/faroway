@@ -79,18 +79,18 @@ export function FieldNotes({ visits }: Props) {
       <header className="flex items-baseline gap-3">
         <h2
           id="field-notes-title"
-          className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500"
+          className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-600"
         >
           Field Notes
         </h2>
         <div className="h-px flex-1 bg-ink/15" />
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 tabular-nums">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 tabular-nums">
           {Object.keys(visits).length} pinned
         </div>
       </header>
 
       {groups.length === 0 ? (
-        <p className="mt-6 font-editorial text-lg italic text-slate-400">
+        <p className="mt-6 font-editorial text-lg italic text-slate-600">
           Field notes appear as you pin countries.
         </p>
       ) : (
@@ -101,7 +101,7 @@ export function FieldNotes({ visits }: Props) {
                 <h3 className="font-editorial text-xl font-bold text-ink">
                   {group.continent}
                 </h3>
-                <span className="text-[11px] font-bold tracking-[0.18em] text-slate-400 tabular-nums">
+                <span className="text-[11px] font-bold tracking-[0.18em] text-slate-600 tabular-nums">
                   · {group.entries.length}
                 </span>
               </div>
@@ -113,14 +113,14 @@ export function FieldNotes({ visits }: Props) {
                       key={visit.iso}
                       className="flex items-baseline gap-2 text-sm text-slate-700"
                     >
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400 w-9 flex-shrink-0">
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-slate-600 w-9 flex-shrink-0">
                         {visit.iso}
                       </span>
                       <span className="font-medium text-slate-800 truncate">
                         {name}
                       </span>
                       {(year || visit.pinnedCity) && (
-                        <span className="ml-auto text-[12px] italic text-slate-500 truncate">
+                        <span className="ml-auto text-[12px] italic text-slate-600 truncate">
                           {[year, visit.pinnedCity].filter(Boolean).join(" · ")}
                         </span>
                       )}
