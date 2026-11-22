@@ -2,7 +2,6 @@
 
 import type { RefObject } from "react";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
-import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { VISITED_FILL } from "@/lib/tools/world-map/status";
 
 interface Props {
@@ -27,12 +26,14 @@ export function MapTooltip({ iso, name, x, y, tooltipRef }: Props) {
     >
       <div className="bg-ink text-paper px-3.5 py-2.5 backdrop-blur whitespace-nowrap shadow-lg">
         <div className="flex items-center gap-2">
-          <span className="text-lg leading-none">{flagEmoji(iso)}</span>
+          <span className="bg-paper/15 text-paper font-mono text-[10px] font-bold px-1.5 py-0.5 rounded">
+            {iso}
+          </span>
           <span className="font-editorial text-base font-bold leading-tight">
             {name}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-paper/60">
+        <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-paper/80">
           {visited ? (
             <>
               <span

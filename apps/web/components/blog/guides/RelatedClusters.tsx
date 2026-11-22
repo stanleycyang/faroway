@@ -14,10 +14,10 @@ export function RelatedClusters({ clusters }: RelatedClustersProps) {
       <div className="max-w-7xl mx-auto px-6">
         <FadeInOnScroll>
           <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-4">
+            <span className="inline-flex items-center gap-2 bg-primary-50 text-primary-800 border border-primary-200 rounded-full px-4 py-1.5 text-sm font-medium mb-4">
               Explore More
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+            <h2 className="font-editorial text-3xl md:text-4xl font-bold text-slate-900">
               Related Guides
             </h2>
           </div>
@@ -42,7 +42,7 @@ export function RelatedClusters({ clusters }: RelatedClustersProps) {
                   <h3 className="text-lg font-bold text-white mb-1">
                     {cluster.title}
                   </h3>
-                  <p className="text-white/70 text-sm line-clamp-1 mb-2">
+                  <p className="text-white/90 text-sm line-clamp-1 mb-2">
                     {cluster.tagline}
                   </p>
                   <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-white/90 group-hover:gap-2.5 transition-all">

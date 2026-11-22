@@ -1,10 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import {
   popularDestinations,
+  CANONICAL_TRAVEL_VIBE_IDS,
   travelVibes,
+  VIBE_ALIASES,
+  normalizeVibeId,
+  normalizeVibeList,
   travelerTypes,
   VIBE_KEYWORDS,
   BUDGET_RANGES,
+  BUDGET_TIERS,
+  BUDGET_LABELS,
+  BUDGET_TIER_ALIASES,
+  normalizeBudgetTier,
+  formatBudgetLabel,
   INSPIRATION_CATEGORIES,
   getInspirationBySlug,
   IMAGE_PATHS,
@@ -58,6 +67,57 @@ describe('travelVibes', () => {
   it('includes adventure vibe', () => {
     expect(travelVibes.find((v) => v.id === 'adventure')).toBeDefined();
   });
+
+  it('has all 14 canonical vibes with culture, shopping, and photography', () => {
+    const ids = travelVibes.map((v) => v.id);
+    expect(ids).toEqual([...CANONICAL_TRAVEL_VIBE_IDS]);
+    expect(ids).toHaveLength(14);
+    expect(new Set(ids).size).toBe(14);
+    expect(ids).toContain('culture');
+    expect(ids).toContain('shopping');
+    expect(ids).toContain('photography');
+    expect(ids.slice(0, 5)).toEqual([
+      'adventure',
+      'relaxation',
+      'culture',
+      'foodie',
+      'nightlife',
+    ]);
+  });
+});
+
+describe('vibe normalization', () => {
+  it('maps cultural alias to canonical culture', () => {
+    expect(VIBE_ALIASES.cultural).toBe('culture');
+    expect(normalizeVibeId('cultural')).toBe('culture');
+    expect(normalizeVibeId('  Cultural ')).toBe('culture');
+    expect(normalizeVibeId('Culture')).toBe('culture');
+    expect(normalizeVibeId('shopping')).toBe('shopping');
+    expect(normalizeVibeId('unknown')).toBeUndefined();
+    expect(normalizeVibeId(null)).toBeUndefined();
+    expect(normalizeVibeId('constructor')).toBeUndefined();
+    expect(normalizeVibeId('__proto__')).toBeUndefined();
+    expect(normalizeVibeId('toString')).toBeUndefined();
+  });
+
+  it('deduplicates, normalizes, drops invalid values, and caps at max', () => {
+    expect(
+      normalizeVibeList(['cultural', 'culture', 'foodie', 'invalid', 'photography', 'solo', 'budget'])
+    ).toEqual(['culture', 'foodie', 'photography', 'solo', 'budget']);
+    expect(normalizeVibeList(['adventure', 'relaxation', 'foodie'], 2)).toEqual([
+      'adventure',
+      'relaxation',
+    ]);
+    expect(normalizeVibeList(['adventure', 'foodie'], 0)).toEqual([]);
+    expect(normalizeVibeList(['adventure', 'foodie'], -2)).toEqual([]);
+    expect(normalizeVibeList(['adventure', 'foodie', 'culture'], Number.NaN)).toEqual([]);
+    expect(normalizeVibeList(['adventure', 'foodie'], 0.5)).toEqual([]);
+    expect(normalizeVibeList(['adventure', 'foodie', 'culture'], Infinity)).toEqual([
+      'adventure',
+      'foodie',
+      'culture',
+    ]);
+  });
 });
 
 describe('travelerTypes', () => {
@@ -103,6 +163,50 @@ describe('VIBE_KEYWORDS', () => {
   it('includes relaxation keywords', () => {
     expect(VIBE_KEYWORDS.relaxation).toBeDefined();
     expect(VIBE_KEYWORDS.relaxation).toContain('spa');
+  });
+
+  it('provides parity for culture, cultural, family, budget, luxury, solo, shopping, and photography', () => {
+    expect(VIBE_KEYWORDS.culture).toEqual(VIBE_KEYWORDS.cultural);
+    for (const key of ['culture', 'cultural', 'family', 'budget', 'luxury', 'solo', 'shopping', 'photography']) {
+      expect(VIBE_KEYWORDS[key]).toBeDefined();
+      expect(VIBE_KEYWORDS[key]!.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('BUDGET_TIERS and budget helpers', () => {
+  it('exports canonical Budget, Moderate, and Luxury labels', () => {
+    expect(BUDGET_LABELS).toEqual({
+      budget: 'Budget',
+      moderate: 'Moderate',
+      luxury: 'Luxury',
+    });
+    expect(BUDGET_TIERS.map((t) => t.id)).toEqual(['budget', 'moderate', 'luxury']);
+    expect(BUDGET_TIERS.map((t) => t.label)).toEqual(['Budget', 'Moderate', 'Luxury']);
+    expect(BUDGET_TIER_ALIASES.comfort).toBe('moderate');
+  });
+
+  it('normalizes legacy labels including Comfort and mid_range', () => {
+    expect(normalizeBudgetTier('Comfort')).toBe('moderate');
+    expect(normalizeBudgetTier('  comfort ')).toBe('moderate');
+    expect(normalizeBudgetTier('mid_range')).toBe('moderate');
+    expect(normalizeBudgetTier('mid-range')).toBe('moderate');
+    expect(normalizeBudgetTier('Moderate')).toBe('moderate');
+    expect(normalizeBudgetTier('BUDGET')).toBe('budget');
+    expect(normalizeBudgetTier('luxury')).toBe('luxury');
+    expect(normalizeBudgetTier('extreme')).toBeUndefined();
+    expect(normalizeBudgetTier(42)).toBeUndefined();
+    expect(normalizeBudgetTier('constructor')).toBeUndefined();
+    expect(normalizeBudgetTier('__proto__')).toBeUndefined();
+    expect(normalizeBudgetTier('toString')).toBeUndefined();
+
+    expect(formatBudgetLabel('comfort')).toBe('Moderate');
+    expect(formatBudgetLabel('budget')).toBe('Budget');
+    expect(formatBudgetLabel('luxury')).toBe('Luxury');
+    expect(formatBudgetLabel('invalid')).toBeUndefined();
+    expect(formatBudgetLabel('constructor')).toBeUndefined();
+    expect(formatBudgetLabel('__proto__')).toBeUndefined();
+    expect(formatBudgetLabel('toString')).toBeUndefined();
   });
 });
 

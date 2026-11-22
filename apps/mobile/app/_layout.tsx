@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import { AuthProvider, useAuthContext } from '../components/AuthProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
 import { OfflineProvider } from '../components/OfflineProvider';
@@ -12,7 +14,10 @@ import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
 import { useTripStore } from '../stores/tripStore';
 import { useUserStore } from '../stores/userStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
+import { FONT_LOAD_TIMEOUT_MS, FONT_SOURCES } from '../constants/fonts';
 import { useNetworkStatus, useSyncStatus } from '../hooks/useOfflineSync';
+
+SplashScreen.preventAutoHideAsync?.().catch(() => {});
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -33,6 +38,22 @@ function RootLayoutNav() {
   const syncBannerVisible = isOffline || hasPending || syncStatus === 'syncing';
   const hydrateFromOffline = useTripStore((state) => state.hydrateFromOffline);
   const accountRevision = useUserStore((state) => state.accountRevision);
+  const [fontsLoaded, fontError] = useFonts(FONT_SOURCES);
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) return;
+    const timer = setTimeout(() => setFontTimedOut(true), FONT_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
+
+  const fontsReady = fontsLoaded || Boolean(fontError) || fontTimedOut;
+
+  useEffect(() => {
+    if (initialized && fontsReady) {
+      void SplashScreen.hideAsync?.().catch(() => {});
+    }
+  }, [initialized, fontsReady]);
 
   // Never expose a cache before Auth has resolved its owner. Rehydrate after
   // account changes even when a previous account completed hydration.
@@ -52,7 +73,7 @@ function RootLayoutNav() {
           backgroundColor: '#ffffff',
         }}
       >
-        <ActivityIndicator size="large" color="#F97066" />
+        <ActivityIndicator size="large" color="#C03A31" />
       </View>
     );
   }
@@ -126,6 +147,7 @@ function RootLayoutNav() {
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
+    void SplashScreen.hideAsync?.().catch(() => {});
     Sentry.captureException(error);
   }, [error]);
 

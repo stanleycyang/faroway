@@ -24,6 +24,7 @@ const brief = z
     travelerType: z.enum(['solo', 'couple', 'family', 'friends', 'business']),
     originCity: z.string().max(200).optional(),
     originAirport: z.string().max(10).optional(),
+    flightConsent: z.boolean().optional(),
     requirements: travelerRequirementsSchema.nullish(),
     vibes: z.array(z.string().min(1).max(100)).max(5),
     budget: z.string().max(100).optional(),

@@ -54,13 +54,13 @@ export function NewsletterCTA() {
   };
 
   return (
-    <section className="my-16 rounded-2xl glass-card p-8 md:p-12">
-      <div className="max-w-2xl mx-auto text-center">
-        <div className="h-1 w-16 bg-gradient-to-r from-primary to-amber-500 rounded-full mx-auto mb-6" />
-        <h2 className="font-editorial text-2xl md:text-3xl text-slate-900 mb-3">
+    <section className="my-16 rounded-2xl border border-[#DCE5E3] bg-[#EFF5F3] p-8 shadow-sm md:p-12">
+      <div className="mx-auto max-w-2xl text-center">
+        <div className="mx-auto mb-6 h-1 w-16 rounded-full bg-gradient-to-r from-[#C03A31] to-[#143D46]" />
+        <h2 className="font-editorial mb-3 text-2xl text-slate-900 md:text-3xl">
           Join the travel journal
         </h2>
-        <p className="text-slate-600 mb-6">
+        <p className="mb-6 text-slate-600">
           Join our list for destination guides, travel tips, and fresh planning
           ideas.
         </p>
@@ -69,7 +69,7 @@ export function NewsletterCTA() {
             ref={successRef}
             tabIndex={-1}
             role="status"
-            className="text-slate-900 font-semibold text-lg outline-none"
+            className="text-lg font-semibold text-slate-900 outline-none"
           >
             You’re subscribed as {submittedEmail}. Thanks for joining our travel
             journal.
@@ -77,7 +77,7 @@ export function NewsletterCTA() {
         ) : (
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
+            className="mx-auto flex max-w-lg flex-col gap-3 sm:flex-row"
           >
             <label htmlFor="newsletter-email" className="sr-only">
               Email address
@@ -92,23 +92,23 @@ export function NewsletterCTA() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              className="flex-1 rounded-xl border border-[#DCE5E3] bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-500 focus:border-primary-700 focus:ring-2 focus:ring-primary-700"
             />
             <button
               type="submit"
               disabled={!hydrated || status === "loading"}
-              className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-all whitespace-nowrap disabled:opacity-50"
+              className="whitespace-nowrap rounded-xl bg-[#143D46] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#0E2C33] disabled:opacity-50"
             >
               {status === "loading" ? "Subscribing..." : "Subscribe Free"}
             </button>
           </form>
         )}
         {status === "error" && (
-          <p role="alert" className="text-red-600 text-sm mt-3">
+          <p role="alert" className="mt-3 text-sm font-medium text-red-700">
             We couldn’t confirm your subscription. Please try again.
           </p>
         )}
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="mt-3 text-xs text-slate-600">
           Travel-journal updates only.
         </p>
       </div>

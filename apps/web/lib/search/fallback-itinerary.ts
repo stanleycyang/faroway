@@ -133,14 +133,21 @@ export function createFallbackItinerary(
     return meal;
   };
 
-  // These are alternative outbound offers, not outbound/return legs.
-  const outboundFlight = transport[0];
+  const outboundFlight = transport.find((t) => !t.id.endsWith("__return"));
+  const returnFlight = outboundFlight
+    ? transport.find((t) => t.id === `${outboundFlight.id}__return`)
+    : undefined;
 
   for (let i = 0; i < numDays; i++) {
     const date = new Date(startDate);
     date.setUTCDate(date.getUTCDate() + i);
 
-    const dayTransport = i === 0 ? outboundFlight : undefined;
+    const dayTransport =
+      i === 0
+        ? outboundFlight
+        : i === numDays - 1 && numDays > 1
+          ? returnFlight
+          : undefined;
 
     dayCount = 0;
     dayMinutes = 0;

@@ -113,9 +113,9 @@ describe("Duffel affiliate client", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
       data: {
         reference: "off_123",
-        success_url: "https://faroway.test/trips?duffel=success",
-        failure_url: "https://faroway.test/trips?duffel=failure",
-        abandonment_url: "https://faroway.test/trips?duffel=abandoned",
+        success_url: "https://faroway.test/dashboard?duffel=success",
+        failure_url: "https://faroway.test/dashboard?duffel=failure",
+        abandonment_url: "https://faroway.test/dashboard?duffel=abandoned",
         primary_color: "#0f172a",
         traveller_currency: "USD",
         markup_amount: "5.00",

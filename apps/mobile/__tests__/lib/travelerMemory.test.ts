@@ -18,7 +18,7 @@ describe('travelerMemory', () => {
     const savedA = await saveTravelerMemory('user-a', {
       homeAirport: 'sfo',
       defaultBudget: 'luxury',
-      defaultVibes: ['foodie', 'culture', 'not-a-real-vibe'],
+      defaultVibes: ['foodie', 'cultural', 'not-a-real-vibe'],
       avoidEarlyStarts: true,
       requirements: {
         allergies: ['Peanuts'],
@@ -41,11 +41,14 @@ describe('travelerMemory', () => {
     expect(summarizeTravelerMemory(loadedA)).toEqual(
       expect.arrayContaining([
         'Home airport: SFO',
-        'Comfort: Luxury',
+        'Budget: Luxury',
         'Relaxed mornings',
         'Allergies: Peanuts',
       ])
     );
+
+    const cappedAirport = await saveTravelerMemory('user-d', { homeAirport: 'sfo-intl-123' });
+    expect(cappedAirport?.homeAirport).toBe('SFO-INTL-1');
 
     // Clearing removes only User A's memory
     await clearTravelerMemory('user-a');

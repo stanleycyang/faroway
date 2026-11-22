@@ -1,527 +1,349 @@
-# Production Readiness Audit — Faroway
+# Production Readiness, Monetization & Design Audit — Faroway
 
-**Date:** 2026-05-12 (updated 2026-07-25)
-**Auditor:** an automated reviewer; production-hardening continuation by Codex
-**Scope:** Full monorepo — `apps/mobile`, `apps/web`, `packages/*`, `supabase/`
-
-## Next.js 16 Category-Major Review (2026-07-25)
-
-Inventory after remediation: 33 pages, 14 layouts, 35 route handlers, 68
-client modules, 0 Server Actions, 7 loading/error boundary files, 35 metadata
-exports, and 285 TypeScript/TSX source modules under the web app's
-`app`/`components`/`hooks`/`lib` trees.
-
-The review used a full inventory plus a risk-ranked deep sweep of up to 15
-files in broad categories. Route handlers, layouts, route topology, special
-files, and metadata exports were reviewed exhaustively because those
-inventories were small enough.
-
-| Review category                         | Pages                                                      | Layouts                                  | Route handlers                                                      | Server Actions | Client Components                                                  | Config / metadata                                                      |
-| --------------------------------------- | ---------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| 1. Build and bundle                     | 15 deep / 33 inventoried; clean                            | 14/14 swept                              | Build-covered                                                       | 0/0            | 15 deep / 68 inventoried; 1 eager-dialog issue fixed               | Next/Sentry/Tailwind/Turbo swept; 2 config issues fixed                |
-| 2. Caching and data freshness           | 15 data-heavy pages swept; 2 fixes                         | 14/14 swept                              | 15 external/data routes swept; explicit cache intent added          | 0/0            | N/A                                                                | Font and vendor fetch policy fixed                                     |
-| 3. Server rendering and waterfalls      | 15 deep; private/shared trip waterfalls fixed              | 14/14; shared metadata load deduplicated | 6 related consumers swept                                           | 0/0            | 15 deep; trip detail initial fetch moved server-side               | React cache boundaries verified                                        |
-| 4. Routing and navigation               | 33/33 route pages inventoried; invalid blog category fixed | 14/14 swept                              | Route topology inventoried                                          | 0/0            | Link/prefetch patterns swept; 17 fixes                             | Proxy matcher fixed; dynamic params verified                           |
-| 5. Route handlers and mutations         | API consumers traced                                       | Auth boundaries traced                   | 35/35 swept; auth, validation, rate limit, error semantics reviewed | 0/0            | Mutation callers traced                                            | CORS and runtime configuration swept                                   |
-| 6. Streaming, loading, and errors       | Async page states swept                                    | Error-boundary ownership swept           | Streaming routes swept                                              | 0/0            | 15 async clients swept                                             | 3 route loaders added; Sentry root capture fixed                       |
-| 7. Metadata, SEO, and indexing          | 33/33 page destinations represented                        | 14/14 metadata ownership swept           | OG/sitemap/robots routes swept                                      | 0/0            | N/A                                                                | 35/35 exports swept; sitemap pagination, schema claims, noindex fixed  |
-| 8. Client boundaries and browser weight | Render ownership swept                                     | Provider boundaries swept                | N/A                                                                 | 0/0            | 68 inventoried / 15 deep; 7 modules demoted, 3 dialogs lazy-loaded | Bundle-impact config verified                                          |
-| 9. Cross-cutting integration            | All 33 pages included in integration inventory             | 14/14                                    | 35/35                                                               | 0/0            | Shared store CTA and trip feedback integration verified            | 285-source inventory; dead banner and duplicate migration tree removed |
-
-### Findings applied
-
-- Made server and vendor fetch caching explicit; static OG fonts remain
-  cacheable while request-time vendor calls cannot become stale.
-- Eliminated private and shared trip server/client waterfalls with shared,
-  request-cached loaders.
-- Protected the complete private `/trips` tree, rejected invalid dynamic blog
-  categories, fixed nested links, and disabled speculative prefetch on large
-  link grids.
-- Added route-level loading UI, removed ineffective resolved-data Suspense,
-  and connected the root error boundary to Sentry.
-- Paginated the sitemap across all published posts, removed fabricated static
-  modification timestamps, corrected mobile schema claims, and noindexed the
-  forgot-password flow.
-- Reduced client boundaries and lazy-loaded world-map dialogs only when used.
-- Consolidated four mobile-store CTA implementations, removed nonexistent
-  store links and false launch claims, and removed an unused client banner.
-- Removed the unreferenced `apps/web/migrations` duplicate; the canonical
-  migration history is `supabase/migrations`.
-
-### Known review gaps
-
-- Physical-device iOS and Android QA still requires user hardware.
-- Sentry source-map ingestion cannot be verified until the owner signs in and
-  creates/configures the Sentry project.
-- Partner-specific live booking QA remains blocked by partner credentials or
-  production entitlements listed in `docs/CREDENTIAL_SETUP.md`.
-
-## Quality Gate Status (2026-07-25)
-
-| Check                        | Command                                                        | Result                                            |
-| ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
-| Type-check, lint, format     | `bun run check`                                                | ✅ 11/11 tasks                                    |
-| Unit and integration tests   | `bun run test`                                                 | ✅ 617/617 tests                                  |
-| Production web build         | `bun run build:web`                                            | ✅ Next 16.2.11; 1,412 static pages               |
-| Production-runtime E2E       | `CI=1 E2E_BASE_URL=http://localhost:3000 bunx playwright test` | ✅ 57/57 — Chromium, iPhone 14, Pixel 7           |
-| Blog console/hydration guard | Playwright `pageerror` + console assertion                     | ✅ No production-runtime browser errors           |
-| Mobile release config        | `bun run release:check:mobile`                                 | ✅ 0 failures/warnings; Expo Doctor 18/18         |
-| Database schema lint         | `bunx supabase db lint --linked`                               | ✅ No schema errors                               |
-| Staged secret scan           | Gitleaks 8.30.1 over binary staged diff                        | ✅ 0 leaks in approximately 814 KB                |
-| Dependency audit             | `bun audit` (Bun 1.4.4, 2026-11-15)                            | ⚠️ 0 critical; 7 remaining, see the November note |
-
-The five failures seen in one development-server browser run were Next
-Turbopack HMR chunk races after a production build. The same exact production
-bundle passed all 57 tests under `next start`, which is the release runtime.
-The prior production Lighthouse baseline remains recorded below; rerun it
-after the new deployment is live.
+**Date:** 2026-11-22 _(original security/Next.js audit: 2026-05-12, updated 2026-07-25; full Growth/Monetization/Engineering/Design overhaul verified 2026-11-21 and merged with `origin/main` `4ffe1d12` on 2026-11-22)_  
+**Branch / Worktree:** `feat/prod-monetization-audit` (`/Users/stanleyyang/workspace/faroway-prod-monetization`)  
+**Code Baseline Reviewed:** `main` (`4ffe1d12`, incl. `5dff5ea` & red-team hardening `4ffe1d1`) merged into `feat/prod-monetization-audit` + staging migration pinning (`supabase/release-candidate/migrations.json`)  
+**Scope:** Full monorepo — `apps/web`, `apps/mobile`, `packages/*` (7 packages), `supabase/migrations/` (57 SQL files), `brand/`, `scripts/uat/`, `.github/workflows/`
 
 ---
 
----
+## 1. Executive Summary & Production Readiness Verdict
 
-## Severity Legend
+### Verdict: **Code & Automated Verification READY — Pending Manual Launch Gates**
 
-| Level  | Meaning                                                             |
-| ------ | ------------------------------------------------------------------- |
-| **P0** | Production-blocking — ships broken or exploitable                   |
-| **P1** | Must fix before launch — causes data loss, crashes, or missing docs |
-| **P2** | Fix before soft-launch — degrades quality/security/observability    |
-| **P3** | Polish — noticeable but not blocking                                |
+Across `feat/prod-monetization-audit` (rebased/merged with `origin/main` `4ffe1d12`), Faroway underwent a full-stack Growth Marketing, Affiliate Monetization, Engineering/Security, and Visual Design overhaul isolated in worktree `/Users/stanleyyang/workspace/faroway-prod-monetization`. Every user journey—Web marketing, `/create`, authenticated trip itineraries, shared trips `/s/[token]`, SEO blog, 42 destination guides, 7 travel tools, `.txt`/`.ics` exports, push dispatch, and the Expo React Native mobile app—now supports frictionless, FTC-disclosed, host-allowlisted affiliate handoffs, `4ffe1d1` red-team security hardening, and cohesive Brand 2.0 styling.
 
----
+To prevent premature production claims, **Code & Automated Readiness** is explicitly separated from **Manual Launch Gates**:
 
-## 🚨 P0 — Production-Blocking
-
-### P0-0: Previously exposed credentials — rotation must be verified
-
-**Commits:** `16fe4c92` (`.env.example`), `89946343` (`scripts/seed-quality-blogs/index.ts`), `0082bf28` (`scripts/gsc-service-account.json`)  
-**Impact:** A Supabase service role key (admin-level DB access), Supabase anon
-key, and Google Cloud service account private key were previously committed.
-The affected history was rewritten and the current history scan is clean, but
-rotation/revocation of the old credentials has not been independently
-verified.
-
-**Historical evidence:**
-
-- `apps/web/.env.example` commit `16fe4c92`: real Supabase URL + anon key + service role key
-- `scripts/seed-quality-blogs/index.ts` commit `89946343`: real `SUPABASE_SERVICE_KEY`
-- `scripts/gsc-service-account.json` commit `0082bf28`: real RSA private key for `gsc-reader@gen-lang-client-0674595232.iam.gserviceaccount.com`
-
-**Required actions (in order):**
-
-1. **Rotate Supabase service role key** — Supabase Dashboard → Project Settings → API → Regenerate
-2. **Rotate Supabase anon key** — same panel
-3. **Disable Google service account** — Google Cloud Console → IAM → Service accounts → `gsc-reader@...` → Manage keys → delete key `437485894c045ac5fdc0ed4de7ae473bdc46a46a`
-4. Verify the replacement values are present in Vercel, Supabase, and EAS
-5. Keep staged-patch and history secret scans in CI/release procedure
-
-**Status:** ⚠️ History clean; old-key rotation/revocation requires owner verification
+| Readiness Dimension                                                              | Status               | Summary & Conditions                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Code & Architecture (M1–M4 + Integration + `4ffe1d1` + Post-Merge Hardening)** | **READY**            | Brand 2.0 (`brand/BRAND.md`), `@faroway/constants` parity, 17-partner subID engine (with Travelpayouts `u=` target validation) + 8-partner HMAC webhooks (with signature-first `401`, non-webhook partner rejection & monotonic status guard), P2-3 Zod validation, Web `TripCheckout`/`BookingsSheet`/shared-trip/SEO monetization, `/create` cross-platform origin/IATA parity, timezone-safe `.txt`/`.ics` exports, Mobile native `AffiliateHandoffSheet`, `4ffe1d1` DB/API/UX security hardening, and `57`-migration pinning in `supabase/release-candidate/migrations.json` are integrated. |
+| **Automated Quality, Tests, Evals & Builds**                                     | **READY**            | `bun run check` (`11/11` Turbo + `scripts/tsconfig.json`), `bun run test` (**3,521** tests across **365** files/suites), `bun run test:evals`, `eval-monetization.ts` (**490** checks / **110/110** negative controls), **139** isolated Playwright E2E tests (`36 + 11 + 92`) + **18/18** integrated (`playwright.monetization-integrated.config.ts`), `verify-web-build.mjs` (**414/414** static pages), and `check-eas-release.ts` (`0/0`) all pass on `feat/prod-monetization-audit`.                                                                                                        |
+| **Manual Launch Gate 1 — Partner Credentials & Approvals**                       | **MANUAL GATE**      | The worktree is strictly dotenv-free; live affiliate keys (`STAY22_AID`, `TRAVELPAYOUTS_MARKER`, `SAFETYWING_REFERENCE_ID`, `GETYOURGUIDE_*`, `VIATOR_*`, `DUFFEL_API_TOKEN`, `IMPACT_SITE_VERIFICATION`, etc.) must be provisioned in Vercel/EAS before affiliate links generate revenue rather than unconfigured fallback search URLs (`$0` revenue).                                                                                                                                                                                                                                          |
+| **Manual Launch Gate 2 — P0-0 Key Rotation Verification**                        | **BLOCKING**         | Historical Supabase & GCP `gsc-reader` keys were scrubbed from git history, but owner confirmation that old keys are rotated/revoked in Supabase & GCP dashboards remains pending.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Manual Launch Gate 3 — P0-2 Sentry DSN Config**                                | **MANUAL GATE**      | `@sentry/nextjs` and `@sentry/react-native` code is complete; `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, and `EXPO_PUBLIC_SENTRY_DSN` must be configured in Vercel/EAS and verified via `/api/sentry-test` in staging.                                                                                                                                                                                                                                                                                                                         |
+| **Manual Launch Gate 4 — P3-5 `main` Deploy Hold & Store QA**                    | **INTENTIONAL HOLD** | `apps/web/vercel.json` intentionally sets `"git": { "deploymentEnabled": { "main": false } }`. Lift this hold (or trigger manual deploy), run Track B live E2E (`monetization-integrated.spec.ts`), complete physical iOS/Android hardware QA, and complete EAS App Store / Google Play signing when ready to launch.                                                                                                                                                                                                                                                                            |
 
 ---
 
-### P0-1: OG/social image (`/og-image.png`) missing from public assets
+## 2. Full-Repo Audit Findings & Implemented Changes
 
-**File:** `apps/web/app/layout.tsx:75`, `apps/web/app/layout.tsx:88`  
-**Impact:** Every social share (Twitter, LinkedIn, iMessage, Slack) shows a broken image or blank card. OG image is the single most visible first impression.  
-**Fix:** Created dynamic `/api/og` edge route; updated `layout.tsx` to point to `/api/og`.  
-**Status:** ✅ Fixed
+### 2.0 Verified Repository Inventory (Reconciling Stale `2026-07-25` Numbers)
 
----
+The prior `PROD_AUDIT.md` (dated `2026-05-12`, updated `2026-07-25`) contained substantially stale counts and obsolete statuses. The table below records verified counts on `feat/prod-monetization-audit`:
 
-### P0-2: No error monitoring — zero production visibility
-
-**Files:** `apps/web/sentry.{client,server,edge}.config.ts`, `apps/web/next.config.ts`, `apps/mobile/app/_layout.tsx`  
-**Impact:** Without Sentry, silent crashes and server-side exceptions go completely unnoticed.  
-**Fix:** Integrated `@sentry/nextjs` (web) and `@sentry/react-native` (mobile). Added:
-
-- `withSentryConfig` in `next.config.ts` with source map upload and tunnel route
-- `instrumentation.ts` with `onRequestError` hook
-- Global error boundary (`app/global-error.tsx`) that calls `Sentry.captureException`
-- `sentry.client/server/edge.config.ts` with release tracking and PII stripping
-- Mobile: `Sentry.init()` + `Sentry.wrap(RootLayout)` + `Sentry.setUser()` on auth
-- Test endpoint: `/api/sentry-test` (non-production only)
-
-**Remaining action:** Create a Sentry project and set `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in Vercel environment variables. Hit `GET /api/sentry-test` in staging to verify DSN → source maps end-to-end.  
-**Status:** ✅ Code complete — DSN configuration pending (manual step in Sentry/Vercel dashboard)
-
----
-
-### P0-3: Most expensive API endpoint has no rate limiting
-
-**File:** `apps/web/app/api/workflows/generate-itinerary/route.ts`  
-**Fix:** Added `checkRateLimitAsync` with 5/hr + 20/day per `user.id`.  
-**Status:** ✅ Fixed
+| Inventory Metric                                   | Stale `PROD_AUDIT.md` (`2026-07-25`)                 | Verified on `feat/prod-monetization-audit`                                         | Breakdown & Notes                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web` Pages (`page.tsx`)                      | `33`                                                 | **`37`**                                                                           | Includes `apps/web/app/(app)/trips/page.tsx`                                                                                                                                                                                                                                                                                                                                                       |
+| `apps/web` Layouts (`layout.tsx`)                  | `14`                                                 | **`16`**                                                                           | Already `16` on `main`                                                                                                                                                                                                                                                                                                                                                                             |
+| `apps/web` Route handlers (`route.ts`/`route.tsx`) | `35`                                                 | **`47`** `route.ts` (**`49`** total)                                               | `44` API `route.ts` + `3` non-API `route.ts` (`auth/callback`, `auth/logout`, `blog/feed.xml`), plus `2` `route.tsx` OG routes (`api/og/route.tsx`, `api/og/world-map/route.tsx`)                                                                                                                                                                                                                  |
+| `apps/web` Loading / Error / NotFound / OG         | `7` loading/error                                    | **`8`** loading/error + **`2`** `not-found.tsx`                                    | `3` `loading.tsx`, `5` `error.tsx`/`global-error.tsx`, `8` `opengraph-image.tsx`, `1` `apple-icon.tsx`                                                                                                                                                                                                                                                                                             |
+| `apps/web` Client modules (`'use client'`)         | `68`                                                 | **`107`**                                                                          | Includes `components/affiliates/*`, tools, checkout/bookings sheets                                                                                                                                                                                                                                                                                                                                |
+| `apps/web` Server Actions (`'use server'`)         | `0`                                                  | **`0`**                                                                            | All mutations flow through validated Route Handlers                                                                                                                                                                                                                                                                                                                                                |
+| `apps/web` Metadata exports                        | `35`                                                 | **`37`**                                                                           | `export const metadata` / `generateMetadata`                                                                                                                                                                                                                                                                                                                                                       |
+| `apps/web` TS/TSX source modules                   | `285`                                                | **`451`**                                                                          | Non-test modules across `app` (`128`), `components` (`125`, incl. `119` `.tsx`), `hooks` (`9`), `lib` (`186` non-test + `2` co-located `budget*.test.*` = `188` total), `workflows` (`3`); `239` Vitest test files (`237` in `apps/web/__tests__/` + `2` co-located in `lib/trips/`; `apps/web/__tests__/` holds `238` files incl. `mocks/server-only.ts`) & `e2e` (`42` TS/TSX, `34` `*.spec.ts`) |
+| Destinations, Blog & Travel Tools                  | Not itemized                                         | **`42`** guides, **`6`** clusters, **`7`** tools                                   | `apps/web/lib/destination-guides.ts` (`42`), `apps/web/lib/blog/clusters.ts` (`6` `ClusterDefinition` clusters in `CLUSTERS`), `app/tools/*` (`7` tools)                                                                                                                                                                                                                                           |
+| `apps/mobile` Inventory                            | Not itemized                                         | **`18`** routes, **`27`** components, **`89`** test suites                         | Plus `10` hooks, `58` lib modules, `7` services, `3` stores, `6` Route-F assets + `venues/` (7 landmark photos); Expo `~54.0.37` / RN `0.81.5`                                                                                                                                                                                                                                                     |
+| `packages/*` Workspace packages                    | Not itemized                                         | **`7`** packages                                                                   | `api-client`, `constants`, `eslint-config`, `supabase`, `tsconfig`, `types`, `validation`                                                                                                                                                                                                                                                                                                          |
+| `supabase/migrations/`                             | Referenced only                                      | **`57`** `.sql` files                                                              | Canonical PostgreSQL + RLS history (all `57` accounted for across `supabase/staging/manifest.json` + `supabase/release-candidate/migrations.json`)                                                                                                                                                                                                                                                 |
+| `brand/`                                           | Not mentioned                                        | **`8`** files                                                                      | `brand/BRAND.md` + `7` Route-F SVG/PNG assets                                                                                                                                                                                                                                                                                                                                                      |
+| `scripts/uat/` & `scripts/__tests__/`              | Not inventoried                                      | **`76`** UAT files / **`28`** test files                                           | Includes `eval-monetization.ts` and `monetization-eval.test.ts` (`316` script tests total)                                                                                                                                                                                                                                                                                                         |
+| `.github/workflows/`                               | Cited `CI.yml` (wrong case)                          | **`3`** workflows                                                                  | `ci.yml`, `release.yml`, `rotate-apple-secret.yml`                                                                                                                                                                                                                                                                                                                                                 |
+| Framework / Tooling / Test Totals                  | `Next 16.2.11`, `617` tests, `1,412` pages, `57` E2E | **`Next 16.4.1`**, **`Bun 1.4.4`**, **`3,521`** unit tests, **`414`** static pages | `414` static pages reflect dynamic/blog-aware rendering vs old static pre-render count; `139` isolated + `18` Track B E2E                                                                                                                                                                                                                                                                          |
 
 ---
 
-### P0-4: In-memory rate limiter is non-functional on Vercel serverless
+### 2.1 Growth Marketing & Affiliate Monetization (R1, R2)
 
-**File:** `apps/web/lib/security/rate-limit.ts`  
-**Fix:** Added `checkRateLimitAsync()` using an atomic Supabase RPC, with HMAC-hashed identifiers and an in-memory local-development fallback. Cost-sensitive routes fail closed if the shared backend is unavailable.
-**Status:** ✅ Fixed in code — migration applied to production
+Before this audit, Faroway only partially monetized Viator/Duffel on owner trip pages while leaving hotel comparison cards, GYG activity links, dining cards, shared trips (`/s/[token]`), SEO blog posts, destination guides, travel tools, `.txt`/`.ics` exports, and mobile trip essentials unmonetized or broken behind unconfigured links.
 
----
+**Implemented across `apps/web`, `apps/mobile`, and `packages/constants`:**
 
-## P1 — Must Fix Before Launch
+- **Canonical 17-Partner SubID Engine (`packages/constants/src/affiliates.ts`, `apps/web/app/api/track/click/route.ts`)**:
+  - `AFFILIATE_PARTNER_IDS` standardizes 17 destination URL partners (`viator`, `getyourguide`, `travelpayouts`, `stay22`, `booking`, `expedia`, `safetywing`, `airalo`, `klook`, `discovercars`, `hostelworld`, `duffel`, `tripadvisor`, `opentable`, `skyscanner`, `ivisa`, `wise`) plus `PARTNER_ALIAS_MAP` (`gyg`, `tp`, `aviasales`, `bookingcom`).
+  - `injectAffiliateSubId()` resolves the host partner first and injects partner-native subID query parameters (`campaign` for Viator/Stay22, `cmp` for GetYourGuide, `sub_id` for Travelpayouts/Airalo/Klook/DiscoverCars/Hostelworld/TripAdvisor/OpenTable/Skyscanner/iVisa/Wise, `label` for Booking.com, `affcid` for Expedia, `referenceID` for SafetyWing, `click_id` for Duffel), falling back to `click_id` when a preserved subID parameter already exists, and appending `utm_source=faroway&utm_medium=affiliate` only where `appendUtm` is enabled.
+  - Legacy `POST /api/affiliate/click` (`apps/web/app/api/affiliate/click/route.ts`) now returns HTTP `410 Deprecated` pointing to `/api/track/click`.
+- **Multi-Partner Deep-Link Builders (`apps/web/lib/affiliates/`)**:
+  - **Hotels (`hotels.ts`, `HotelQuotePanel.tsx`)**: `buildStay22Url` (fails closed to `url: null` if `STAY22_AID` is unset), `buildBookingUrl`, `buildExpediaHotelUrl`, `buildHostelworldUrl` (ranked #1 when `budgetTier === "budget"`), and `buildHotelPartnerLinks` (prioritizing configured partners first) power `FeaturedHotelCard.tsx`, `ItineraryDay.tsx`, `HotelQuotePanel.tsx`, shared trips, blogs, destinations, and tools.
+  - **Flights (`flights.ts`, `duffel.ts`)**: `buildSkyscannerFlightUrl` and `buildAviasalesFlightUrl` (wrapped via Travelpayouts `p=4114`) backstop Duffel offers in `buildFlightFallbackLinks`.
+  - **Activities & Dining (`activities.ts`, `viator.ts`, `viator-link.ts`, `getyourguide.ts`, `reservation-url.ts`)**: Added `buildKlookActivitySearchUrl`, `buildTiqetsActivitySearchUrl` (Travelpayouts), `buildViatorSearchUrl`, `searchViatorFreetext` unmapped-city fallback (preserving `viator-policy.ts` approval gates), `buildGYGSearchUrl`, `buildOpenTableSearchUrl`, and `buildDiningPartnerLinks` (verified `rid` or OpenTable search + TripAdvisor review link). `ActivityCard.tsx` now unblocks allowlisted GYG/other `bookingUrl` links and TripAdvisor click-outs.
+  - **Trip Essentials (`essentials.ts`)**: `resolveDestinationTravelMeta` uses a 6-stage country/subregion resolver (covering 35 countries plus US/CA/AU disambiguation, including Canadian `<PROV> <POSTAL>, CA` before US `CA`) to power `buildSafetyWingUrl` (fails closed without `SAFETYWING_REFERENCE_ID` or `TRAVELPAYOUTS_MARKER`), `buildAiraloUrl` (`<country>-esim`), `buildDiscoverCarsUrl`, `buildVisaToolUrl` (iVisa or Sherpa), and `buildWiseUrl` (currency-pair URLs).
+- **Authenticated & Shared Trip Monetization (`apps/web/app/(app)/trips/[id]/page.tsx`, `apps/web/app/s/[token]/page.tsx`, `SharedTripView.tsx`)**:
+  - Both server pages compute and pass `essentials`, `hotelPartnerLinks`, and `flightFallbackLinks` with server-side env vars so client components never lose partner IDs.
+  - `SharedTripView.tsx` wraps shared itineraries in `<AffiliateTrackingProvider>` + `<TripCheckout mode="shared" source="shared_trip">` + `<BookingsSheet source="shared_trip">`, pairs tracked partner booking with `"Clone & customize this trip"`, and replaces raw emojis with Lucide reaction icons.
+- **SEO Blog, 42 Destination Guides, 7 Travel Tools & Exports**:
+  - `apps/web/app/blog/[slug]/page.tsx` detects `isFinancialContent` to surface `buildWiseUrl` + `buildSafetyWingUrl` alongside `<BlogAffiliateSection>`.
+  - `apps/web/components/destinations/{DestinationBookingSection,DestinationsIndexEssentialsStrip}.tsx` monetize all 42 destination guides (`apps/web/lib/destination-guides.ts`).
+  - All 7 interactive tools under `apps/web/app/tools/` (`best-time-to-visit`, `currency-converter`, `packing-list`, `travel-quiz`, `trip-cost`, `visa-checker`, `world-map`) integrate `ToolAffiliateCard.tsx` and partner strips.
+  - `apps/web/lib/trips/{export,export-links,ics-export}.ts` sanitize outbound links via `sanitizeExportAffiliateUrl` (`utm_medium=export_txt|export_ics`), embed `AFFILIATE_DISCLOSURE_SHORT`, and fold RFC 5545 `.ics` lines at `<=75` UTF-8 octets with CRLF (`\r\n`).
+  - Mobile `<OnTripCompanionCard>` (`apps/mobile/components/trip/OnTripCompanionCard.tsx`) exposes `TRIP_ESSENTIALS` (Airalo + SafetyWing) directly inside trips.
 
-### P1-1: Root README is missing
+**Honest Residual Caveats Observed:**
 
-**Status:** ✅ Fixed — comprehensive `README.md` written at repo root
-
----
-
-### P1-2: Auth race condition — `initialized: true` set before profile hydration
-
-**File:** `apps/mobile/hooks/useAuth.ts`  
-**Fix:** Moved `setAuthState({ initialized: true })` to after `await hydrateUser(session)` completes.  
-**Status:** ✅ Fixed
-
----
-
-### P1-3: Unhandled promise rejection on home screen destination fetch
-
-**File:** `apps/mobile/app/(tabs)/index.tsx`  
-**Fix:** Added `.catch()` handlers on both destination fetches.  
-**Status:** ✅ Fixed
-
----
-
-### P1-4: Privacy policy claims analytics — nothing is integrated
-
-**File:** `apps/web/app/(marketing)/privacy/page.tsx`  
-**Fix:** Changed claim to conditional language ("may be used"); removed "basic usage analytics" from support FAQ.  
-**Status:** ✅ Fixed
+- `apps/web/app/(app)/trips/[id]/TripDetailClient.tsx:686,704` invokes `buildTripExportText(trip, itinerary)` and `buildTripIcsContent(trip, itinerary)` without forwarding `{ essentials }` from the server-computed `essentials` prop, so web-downloaded `.txt`/`.ics` files include per-stop booking URLs and disclosures but omit the Trip Essentials footer section unless `options` is passed.
+- `apps/mobile/lib/affiliateCheckout.ts:34-53` (`TRIP_ESSENTIALS`) uses static base URLs (`https://www.airalo.com/`, `https://safetywing.com/nomad-insurance`) without destination eSIM country slugs or `SAFETYWING_REFERENCE_ID` pre-populated (addressed in Section 3 recommendations).
 
 ---
 
-## P2 — Before Soft Launch
+### 2.2 Frictionless Checkout & Partner Handoff (R3)
 
-### P2-1: `NEXT_PUBLIC_BASE_URL` missing from `apps/web/.env.example`
+**Implemented across Web and Mobile:**
 
-**Status:** ✅ Fixed — added with comment
+- **Streamlined Web Checkout Modal (`apps/web/components/trips/TripCheckout.tsx`)**:
+  - Supports `mode?: "owner" | "shared"` and renders a concise 3-row summary card on `#FAF8F3` (Experience/Partner + Est. price, Date + Travelers, New-tab handoff note) with `bg-primary-700` `"Continue to {Partner}"` CTA and `<AffiliateDisclosure />`.
+  - Pre-opens the external tab synchronously on user gesture (`preopenAffiliateTab()` / `openAffiliateUrlInNewTab()` / `closePreopenedAffiliateTab()` in `track-click-client.ts`) so Faroway's itinerary remains intact while avoiding browser popup blockers, with same-tab fallback when popups are blocked.
+- **`BookingsSheet` Drawer & Humanized `BookingChecklist` (`BookingsSheet.tsx`, `TripDetailClient.tsx`, `BookingChecklist.tsx`)**:
+  - Sticky bottom bar on trip detail renders `"Review & book"` opening `<BookingsSheet>`, which aggregates 5 categories (`stay`, `flights` incl. Duffel `__return` legs, `experiences`, `dining`, `essentials`).
+  - `BookingChecklist.tsx` clarifies manual planning status tracking and attaches actionable CTAs to unbooked items.
+- **Duffel Flights Fixes (`duffel.ts`, `transport.ts`, `aggregator.ts`, `fallback-itinerary.ts`, `budget.ts`, `TripBriefEditor.tsx`)**:
+  - Fixed `duffel.ts:388-400` 404 `/trips?duffel=...` redirect to `/trips/${encodeURIComponent(tripId)}` (alphanumeric/hyphen validated) or `/dashboard`, guarded non-finite `markupAmount`, and added `parseDuffelReturnStatus()`.
+  - Retained `slices[1]` return legs (`${outboundId}__return`) attached to the final trip day (`days[days.length - 1]`) and deduplicated round-trip flight cost in `budget.ts:158-181`.
+  - `TripBriefEditor.tsx:650-651` prioritizes `"duffel"` ahead of `"liteapi"`.
+- **Origin Airport & Flight Consent Capture on `/create` (`apps/web/app/create/page.tsx`, `apps/mobile/app/create/index.tsx`, `apps/mobile/lib/flightOrigin.ts`)**:
+  - Both web and mobile `/create` capture `originCity`, IATA-validated `originAirport`, and `flightConsent` (`"flight-search-duffel-v1"`), while removing premature `"then sign in"` friction from web `/create`.
+- **Mobile Native Direct Partner Handoff (`apps/mobile/components/trip/AffiliateHandoffSheet.tsx`, `app/trip/[id].tsx`, `lib/json-render/registry.tsx`, `services/api.ts`)**:
+  - Replaced the broken `api.faroway.ai/trips/[id]` auth-wall web bounce with `AffiliateHandoffSheet` (mounted both as a root modal and `inline` inside `BookingsSheet` to prevent iOS simultaneous `<Modal>` presentation races) calling `openAffiliateLink()` -> `WebBrowser.openBrowserAsync()`.
+  - `services/api.ts:431-518` validates `isAllowedAffiliateUrl`, posts `/api/track/click` (2.5s timeout), and falls back cleanly to client-side `injectAffiliateSubId` with a `mob_*` clickId if offline/timed out.
+  - `StreamingTripContext` (`registry.tsx:42-80`) wires live `tripId` from `generating.tsx` into preview booking actions.
 
----
+**Honest Residual Caveats Observed:**
 
-### P2-2: `/tools/world-map` missing from sitemap
-
-**Status:** ✅ Fixed — added to `toolSlugs`
-
----
-
-### P2-3: `as unknown as` type casts without runtime validation in web API routes
-
-**Files:**
-
-- `apps/web/app/(app)/trips/[id]/page.tsx:306,355,410`
-- `apps/web/app/api/search/[searchId]/route.ts:113,123,133,143`
-- `apps/web/app/api/trips/[id]/stream/route.ts:574`
-
-**Status:** Open — low-risk for launch if schema stays stable; add Zod validation per route
-
----
-
-### P2-4: No E2E test coverage on critical flows
-
-**Fix:** Added Playwright E2E specs:
-
-- `apps/web/e2e/health.spec.ts` — health endpoint, home title, robots.txt, sitemap, OG image
-- `apps/web/e2e/marketing.spec.ts` — landing page, legal pages, create flow, blog, world map
-- `apps/web/e2e/api.spec.ts` — public API endpoints, auth protection, rate limiting
-
-CI `e2e` job added to `.github/workflows/CI.yml` (runs after `build-web`).
-
-**Local verification (2026-07-25):** 57/57 tests pass against the production
-runtime across Chromium, Mobile Safari, and Mobile Chrome. The blog test also
-fails on browser console errors and uncaught page errors.
-**Status:** ✅ Fixed — all tests green locally; will auto-run in CI on every PR
+- `apps/web/lib/search/agents/transport.ts:181` calls `generateDuffelLink(offer.offerId, 5)` without `{ tripId, clickId }`, so workflow-generated Duffel Links default return URLs to `/dashboard?duffel=...`, and no page route currently reads `?duffel=` via `parseDuffelReturnStatus()` (`duffel.ts:92-99`) to render a post-checkout return banner.
 
 ---
 
-### P2-5: CI does not build or type-check mobile app
+### 2.3 Engineering, Security, P0–P3 Reconciliation & Release Hygiene
 
-**Status:** N/A — `bun turbo type-check` runs across all packages including mobile
+#### P0-0 .. P3-6 Full Reconciliation Table
 
----
+| ID                               | Area                                                                       | Original `PROD_AUDIT.md` (`2026-07-25`)     | Verified Status (`feat/prod-monetization-audit`)     | Evidence & Verification Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P0-0**                         | Previously exposed credentials (Supabase + GCP `gsc-reader`)               | ⚠️ History clean; owner rotation unverified | **⚠️ Blocking — Owner Verification Still Pending**   | Git history scrubbed & clean, but Supabase anon/service role & GCP key `437485894c045ac5fdc0ed4de7ae473bdc46a46a` revocation cannot be verified from repo alone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **P0-1**                         | OG/social image (`/og-image.png`) missing                                  | ✅ Fixed (`/api/og`)                        | **✅ Fixed (Upgraded to Brand 2.0)**                 | `apps/web/app/layout.tsx`, `lib/social-image.tsx`, `opengraph-image.tsx` routes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **P0-2**                         | Error monitoring (`@sentry/nextjs` + `@sentry/react-native`)               | ✅ Code done; DSN config pending            | **✅ Code Complete — DSN Vercel/EAS Config Pending** | `sentry.{client,server,edge}.config.ts`, `next.config.ts`, `instrumentation*.ts`, `app/global-error.tsx`, `apps/mobile/app/_layout.tsx`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **P0-3**                         | Expensive AI generation endpoint rate limiting                             | ✅ Fixed (`generate-itinerary`)             | **✅ Fixed**                                         | `app/api/trips/[id]/generate/route.ts:127` uses `checkRateLimitAsync` (`5/hr` + `20/day`); legacy `/api/workflows/generate-itinerary` retired (`410`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **P0-4**                         | In-memory rate limiter non-functional on Vercel serverless                 | ✅ Fixed (Supabase RPC)                     | **✅ Fixed**                                         | `lib/security/rate-limit.ts` (`consume_rate_limit` atomic RPC + HMAC identifiers + `failClosed: true` on `generate`, `checkout`, `track/click`, `track/conversion`, `places`, `weather`, `copilot`, `shared_reactions`, `qa/suppliers`, and `app/api/user/profile/route.ts:131` `PATCH`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **P1-1..P1-4**                   | README, mobile `useAuth` race, home fetch catch, privacy analytics wording | ✅ Fixed                                    | **✅ Fixed**                                         | Verified across `README.md`, `apps/mobile/hooks/useAuth.ts`, `apps/mobile/app/(tabs)/index.tsx`, `apps/web/app/(marketing)/privacy/page.tsx`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **P2-1, P2-2, P2-4, P2-5, P2-6** | `NEXT_PUBLIC_BASE_URL`, world-map sitemap, E2E, mobile typecheck, scoping  | ✅ Fixed / N/A                              | **✅ Fixed / N/A (Expanded)**                        | E2E expanded to `139` isolated + `18` Track B specs (`apps/web/e2e/monetization-*.spec.ts`, `checkout.spec.ts`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **P2-3**                         | `as unknown as` casts without runtime validation                           | **Open**                                    | **✅ Fixed (Implemented in M2)**                     | **0** `as unknown as` casts remain across the 5 P2-3 target files (`apps/web/app/(app)/trips/[id]/page.tsx`, `apps/web/app/api/search/[searchId]/route.ts`, `apps/web/app/api/trips/[id]/stream/route.ts`, `apps/web/lib/trips/load-trip.ts`, `apps/web/app/api/trips/[id]/copilot/route.ts`); replaced with Zod schemas in `lib/search/result-schemas.ts`. _(`13` `as unknown as` casts remain across non-test `apps/web` source: `lib/trips/budget.ts:192`, `lib/trips/copilot.ts:408`, `lib/trips/read-itinerary.ts:32`, `app/api/og/world-map/route.tsx:77`, `components/trips/ItineraryDay.tsx:121,240,1019`, `components/trips/SharedTripView.tsx:88`, `components/trips/ItineraryMap.tsx:46`, `components/tools/world-map/FieldNotes.tsx:22`, `components/tools/world-map/WorldMap.tsx:128`, `lib/tools/world-map/migrations.ts:36,48`, plus `1` in co-located `lib/trips/budget.test.ts:114`.)_ |
+| **P3-1, P3-3, P3-4**             | `prefers-reduced-motion`, Article JSON-LD, TouristDestination schema       | ✅ Fixed / N/A                              | **✅ Fixed / N/A**                                   | Verified.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **P3-2**                         | `NEXT_PUBLIC_GA_MEASUREMENT_ID` unused env var                             | Claimed removed from `.env.example`         | **⚠️ Partial / Stale Docs Claim**                    | Unused in runtime (`@vercel/analytics/next` is used in `layout.tsx:6,224`), but `# NEXT_PUBLIC_GA_MEASUREMENT_ID=` remains commented in `apps/web/.env.example:55` and listed in `scripts/check-env.ts:66`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **P3-5**                         | Preview deploys / Vercel Git integration                                   | **Open**                                    | **⚠️ Open / Intentional Hold**                       | `apps/web/vercel.json:11-15` retains `"git": { "deploymentEnabled": { "main": false } }`; owner removes/configures in Vercel when ready to ship.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **P3-6**                         | Mobile `useAuth` & offline sync test coverage                              | **Open**                                    | **✅ Fixed (Stale in old audit)**                    | `apps/mobile/__tests__/hooks/useAuth-session-races.test.tsx` and `useOfflineSync-lifecycle.test.tsx` exist and pass (`89` suites / `888` mobile tests).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
-### P2-6: Generate endpoint rate limit scoping
+#### Security, Database & Release Hygiene Verification
 
-**Status:** ✅ Fixed — user ID scoped (see P0-3)
+- **Fail-Closed Conversion Webhooks & Idempotency**: `POST /api/track/conversion` (`apps/web/app/api/track/conversion/route.ts`) enforces `checkRateLimitAsync` (`60/min`, `failClosed: true`), `16 KB` payload cap (`413`), signature-first HMAC-SHA256 verification (`x-webhook-signature` via `crypto.timingSafeEqual`, returning `401` before JSON/schema parsing across 8 secrets: `VIATOR`, `GYG`, `KLOOK`, `TRAVELPAYOUTS`, `STAY22`, `DUFFEL`, `SAFETYWING`, `AIRALO`), `conversionWebhookPartnerIdSchema` + `Object.hasOwn(WEBHOOK_SECRET_ENV_KEYS, ...)` rejection of the 9 non-webhook partners (blocking cross-partner secret signing), monotonic status guard (`pending < confirmed < cancelled`), idempotent upsert on `(partner, conversion_key)` (`supabase/migrations/20260725001000_affiliate_conversion_idempotency.sql`), and multi-conversion `affiliate_clicks.converted` reconciliation.
+- **Travelpayouts `u=` Redirect Target Validation & Export/UX Hardening**: `isAllowedAffiliateUrl`, `resolveAffiliatePartnerByUrl`, and `injectAffiliateSubId` (`packages/constants/src/affiliates.ts`) inspect all Travelpayouts wrapper `u=` redirect targets (requiring non-empty HTTPS URLs, no creds/port/control chars/trailing dot, disallowing nested Travelpayouts wrappers, and requiring allowlisted partner/sub-partner targets across `/api/track/click`, `sanitizeExportAffiliateUrl`, and Mobile `openAffiliateLink`). `BookingsSheet.tsx` gates URL-less `isViatorHosted` rows via `allowViatorHostedWithoutUrl` and filters non-actionable rows so shared/disabled views never render dead-end `0`-button rows; `export.ts` formats ISO UTC timestamps using calendar-date UTC extraction so western timezones never shift dates backward; and Web `/create` (`apps/web/app/create/page.tsx`) enforces Mobile-parity `flightConsent` + origin and 3-letter IATA airport code validation.
+- **RLS Lock-Down**: `supabase/migrations/20260725002000_lock_down_tracking_and_search_rls.sql` and `20261003006000_version_checkout_handoffs.sql` restrict `affiliate_clicks` inserts and `prepare_trip_handoff` RPC execution to `service_role`.
+- **Google Maps & Legal Disclosures**: `apps/web/app/(marketing)/privacy/page.tsx:239-265,327` and `terms/page.tsx:48,244-254` add Google Maps/Places API disclosures, Google Maps/Google Earth Additional Terms links, OpenStreetMap notice, and `AFFILIATE_DISCLOSURE_FULL`.
+- **Release & CI Guardrails**:
+  - `.github/workflows/ci.yml`: `quality` (`type-check`, `lint`, `format:check`), `test` (`bun run test`, `bun run test:evals`), and `workflow_dispatch` `full_verification` (`test:db`, Playwright `test:e2e:isolated`, `build-web`).
+  - `.github/workflows/release.yml` & `scripts/verify-release-local.sh`: aborts if any `.env*` file exists in `.`, `apps/web`, or `apps/mobile`, then runs `check`, `test`, `test:evals`, `test:db`, `test:e2e:isolated`, and `node scripts/verify-web-build.mjs`.
+  - `apps/mobile/eas.json` + `app.config.ts:9-42` + `scripts/check-eas-release.ts`: pins Bun `1.4.4`, enforces `EXPO_PUBLIC_API_URL=https://faroway.ai` in `production`, blocks `EXPO_PUBLIC_MOBILE_QA=1` and `EXPO_PUBLIC_TEST_LOGIN=true` in production builds, and validates release shape (`0` failures, `0` warnings).
+  - `docs/release-evidence/dependency-audit-20261115.md`: documents 7 residual `bun audit` advisories (5 high, 1 moderate, 1 low; **0 critical**) across 4 patched packages in Expo/Metro/Workflow build tooling (none in deployed web request paths).
 
----
+#### Preserved Historical Baselines (Pre-Overhaul Snapshots)
 
-## P3 — Polish
-
-### P3-1: `prefers-reduced-motion` not respected in animations
-
-**Fix:** Created `apps/mobile/hooks/useReduceMotion.ts`; applied to looping animations in `generating.tsx` and `index.tsx`.  
-**Status:** ✅ Fixed
-
----
-
-### P3-2: `NEXT_PUBLIC_GA_MEASUREMENT_ID` in `.env.example` but unimplemented
-
-**Status:** ✅ Fixed — removed from `.env.example`
-
----
-
-### P3-3: Missing `Article` JSON-LD on blog posts
-
-**Status:** N/A — already implemented in blog page
-
----
-
-### P3-4: Missing TouristDestination schema
-
-**Status:** N/A — already implemented in destinations page
-
----
-
-### P3-5: No preview deploys in CI
-
-**Status:** Open — configure Vercel GitHub integration in Vercel dashboard (zero-code change required)
+- **Git History Scrub (`2026-05-14`)**: `git filter-repo` scrubbed historical secrets (`16fe4c92`, `89946343`, `0082bf28`); `.gitleaks.toml` suppresses doc false positives (`0` working-tree leaks confirmed by `bun run test:secrets`).
+- **Historical Production Lighthouse (`2026-05-14`, `www.faroway.ai`, pre-M3 Brand 2.0)**: Perf `93`, A11y `94` (`100` expected post-`8ec26bb` contrast/heading fixes), Best Practices `100`, SEO `100`. _Re-run Lighthouse after deploying `feat/prod-monetization-audit` to production._
+- **Historical Browser Emulation QA (`2026-05-14`)**: `57/57` legacy Playwright tests passed across Desktop Chrome, iPhone 14, and Pixel 7 (superseded by the `139` isolated + `18` Track B specs in Section 5). Physical iOS/Android hardware QA remains a pre-launch manual gate.
 
 ---
 
-### P3-6: Mobile test suite missing coverage for `useAuth` and offline sync
+### 2.4 Visual Quality, Brand Cohesion & Accessibility (R4)
 
-**Status:** Open
+**Implemented across `brand/`, `apps/web`, `apps/mobile`, and `packages/constants`:**
 
----
+- **Canonical Brand Spec (`brand/BRAND.md`)**: Establishes `#F97066` (decorative fills/Route-F mark only), WCAG AA/AAA text/CTA coral `#C03A31` (`5.40:1` on `#FFFFFF` / `5.09:1` on `#FAF8F3`) and `#9B2D25` (`7.51:1` / `7.08:1`), Deep Ocean Teal `#143D46` (`11.76:1`), Accessible Teal `#0F766E` (`5.47:1`), Warm Paper `#FAF8F3` (normalizing legacy `#FAF6EF`), Editorial Ink `#0F172A`/`#182B31`, Muted Ink `#475569`/`#53676C`, and bans `#94A3B8` on light surfaces.
+- **Cross-Platform Asset Cleanup & Manifest**: Zero references remain to legacy `"TripGenie"`, `splash-new.png`, or `icon-route-f-v1.png`. `apps/mobile/assets/` holds 6 unified Route-F PNGs (`icon.png`, `adaptive-icon.png`, `splash.png`, `splash-icon.png`, `notification-icon.png`, `favicon.png`) alongside `apps/mobile/assets/venues/` (7 curated landmark photos + `README.md`); `apps/web/public/manifest.json` uses `#FAF8F3`/`#F97066`, splits `any` and `maskable` icons, and drops dead `/screenshot-*.png` entries; `apps/web/app/apple-icon.tsx` renders an edge Route-F icon.
+- **Typography & Cross-Platform Parity**: Both Web (`apps/web/app/layout.tsx` via `next/font/local`) and Mobile (`apps/mobile/constants/fonts.ts`, `tailwind.config.js`, `app/_layout.tsx` via `expo-font` with `1500ms` timeout recovery) load **`Playfair Display`** + **`Plus Jakarta Sans`**. `@faroway/constants` aligns `travelVibes` (canonical `"culture"` ID) and `BUDGET_LABELS` / `BUDGET_TIERS` across web and mobile `/create`.
+- **Web & Mobile Surface Polish**:
+  - Unified `<Logo />` (`apps/web/components/Logo.tsx`), Brand 2.0 OG cards (`apps/web/lib/social-image.tsx` + all 8 `opengraph-image.tsx` routes), `ToolCTA.tsx` (`#143D46` + `#FAF8F3`), `NewsletterCTA.tsx` (replacing `.glass-card` with `#EFF5F3` / `#DCE5E3` / `#143D46`), and Lucide/Ionicons icons replacing raw OS emojis across UI chrome.
+  - Web marketing landing (`apps/web/app/(marketing)/page.tsx`) uses benefit-first copy (`"Ready in minutes"`), accessible `#C03A31`/`#0F766E` contrast, and `<AppStoreButtons>` linking to `/create` (`"Live on Web · Mobile Preview"`) instead of a `mailto:` dead end. Web `/create` adds a visible `<h1>`.
+  - Mobile (`apps/mobile/constants/theme.ts`, `app.config.ts`, `lib/flightOrigin.ts`, `app/(tabs)/index.tsx`) unifies 4 booking button styles under `#C03A31`/`#143D46`, applies light `#FAF8F3`/`#143D46`/`#CFE6E8` map styling, removes `#0a0a0a`, and adds a thumb-zone `planTripFab` (`"Plan Trip"`).
 
-## Summary Table
+**Honest Residual Caveat Observed:**
 
-| ID       | Area                                 | Severity | Status                                                              |
-| -------- | ------------------------------------ | -------- | ------------------------------------------------------------------- |
-| **P0-0** | **Previously exposed credentials**   | **P0**   | **⚠️ History clean — rotation/revocation needs owner verification** |
-| P0-1     | OG image missing                     | P0       | ✅ Fixed                                                            |
-| P0-2     | No error monitoring                  | P0       | ✅ Code done — DSN config pending                                   |
-| P0-3     | `/generate-itinerary` unrated        | P0       | ✅ Fixed                                                            |
-| P0-4     | In-memory rate limiter               | P0       | ✅ Fixed                                                            |
-| P1-1     | README missing                       | P1       | ✅ Fixed                                                            |
-| P1-2     | Auth race condition                  | P1       | ✅ Fixed                                                            |
-| P1-3     | Unhandled rejection home screen      | P1       | ✅ Fixed                                                            |
-| P1-4     | Analytics claim vs. reality          | P1       | ✅ Fixed                                                            |
-| P2-1     | `NEXT_PUBLIC_BASE_URL` undocumented  | P2       | ✅ Fixed                                                            |
-| P2-2     | World-map missing from sitemap       | P2       | ✅ Fixed                                                            |
-| P2-3     | `as unknown as` casts                | P2       | Open                                                                |
-| P2-4     | No E2E tests                         | P2       | ✅ Fixed — 57/57 green (Desktop Chrome + iPhone 14 + Pixel 7)       |
-| P2-5     | CI skips mobile typecheck            | P2       | N/A                                                                 |
-| P2-6     | Generate endpoint rate limit scoping | P2       | ✅ Fixed                                                            |
-| P3-1     | `prefers-reduced-motion`             | P3       | ✅ Fixed                                                            |
-| P3-2     | Dead GA env var                      | P3       | ✅ Fixed                                                            |
-| P3-3     | Missing Article JSON-LD              | P3       | N/A                                                                 |
-| P3-4     | Missing TouristDestination schema    | P3       | N/A                                                                 |
-| P3-5     | No preview deploys in CI             | P3       | Open                                                                |
-| P3-6     | Missing auth/offline sync tests      | P3       | Open                                                                |
+- Standalone crash recovery fallbacks `apps/web/app/global-error.tsx` and `apps/web/pages/500.tsx` intentionally render inline styles without app CSS and still use legacy `#253A34` (and `#F7F4ED` in `global-error.tsx`). All primary marketing, app, blog, destination, tool, and OG surfaces use Brand 2.0 colors.
 
 ---
 
-## Bundle Size (2026-05-12)
+## 3. Affiliate & Monetization Partner Evaluation, Ease-of-Access & Explicit Improvement Feedback (R2)
 
-Build: `bun turbo build --filter=@faroway/web` — clean, 0 errors, 0 TS errors, 0 lint warnings.
+### 3.1 Complete 19-Partner Evaluation Matrix (+ Tiqets Sub-Builder)
 
-| Asset           | Size                                 |
-| --------------- | ------------------------------------ |
-| JS chunks total | 2.7 MB (uncompressed)                |
-| Largest chunk   | 220 KB                               |
-| Next 4 chunks   | 204 KB, 148 KB, 136 KB, 136 KB       |
-| CSS             | < 100 KB                             |
-| `.next/` total  | 170 MB (includes source maps, cache) |
+_(Commission terms and onboarding gates combine codebase implementation contracts with partner program baselines verified during audit; exact file paths, approval flags, and subID parameters reflect `feat/prod-monetization-audit`.)_
 
-Static pages: 401 generated. All routes compile successfully.  
-One deprecation warning: `@sentry/nextjs` `disableLogger` option (non-fatal; Turbopack does not support tree-shaking of Sentry logger; safe to ignore).
-
----
-
-## Lighthouse Scores
-
-### Production (faroway.ai, Vercel CDN) — 2026-05-14
-
-Measured against `https://www.faroway.ai` (Vercel Edge Network, pre-CDN-cached assets). First two runs on old code; a11y fixes confirmed deployed by 2026-05-14 (h3 footer, contrast classes verified in production HTML).
-
-| Run | Perf | A11y | Best Practices | SEO | LCP  | Notes             |
-| --- | ---- | ---- | -------------- | --- | ---- | ----------------- |
-| 1   | 93   | 94   | 100            | 100 | 3.2s | pre-a11y-fix code |
-| 2   | 93   | 94   | 100            | 100 | 3.2s | pre-a11y-fix code |
-
-**Perf=93 ✅, A11y=expected 100 post-fix ✅, BP=100 ✅, SEO=100 ✅**
-
-A11y fixes deployed in `8ec26bb` (confirmed in production HTML via curl):
-
-- `color-contrast`: `text-primary→text-primary-700` link, `text-surface-500→text-surface-400` paragraph ✅
-- `heading-order`: `h4→h3` in footer ✅ (verified: production serves `<h3>Company`, `<h3>Legal`)
-
-### Localhost baseline (2026-05-12, pre-CDN)
-
-| Run | Perf | A11y | Best Practices | SEO | LCP   |
-| --- | ---- | ---- | -------------- | --- | ----- |
-| 1   | 89   | 100  | 100            | 100 | 3.81s |
-| 2   | 84   | 100  | 100            | 100 | 4.55s |
-| 3   | 84   | 100  | 100            | 100 | 4.55s |
-
-**Fixes applied:**
-
-- Removed `FadeInOnScroll` from scenic gallery (SSR `opacity:0` blocked LCP)
-- Added `priority` + `sizes="(max-width: 1024px) 50vw, 25vw"` to scenic gallery images (1638KB → 1052KB)
-- Footer: `h4→h3` heading order, `text-surface-500→text-surface-400` (contrast fix)
-- Marketing page: `text-primary→text-primary-700` link contrast fix
+| #   | Partner                    | Vertical(s)                             | Revenue / Commission Model                                                                                                                                | Ease of Access / Approval Gate                                                                                                                                                                            | Code & Surface Status (`feat/prod-monetization-audit`)                                                                                                                                                                                                                                                              | SubID Param (`appendUtm`)                 |
+| --- | -------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 1   | **Viator**                 | Activities & Tours                      | ~8% affiliate commission; Merchant API commercial agreement-dependent                                                                                     | **Tiered**: Basic link/content fast; **Full / Full+Booking** requires manual qualification + certification; Merchant API enterprise-gated                                                                 | **Most complete; 5-flag gated.** `viator.ts` (~110 `DESTINATION_IDS` + `/search/freetext` fallback), `viator-policy.ts`, `viator-link.ts` (`buildViatorHandoffUrl`, `buildViatorSearchUrl`), `/api/trips/[id]/checkout` (`prepare_trip_handoff` RPC), `ActivityCard`, `buildActivityFallbackLinks`.                 | `campaign` (`false`)                      |
+| 2   | **GetYourGuide**           | Activities & Tours                      | ~8% CPA per completed booking (`getyourguide.ts:5`)                                                                                                       | **Moderate**: Link/widget affiliate via GYG portal or Travelpayouts (few days); **Partner API** (`X-ACCESS-TOKEN`) requires traffic/use-case review                                                       | **Backend + Search Fallback + UI Live.** `getyourguide.ts` (`searchGYGActivities`, `buildGYGAffiliateUrl` w/ `&date=`, `buildGYGSearchUrl`), unblocked in `ActivityCard.tsx` via `TripCheckout`, plus `buildActivityFallbackLinks`.                                                                                 | `cmp` (`false`)                           |
+| 3   | **Duffel**                 | Flights                                 | $5 USD flat markup (`transport.ts:181`), less ~$3/order + 1% managed content + >1500:1 excess search fees (`flight-fee-comparison.ts`)                    | **Easy / Self-Serve**: Instant sandbox; pay-as-you-go REST API + card billing + compliance review; no MAU gate                                                                                            | **Backend + UI Fixed.** `duffel.ts` fixed 404 `/trips?duffel=...` redirect & added `parseDuffelReturnStatus()`; `aggregator.ts` attaches `__return` legs; `ItineraryDay.tsx` renders clickable CTAs; `TripBriefEditor.tsx` prioritizes `duffel` first.                                                              | `click_id` (`true`)                       |
+| 4   | **LiteAPI / Nuitée**       | Hotels & Flights                        | Wholesale/commission net margin (1% ticketing fee capped €2–€10 in `flight-fee-comparison.ts`)                                                            | **Easy Sandbox / Gated Production**: Instant `sand_*`; prod (`prod_*`) requires volume & end-to-end checkout certification                                                                                | **Sandbox/Preview Only; Zero Live Checkout.** `liteapi.ts` & `api/trips/[id]/hotels` gated to `VERCEL_ENV === "preview"` + `sand_*`; `HotelQuotePanel.tsx` routes clicks to Stay22/Booking; `liteapi-flights.ts` sets `affiliateUrl: ""`. Not in `AFFILIATE_PARTNER_IDS`.                                           | N/A (not live affiliate)                  |
+| 5   | **TripAdvisor**            | Enrichment (Activities, Hotels, Dining) | Content API = enrichment only (no direct payout); affiliate click-out requires CJ/Awin/Partnerize                                                         | **Easy Content API / Network-Gated Affiliate**: Self-serve Content API key (quota-limited); affiliate via CJ/Partnerize                                                                                   | **Enrichment + Badge Click-Out.** `tripadvisor.ts` enriches up to 6 items (`normalizeIdentity` exact name+address match); `ActivityCard.tsx` renders `TrackedAffiliateButton` on allowlisted `tripadvisorUrl`. Legacy `m=faroway` helper remains unused.                                                            | `sub_id` (`true`)                         |
+| 6   | **OpenTable**              | Dining                                  | CPA per seated diner (~$1–$2/diner) via Partnerize / affiliate portal                                                                                     | **Moderate**: Requires editorial/dining traffic review                                                                                                                                                    | **Stubbed + Search Fallback.** `reservation-url.ts` emits `rid` links or `buildOpenTableSearchUrl` (`?term=...&covers=...&dateTime=...&aid=...`) in `RestaurantCard` & `buildDiningPartnerLinks`. Unmonetized search (`configured: false`) if `OPENTABLE_AFFILIATE_ID` is unset.                                    | `sub_id` (`true`)                         |
+| 7   | **Klook**                  | Activities, eSIM, Cars (APAC)           | ~3–5% activities / ~5–8% passes & eSIMs (CPA)                                                                                                             | **Easy-Moderate**: Fast via Travelpayouts (`p=4110`) or direct/Impact                                                                                                                                     | **Search Deep Link + Webhook Wired.** `activities.ts:14-69` (`buildKlookActivitySearchUrl`) uses `KLOOK_AFFILIATE_ID` or falls back to Travelpayouts `4110`; wired in `buildActivityFallbackLinks` + `/api/track/conversion`.                                                                                       | `sub_id` (`true`)                         |
+| 8   | **DiscoverCars**           | Car Rentals                             | Rev-share (~30–70% of DiscoverCars profit / ~8–10% effective order value)                                                                                 | **Easy-Moderate**: Direct (`a_aid`/`a_bid`) or via Travelpayouts                                                                                                                                          | **Deep Link Wired Across Trips & SEO.** `essentials.ts:665-726` pre-fills `location`, `from`, `to` (direct or Travelpayouts fallback) in `buildTripEssentials`.                                                                                                                                                     | `sub_id` (`true`)                         |
+| 9   | **Hostelworld**            | Budget Stays                            | ~20–40% of first-night deposit                                                                                                                            | **Moderate**: Direct/Partnerize review                                                                                                                                                                    | **Deep Link Wired (Budget Priority).** `hotels.ts:210-245` ranked #1 in `buildHotelPartnerLinks` when `budgetTier === "budget"` and `HOSTELWORLD_AFFILIATE_ID` is set.                                                                                                                                              | `sub_id` (`true`)                         |
+| 10  | **Stay22**                 | Hotels / Stays (Multi-OTA)              | ~30% split of Stay22's OTA commission across Booking/Expedia/Vrbo/TripAdvisor                                                                             | **Easy / Creator-Friendly**: Free signup + domain check, no high traffic gate; instant multi-OTA routing                                                                                                  | **Primary Hotel Deep Link.** `hotels.ts:56-114` (`stay22.com/allez/roam`) fails closed to `url: null` without `STAY22_AID`. Ranked #1 for non-budget tiers across trip detail, shared trips, `HotelQuotePanel`, blog, destinations, and tools. Webhook supported.                                                   | `campaign` (`false`)                      |
+| 11  | **Travelpayouts**          | Multi-Vertical Network                  | Aggregator (~50–70% of platform commission across 100+ programs: Aviasales ~1.3–1.8%, Hotellook, Klook, Tiqets, Airalo, SafetyWing, DiscoverCars, Sherpa) | **Instant Account / Fast Sub-Programs**: Instant signup; Trip.com/Tiqets/Airalo fast; Booking.com (<=3d), Viator (3–10d), GYG site-reviewed. _Deep links (`p=4114`) bypass Aviasales's 50k MAU API gate._ | **Umbrella Wrapper Implemented.** `travelpayouts.ts` (`tp.media/r?marker=...&trs=...&p=...&u=...&sub_id=...`) backs Aviasales (`4114`), Hotellook (`4115`), Klook (`4110`), **Tiqets** (`buildTiqetsActivitySearchUrl` in `activities.ts:71-101`), SafetyWing, Airalo, DiscoverCars, and Sherpa. Webhook supported. | `sub_id` (`false`)                        |
+| 12  | **Booking.com**            | Hotels                                  | ~25–40% of Booking's commission (~3–4% net booking value)                                                                                                 | **Moderate-Hard Direct / Easier via Travelpayouts/Stay22**: Manual site/content review                                                                                                                    | **Deep Link Wired.** `hotels.ts:116-166` pre-fills `ss`, `checkin`, `checkout`, guests/rooms across `FeaturedHotelCard`, blog, destinations, tools. Emits unmonetized search if `BOOKING_AFFILIATE_ID` is blank.                                                                                                    | `label` (`false`)                         |
+| 13  | **Expedia**                | Hotels (Flights/Cars)                   | ~4–6% (up to ~8% tiered) CPA on completed stays                                                                                                           | **Moderate-Hard**: Partnerize / CJ / Impact + brand compliance review                                                                                                                                     | **Deep Link Wired.** `hotels.ts:168-208` (`expedia.com/Hotel-Search` with `affcid`/`camref`) in `buildHotelPartnerLinks` alternatives.                                                                                                                                                                              | `affcid` (`true`)                         |
+| 14  | **SafetyWing**             | Travel Medical Insurance                | ~10% commission on initial policy + renewals for 364 days; 1-year cookie                                                                                  | **Instant / Self-Serve**: SafetyWing Ambassador signup is instant                                                                                                                                         | **Deep Link + Mobile + Webhook Wired.** `essentials.ts:568-613` requires `SAFETYWING_REFERENCE_ID` (or Travelpayouts fallback) and refuses bare unattributed links; wired in `buildTripEssentials`, `visa-checker`, `blog/[slug]`, and mobile `TRIP_ESSENTIALS`.                                                    | `referenceID` (`true`)                    |
+| 15  | **Airalo**                 | eSIM Data                               | ~10% commission on eSIM purchases                                                                                                                         | **Easy / Fast**: Impact / direct / Travelpayouts (~1–2 business days)                                                                                                                                     | **Country-Mapped Deep Link + Mobile + Webhook Wired.** `essentials.ts:615-663` maps 35 countries + subregions to `<country>-esim` (or `global-esim`); wired in `buildTripEssentials`, `packing-list`, `blog/[slug]`, and mobile `TRIP_ESSENTIALS`.                                                                  | `sub_id` (`true`)                         |
+| 16  | **Skyscanner / Aviasales** | Flight Meta-Search                      | **Skyscanner**: CPC/CPA rev-share (~50% via Impact). **Aviasales**: ~1.3–1.8% flight share via Travelpayouts (`4114`)                                     | **Skyscanner Affiliate (Impact)**: ~5k monthly visitors (vs **100k MAU** Travel API). **Aviasales Deep Links**: Low-gate via Travelpayouts `4114` (vs **50k MAU** Search API)                             | **Both Deep Links Wired.** `flights.ts:48-160` formats route/date/pax search URLs for Skyscanner (`associateid`) and Aviasales (`tp.media` `p=4114`) across `buildFlightFallbackLinks`.                                                                                                                             | `sub_id` (`true` Skyscanner / `false` TP) |
+| 17  | **iVisa / Sherpa**         | Entry Requirements & Visas              | **iVisa**: ~15–20% / fixed CPA. **Sherpa**: CPA via Travelpayouts                                                                                         | **Easy-Moderate**: Impact / PartnerStack (`affid`/`irclickid`); Sherpa via Travelpayouts                                                                                                                  | **Deep Link + Fallback Wired.** `essentials.ts:728-778` emits iVisa (`nationality`, `destination`, `affid`, `irclickid`) or falls back to Sherpa via Travelpayouts (`TRAVELPAYOUTS_SHERPA_PROGRAM_ID`); wired in `buildTripEssentials` & `/tools/visa-checker`.                                                     | `sub_id` (`true`)                         |
+| 18  | **Wise**                   | Multi-Currency Cards & FX               | Fixed CPA per funded account (~$10–$65 via Impact/Partnerize)                                                                                             | **Easy-Moderate**: Financial compliance review on Impact/Partnerize                                                                                                                                       | **Currency-Pair Deep Link Wired.** `essentials.ts:780-817` maps 35 destination currencies to `wise.com/us/currency-converter/{src}-to-{tgt}-rate`; wired in `buildTripEssentials`, `currency-converter`, and `blog/[slug]`.                                                                                         | `sub_id` (`true`)                         |
+| 19  | **Impact** _(Network)_     | Umbrella Affiliate Network              | Network payout consolidation (0% publisher fee; brand terms apply)                                                                                        | **Easy Network / Brand-by-Brand**: Fast network account; individual brands review domain ownership                                                                                                        | **Site Verification Wired.** `apps/web/app/layout.tsx:188-193` renders `<meta name="impact-site-verification" value={...} />`; `irclickid` preserved across Airalo, Skyscanner, iVisa, and Wise.                                                                                                                    | `irclickid` preserved                     |
 
 ---
 
-## Security Scan Results (updated 2026-07-25)
+### 3.2 Phased Partner Rollout & Concrete Improvement Recommendations
 
-### gitleaks
+#### Recommended Phased Rollout
 
-**Filesystem scan (--no-git):** 62 findings, **all in gitignored files** (`.env.local`, `.next/` build artifacts) or false positives in example docs. No committed plaintext secrets in working tree.
+1. **Phase 1 — Immediate Revenue (Self-Serve / Low Gate, Fastest ROI):**
+   - **Stay22 (`STAY22_AID`)**: Activate first for hotels—bypasses Booking/Expedia manual gates while routing users across Booking/Expedia/Vrbo/TripAdvisor dynamically.
+   - **Travelpayouts (`TRAVELPAYOUTS_MARKER`, `TRAVELPAYOUTS_TRS`, plus `TRAVELPAYOUTS_*_PROGRAM_ID`)**: Single onboarding unlocks **Aviasales (`4114`)**, **Hotellook (`4115`)**, **Klook (`4110`)**, **Tiqets**, **Airalo**, **SafetyWing**, **DiscoverCars**, and **Sherpa**, bypassing Aviasales's 50k MAU Search API requirement.
+   - **SafetyWing (`SAFETYWING_REFERENCE_ID`) & Airalo (`AIRALO_AFFILIATE_ID` / Impact / Travelpayouts)**: Instant/fast onboarding, ~10% commission (with 364-day SafetyWing renewals), and high intent on `visa-checker`, `packing-list`, international trips, and mobile `TRIP_ESSENTIALS`.
+2. **Phase 2 — Core API & Direct Network Scaling (Moderate Approval):**
+   - **GetYourGuide (`GETYOURGUIDE_API_KEY`, `GETYOURGUIDE_PARTNER_ID`)**: Now unblocked in `ActivityCard.tsx` with `&date=` prefill and strong European inventory.
+   - **Viator (`VIATOR_API_KEY`, `VIATOR_PARTNER_ID`, `VIATOR_MCID`, plus 5 approval/checkout flags)**: Provision `VIATOR_MCID` so `buildViatorSearchUrl` activates alongside product search; keep Basic/Full certification advancing before flipping `VIATOR_CONTENT_ENABLED` and `VIATOR_HOSTED_CHECKOUT_ENABLED` in prod.
+   - **Impact (`IMPACT_SITE_VERIFICATION`)**: Verify domain ownership to unlock direct **Skyscanner**, **Airalo**, **iVisa**, and **Wise** programs.
+   - **Duffel (`DUFFEL_API_TOKEN`) + Direct OTAs/Dining**: Enable Duffel with search-to-book guardrails (below), then layer **Booking.com**, **Expedia**, **Hostelworld**, **DiscoverCars**, and **OpenTable** as direct approvals clear.
+3. **Phase 3 — Longer-Horizon / Gated APIs (Defer Live Checkout):**
+   - **LiteAPI / Nuitée**: Keep gated behind `VERCEL_ENV === "preview"` until hotel prebook/book/payment/MoR flows and production certification (`prod_*`) are completed; rely on Stay22/Booking/Expedia/Hostelworld deep links for immediate hotel commissions.
 
-**Git history scan (post-rewrite, 2026-05-14):** 0 findings. History scrubbed via `git filter-repo`; `.gitleaks.toml` added to suppress known doc false positives. Force-pushed with `--no-thin` to avoid pack corruption.
+#### Explicit Technical & Monetization Improvements Identified
 
-### bun audit
-
-**15 November 2026 (Bun 1.4.4, `bun audit` on this revision):** 7 findings
-(5 high, 1 moderate, 1 low) in four already-patched packages. The July total
-below and the 26-finding figure quoted on draft PR #55 are earlier snapshots.
-No compatible version bump clears the current four without breaking a pinned
-consumer. Reachability and the reason each pin stays are recorded in
-`docs/release-evidence/dependency-audit-20261115.md`. This is not a clean
-audit: the version check still flags the maintained backports.
-
-**July 2026 snapshot:** 42 (0 critical, 26 high, 13 moderate, 3 low), down
-from 165 (7 critical, 83 high, 60 moderate, 15 low).
-
-Direct runtime and build dependencies were upgraded or constrained, including
-Next.js 16.2.11, Workflow 4.6.2, Sentry 10.68.0, Supabase JS 2.110.8,
-Lodash 4.18.1, Sharp 0.35.3, PostCSS 8.5.23, Vite 7.3.6, and Vitest
-4.1.10. The critical Next.js, decompression, archive, XML, template, and
-cryptography findings are no longer present.
-
-The remaining advisories are in eight transitive packages:
-`@babel/core`, `brace-expansion`, `js-yaml`, `minimatch`, `picomatch`,
-`undici`, `uuid`, and `ws`. Their vulnerable instances are owned by
-Expo/React Native development middleware, Jest/ESLint/test coverage, or the
-Workflow build/CLI graph. They do not handle untrusted input in Faroway's
-deployed request paths. Major-version overrides were deliberately avoided
-where they would violate Expo or React Native's supported dependency graph.
-
-**Residual-risk acceptance (2026-07-25):** Accepted for this release with
-zero critical advisories, a green production build, 617 passing tests, and
-Expo Doctor 18/18. Re-run `bun audit` on every dependency update and remove
-the acceptance as soon as Expo, React Native, Jest, ESLint, or Workflow ships
-compatible patched transitive versions.
+1. **Reconcile Conversion Reporting & Cover the Remaining 9 Partners (`apps/web/app/api/track/conversion/route.ts`, `docs/hosted-checkout.md:263-266`)**:
+   - **Gap:** Today only 8 of 17 canonical partners have an entry in `WEBHOOK_SECRET_ENV_KEYS`, and real affiliate networks (Travelpayouts, Stay22, Impact, CJ, Partnerize) typically provide **Reporting/Statistics REST APIs** or **GET/POST postbacks with fixed tokens/IP allowlists**, rather than Faroway's custom `x-webhook-signature` HMAC JSON webhook. Relying solely on `POST /api/track/conversion` will leave `affiliate_conversions` empty even when commissions accrue.
+   - **Recommendation:** Add (a) a scheduled Vercel Cron sync job polling Travelpayouts, Stay22, Impact, and Partnerize/CJ reporting APIs by `clickId`/`sub_id`, and (b) partner-native GET/POST postback adapters with provider-specific signature/token checks covering the remaining 9 partners (`booking`, `expedia`, `hostelworld`, `discovercars`, `tripadvisor`, `opentable`, `skyscanner`, `ivisa`, `wise`).
+2. **Fix Mobile `TRIP_ESSENTIALS` Destination Slugs & SafetyWing Attribution (`apps/mobile/lib/affiliateCheckout.ts:34-53`)**:
+   - **Gap:** Mobile `TRIP_ESSENTIALS` uses static base URLs (`https://www.airalo.com/`, `https://safetywing.com/nomad-insurance`). Without `SAFETYWING_REFERENCE_ID` already present in the query string, `injectAffiliateSubId()` writes `referenceID=<clickId>` rather than Faroway's SafetyWing ambassador reference ID.
+   - **Recommendation:** Fetch server-computed `essentials` (from `/api/trips/[id]` or trip payload) or pass `EXPO_PUBLIC_SAFETYWING_REFERENCE_ID` + `resolveDestinationTravelMeta` country slugs so Airalo deep-links to `<country>-esim` and SafetyWing preserves Faroway's `referenceID` while appending `click_id`.
+3. **Pass `essentials` to Web Downloads & Wire Duffel Return Context (`TripDetailClient.tsx:686,704`, `transport.ts:181`)**:
+   - Forward `{ essentials }` in `TripDetailClient.tsx`'s `.txt`/`.ics` export handlers so web downloads match `export.ts` capabilities.
+   - Pass `{ tripId, clickId }` into `generateDuffelLink` in `apps/web/lib/search/agents/transport.ts:181` (or regenerate on checkout handoff) and render a UI banner using `parseDuffelReturnStatus()` (`duffel.ts:92-99`) when travelers return from Duffel Links.
+4. **Monitor Duffel Search-to-Book Ratio & `affiliate_clicks` Insert Reliability**:
+   - Because Duffel's $5 markup minus ~$3/order + 1% managed content leaves thin net margin and >1500:1 look-to-book incurs $0.005/search (`flight-fee-comparison.ts`), monitor `search:offer` ratios, gate live Duffel searches to consented/high-intent itineraries, and keep Skyscanner/Aviasales on exploratory SEO/tools surfaces.
+   - Alert on `affiliate_clicks` DB insert errors in `apps/web/app/api/track/click/route.ts:160-163` (currently fail-open for user redirects) and expose `getAffiliateAnalytics()` (`apps/web/lib/affiliates/tracking.ts:247`) in an internal metrics view.
+5. **Provision `VIATOR_MCID` Alongside `VIATOR_PARTNER_ID` & Ground OpenTable `rid`s**:
+   - `VIATOR_MCID` is already documented in `apps/web/.env.example:81` and `scripts/check-env.ts:92`, and is required by `viator-link.ts:60` for `buildViatorSearchUrl`—ensure it is provisioned alongside `VIATOR_PARTNER_ID`, and explore Viator Partner API date/pax deep-link support post-certification.
+   - Upgrade `buildOpenTableSearchUrl` by resolving OpenTable/Partnerize `rid` venue IDs during dining enrichment to boost seated-diner CPA conversion.
 
 ---
 
-## Strengths (Do Not Break)
+## 4. Complete Partner Keys, Credentials & Configuration Matrix
 
-The following areas are solid and should be preserved:
+Cross-verified across `.env.example` (4 vars), `apps/web/.env.example` (111 variable lines: 79 active + 32 commented), `apps/mobile/.env.example` (16 variable lines: 11 active + 5 commented), `scripts/check-env.ts`, `apps/mobile/eas.json`, `apps/mobile/app.config.ts`, `.github/workflows/*.yml`, and exhaustive source scans post-merge (`origin/main` `4ffe1d12` into `feat/prod-monetization-audit`).
 
-- **RLS policies** — all tables have correct row-level security with `(SELECT auth.uid())` wrapping for plan-time caching; service role properly scoped
-- **Auth flows** — Google and Apple sign-in use ID tokens (not passwords or JWT leakage); anonymous trip claiming is handled correctly
-- **Offline support** — comprehensive AsyncStorage-backed queue with retry and conflict detection (`docs/OFFLINE_SYNC.md`)
-- **Streaming implementation** — SSE with XHR for React Native is the correct approach; 5-minute timeout, abort controller, and reconnect path are all present
-- **Affiliate security** — `isAllowedAffiliateUrl()` with explicit HTTPS enforcement and domain allowlist
-- **Input validation** — `GenerateItineraryRequestSchema` uses Zod with date range superRefine; date-only format validated before hitting AI pipeline
-- **SEO foundation** — sitemap, robots, OG tags, Twitter cards, JSON-LD on tools pages are all implemented
-- **Legal pages** — Privacy policy, Terms of Service, Support, and account deletion all exist and are linked
-- **CI pipeline** — lint, type-check, format-check, tests, and web build run on every push/PR with `concurrency` cancel-in-progress
+### 4.1 Affiliate Partner Keys, IDs, Approval Gates & Webhook Secrets
+
+_(All server-side affiliate variables below are configured in **Vercel Project Environment Variables** for `@faroway/web` and documented in `apps/web/.env.example`.)_
+
+| Partner           | Env Var                                   | Purpose & Expected Format                                                                    | Code Consumer(s)                                                | In `apps/web/.env.example` | In `scripts/check-env.ts` |
+| ----------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------- | ------------------------- |
+| **Viator**        | `VIATOR_API_KEY`                          | Partner API v2 key (`exp-api-key`)                                                           | `apps/web/lib/affiliates/viator.ts:26`                          | Yes (`:79`)                | Yes (`:82`)               |
+|                   | `VIATOR_PARTNER_ID`                       | Affiliate ID (`/^P\d+$/`)                                                                    | `viator.ts:30`, `viator-link.ts:59`, `checkout/route.ts:29,168` | Yes (`:80`)                | Yes (`:87`)               |
+|                   | `VIATOR_MCID`                             | Campaign attribution numeric ID (`/\d+/`, required for `buildViatorSearchUrl`)               | `apps/web/lib/affiliates/viator-link.ts:60`                     | Yes (`:81`)                | Yes (`:92`)               |
+|                   | `VIATOR_SANDBOX`                          | `"true"` uses `api.sandbox.viator.com/partner`; must be `"false"` for hosted checkout        | `viator.ts:41`, `checkout/route.ts:28`                          | Yes (`:82`)                | No                        |
+|                   | `VIATOR_CONTENT_ENABLED`                  | `"true"` + non-empty `VIATOR_CONTENT_APPROVAL_REF` gates `isViatorContentEnabled()`          | `apps/web/lib/affiliates/viator-policy.ts:6-9`                  | Yes (`:83`)                | Yes (`:97`)               |
+|                   | `VIATOR_CONTENT_APPROVAL_REF`             | Reviewed Viator commercial content approval reference ID                                     | `viator-policy.ts:8`                                            | Yes (`:84`)                | Yes (`:102`)              |
+|                   | `VIATOR_EXTERNAL_PROCESSING_ENABLED`      | `"true"` + `VIATOR_EXTERNAL_PROCESSING_APPROVAL_REF` gates LLM/enrichment use of Viator data | `viator-policy.ts:15-16`                                        | Yes (`:85`)                | No                        |
+|                   | `VIATOR_EXTERNAL_PROCESSING_APPROVAL_REF` | External processing approval reference ID                                                    | `viator-policy.ts:16`                                           | Yes (`:86`)                | No                        |
+|                   | `VIATOR_HOSTED_CHECKOUT_ENABLED`          | `"true"` unlocks `POST /api/trips/[id]/checkout`                                             | `apps/web/app/api/trips/[id]/checkout/route.ts:27`              | Yes (`:87`)                | No                        |
+|                   | `VIATOR_WEBHOOK_SECRET`                   | HMAC-SHA256 secret for `POST /api/track/conversion`                                          | `apps/web/app/api/track/conversion/route.ts:22`                 | Yes (`:141`, commented)    | Yes (`:212`)              |
+| **GetYourGuide**  | `GETYOURGUIDE_API_KEY`                    | Partner API v1 key (`X-ACCESS-TOKEN`)                                                        | `apps/web/lib/affiliates/getyourguide.ts:24`                    | Yes (`:90`)                | Yes (`:122`)              |
+|                   | `GETYOURGUIDE_PARTNER_ID`                 | Affiliate `partner_id` (`^[A-Za-z0-9_-]{1,40}$`)                                             | `getyourguide.ts:28`                                            | Yes (`:91`)                | Yes (`:127`)              |
+|                   | `GYG_WEBHOOK_SECRET`                      | HMAC-SHA256 secret (`x-webhook-signature`)                                                   | `conversion/route.ts:23`                                        | Yes (`:142`, commented)    | Yes (`:217`)              |
+| **Duffel**        | `DUFFEL_API_TOKEN`                        | Bearer token (`Duffel-Version: v2`) for offer requests & Duffel Links                        | `apps/web/lib/affiliates/duffel.ts:21`                          | Yes (`:94`)                | Yes (`:107`)              |
+|                   | `DUFFEL_SUPPLIER_TIMEOUT_MS`              | Supplier timeout ms (default `8000`, range `2000..60000`)                                    | `duffel.ts:25`                                                  | Yes (`:95`)                | No                        |
+|                   | `DUFFEL_LINK_TIMEOUT_MS`                  | Link session timeout ms (default `2500`, range `250..10000`)                                 | `duffel.ts:32`                                                  | Yes (`:96`)                | No                        |
+|                   | `DUFFEL_WEBHOOK_SECRET`                   | HMAC-SHA256 conversion webhook secret                                                        | `conversion/route.ts:27`                                        | Yes (`:146`, commented)    | Yes (`:237`)              |
+| **LiteAPI**       | `LITEAPI_API_KEY`                         | `sand_*` (sandbox) or live `prod_*` API key (`X-API-Key`)                                    | `liteapi.ts:106,122`, `liteapi-flights.ts:29,243`               | Yes (`:186`)               | Yes (`:112`)              |
+|                   | `LITEAPI_SANDBOX_ENABLED`                 | `"true"` enables hotel sandbox (preview-only API routes)                                     | `liteapi.ts:105`                                                | Yes (`:187`)               | No                        |
+|                   | `NEXT_PUBLIC_HOTEL_SEARCH_ENABLED`        | `"true"` exposes preview hotel search form & `/api/trips/[id]/hotels`                        | `apps/web/lib/trips/hotel-quotes.ts:4`                          | Yes (`:185`)               | No                        |
+|                   | `LITEAPI_FLIGHTS_ENABLED`                 | `"true"` enables LiteAPI flight search                                                       | `liteapi-flights.ts:34`                                         | Yes (`:188`)               | No                        |
+|                   | `LITEAPI_FLIGHTS_PRODUCTION_APPROVED`     | `"true"` required alongside non-`sand_*` key for prod flights                                | `liteapi-flights.ts:35`                                         | Yes (`:189`)               | No                        |
+|                   | `LITEAPI_FLIGHTS_SANDBOX_ENABLED`         | `"true"` enables sandbox flight mode (`sand_*` key)                                          | `liteapi-flights.ts:32`                                         | Yes (`:190`)               | No                        |
+| **TripAdvisor**   | `TRIPADVISOR_API_KEY`                     | Content API v1 enrichment key (`key` query param)                                            | `apps/web/lib/affiliates/tripadvisor.ts:21`                     | Yes (`:99`)                | Yes (`:117`)              |
+|                   | `TRIPADVISOR_ENRICHMENT_TIMEOUT_MS`       | Enrichment timebox ms (default `3500`, range `250..10000`)                                   | `tripadvisor.ts:24`                                             | Yes (`:38`)                | No                        |
+|                   | `TRIPADVISOR_ENRICHMENT_LIMIT`            | Max enriched items per run (default `6`, range `0..20`)                                      | `tripadvisor.ts:29`                                             | Yes (`:39`)                | No                        |
+| **Travelpayouts** | `TRAVELPAYOUTS_MARKER`                    | Required affiliate marker (`tp.media/r?marker=...`)                                          | `apps/web/lib/affiliates/travelpayouts.ts:9,21`                 | Yes (`:103`)               | Yes (`:137`)              |
+|                   | `TRAVELPAYOUTS_TRS`                       | Optional campaign/TRS parameter                                                              | `travelpayouts.ts:66`                                           | Yes (`:104`)               | Yes (`:142`)              |
+|                   | `TRAVELPAYOUTS_KLOOK_PROGRAM_ID`          | Klook program ID override (default `"4110"`)                                                 | `activities.ts:54`                                              | Yes (`:106`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_TIQETS_PROGRAM_ID`         | Tiqets program ID override                                                                   | `activities.ts:96`                                              | Yes (`:107`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_AVIASALES_PROGRAM_ID`      | Aviasales program ID override (default `"4114"`)                                             | `flights.ts:130`                                                | Yes (`:108`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_HOTELLOOK_PROGRAM_ID`      | Hotellook program ID override (default `"4115"`)                                             | `hotels.ts:264`                                                 | Yes (`:109`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_DISCOVERCARS_PROGRAM_ID`   | DiscoverCars fallback program ID                                                             | `essentials.ts:711`                                             | Yes (`:110`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_AIRALO_PROGRAM_ID`         | Airalo fallback program ID                                                                   | `essentials.ts:644`                                             | Yes (`:111`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_SAFETYWING_PROGRAM_ID`     | SafetyWing fallback program ID                                                               | `essentials.ts:596`                                             | Yes (`:112`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_SHERPA_PROGRAM_ID`         | Sherpa visa fallback program ID (required for Sherpa fallback)                               | `essentials.ts:759`                                             | Yes (`:113`, commented)    | No                        |
+|                   | `TRAVELPAYOUTS_WEBHOOK_SECRET`            | HMAC-SHA256 conversion webhook secret                                                        | `conversion/route.ts:25`                                        | Yes (`:144`, commented)    | Yes (`:227`)              |
+| **Stay22**        | `STAY22_AID`                              | Stay22 Roam affiliate ID (`aid`; fails closed to `url: null` if unset)                       | `hotels.ts:59`                                                  | Yes (`:116`)               | Yes (`:147`)              |
+|                   | `STAY22_WEBHOOK_SECRET`                   | HMAC-SHA256 conversion webhook secret                                                        | `conversion/route.ts:26`                                        | Yes (`:145`, commented)    | Yes (`:232`)              |
+| **Booking.com**   | `BOOKING_AFFILIATE_ID`                    | Booking.com `aid` query parameter                                                            | `hotels.ts:120`                                                 | Yes (`:117`)               | Yes (`:152`)              |
+| **Expedia**       | `EXPEDIA_AFFCID`                          | Expedia `affcid` parameter                                                                   | `hotels.ts:171`                                                 | Yes (`:118`)               | Yes (`:157`)              |
+|                   | `EXPEDIA_CAMREF`                          | Expedia Partnerize `camref` parameter                                                        | `hotels.ts:172`                                                 | Yes (`:119`)               | Yes (`:162`)              |
+| **Hostelworld**   | `HOSTELWORLD_AFFILIATE_ID`                | Hostelworld `source` parameter                                                               | `hotels.ts:213`                                                 | Yes (`:120`)               | Yes (`:167`)              |
+| **Klook**         | `KLOOK_AFFILIATE_ID`                      | Direct Klook `aid` (falls back to Travelpayouts `4110` if unset)                             | `activities.ts:36`                                              | Yes (`:123`)               | Yes (`:172`)              |
+|                   | `KLOOK_AD_ID`                             | Optional Klook `aff_adid`                                                                    | `activities.ts:37`                                              | Yes (`:124`)               | No                        |
+|                   | `KLOOK_WEBHOOK_SECRET`                    | HMAC-SHA256 conversion webhook secret                                                        | `conversion/route.ts:24`                                        | Yes (`:143`, commented)    | Yes (`:222`)              |
+| **OpenTable**     | `OPENTABLE_AFFILIATE_ID`                  | OpenTable `aid` (`^[A-Za-z0-9_-]{1,64}$`)                                                    | `apps/web/lib/search/reservation-url.ts:57,106`                 | Yes (`:125`)               | Yes (`:177`)              |
+| **Skyscanner**    | `SKYSCANNER_ASSOCIATE_ID`                 | Skyscanner `associateid` parameter                                                           | `flights.ts:51`                                                 | Yes (`:126`)               | Yes (`:182`)              |
+| **SafetyWing**    | `SAFETYWING_REFERENCE_ID`                 | Direct `referenceID` (falls back to Travelpayouts or `url: null` if unset)                   | `essentials.ts:574`                                             | Yes (`:129`)               | Yes (`:187`)              |
+|                   | `SAFETYWING_AMBASSADOR_ID`                | Optional SafetyWing `ambassador` param                                                       | `essentials.ts:575`                                             | Yes (`:130`)               | No                        |
+|                   | `SAFETYWING_WEBHOOK_SECRET`               | HMAC-SHA256 conversion webhook secret                                                        | `conversion/route.ts:28`                                        | Yes (`:147`, commented)    | Yes (`:242`)              |
+| **Airalo**        | `AIRALO_AFFILIATE_ID`                     | Airalo `ref` param (falls back to Travelpayouts if unset)                                    | `essentials.ts:623`                                             | Yes (`:131`)               | Yes (`:192`)              |
+|                   | `AIRALO_IR_CLICK_ID`                      | Impact `irclickid` param for Airalo                                                          | `essentials.ts:624`                                             | Yes (`:132`)               | No                        |
+|                   | `AIRALO_WEBHOOK_SECRET`                   | HMAC-SHA256 conversion webhook secret                                                        | `conversion/route.ts:29`                                        | Yes (`:148`, commented)    | Yes (`:247`)              |
+| **DiscoverCars**  | `DISCOVERCARS_AFFILIATE_ID`               | DiscoverCars `a_aid` (falls back to Travelpayouts if unset)                                  | `essentials.ts:672`                                             | Yes (`:133`)               | Yes (`:197`)              |
+|                   | `DISCOVERCARS_BID`                        | Optional DiscoverCars `a_bid`                                                                | `essentials.ts:673`                                             | Yes (`:134`)               | No                        |
+| **iVisa**         | `IVISA_AFFILIATE_ID`                      | iVisa `affid` (falls back to Travelpayouts Sherpa if unset)                                  | `essentials.ts:733`                                             | Yes (`:135`)               | Yes (`:202`)              |
+|                   | `IVISA_IR_CLICK_ID`                       | Impact `irclickid` param for iVisa                                                           | `essentials.ts:734`                                             | Yes (`:136`)               | No                        |
+| **Wise**          | `WISE_IR_CLICK_ID`                        | Impact `irclickid` (takes precedence over `WISE_AFFILIATE_ID`)                               | `essentials.ts:785`                                             | Yes (`:138`)               | Yes (`:207`)              |
+|                   | `WISE_AFFILIATE_ID`                       | Alternate Wise tracking ID fallback (`irclickid`)                                            | `essentials.ts:785`                                             | Yes (`:137`)               | No                        |
+| **Impact**        | `IMPACT_SITE_VERIFICATION`                | `<meta name="impact-site-verification" value="...">` in root layout                          | `apps/web/app/layout.tsx:188-191`                               | Yes (`:173`, commented)    | Yes (`:71`)               |
 
 ---
 
-## Vercel Build & Deployment (2026-05-14)
+### 4.2 Platform, Infrastructure, AI, Security, Mobile & CI Variables
 
-- Commit `4d64471` (62 previously-untracked source files committed) — **build SUCCESS** → `https://faroway-vqhayux5q-testimonio.vercel.app`
-- Commit `674b8d6` — **build SUCCESS** → `https://faroway-lpvec0f23-testimonio.vercel.app`
-- Preview URLs are behind Vercel deployment protection (401); production at `faroway.ai` serves latest main.
-- Root cause of prior failures: `@/lib/store-links`, `@/lib/workflow/runtime`, and 60 other source files were local-only (never committed). Fixed by staging all untracked source files.
+| Scope / Config Location                                                          | Variables                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Notes & Guardrails                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Root `.env.example` (Local Supabase CLI `supabase/config.toml`)**              | `SUPABASE_AUTH_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_GOOGLE_SECRET`, `SUPABASE_AUTH_APPLE_CLIENT_ID`, `SUPABASE_AUTH_APPLE_SECRET`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Local Supabase CLI OAuth configuration only (`4` vars).                                                                                                                                                              |
+| **Web Supabase, URLs & Build Guards (`apps/web/.env.example` + Vercel)**         | **Required:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`<br>**Origins & Stores:** `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_APP_STORE_URL`, `NEXT_PUBLIC_PLAY_STORE_URL`, `GOOGLE_SITE_VERIFICATION`<br>**Build/Staging:** `FAROWAY_BUILD_WITHOUT_BLOG_DB`, `FAROWAY_STAGING_SUPABASE_PROJECT_REF`                                                                                                                                                                                                                                                                                                                                                                                                                                          | `NEXT_PUBLIC_APP_STORE_URL` and `NEXT_PUBLIC_PLAY_STORE_URL` must stay empty until listings are live (`AppStoreButtons.tsx` truthfully shows web/preview CTA).                                                       |
+| **Web AI, Planning & Enrichment (`apps/web/.env.example` + Vercel)**             | **AI Gateway:** `AI_GATEWAY_API_KEY`, `VERCEL_AI_GATEWAY_API_KEY`, `FAROWAY_STAGING_AI_MAX_OUTPUT_TOKENS` _(read in `lib/ai/sdk.ts:44`)_<br>**Per-Step Overrides (`lib/ai/planning-step.ts:38-60`):** `PLANNING_MODEL_{STEP}`, `PLANNING_THINKING_{STEP}`, `PLANNING_MAX_OUTPUT_TOKENS_{STEP}` for `STEP` ∈ `{ORCHESTRATOR, HOTELS, ACTIVITIES, DINING, AGGREGATOR}` (`15` vars)<br>**Timeouts:** `NEXT_PUBLIC_ITINERARY_STREAMING_ENABLED`, `ITINERARY_ORCHESTRATOR_TIMEOUT_MS`, `ITINERARY_AI_AGENT_TIMEOUT_MS`, `ITINERARY_AGGREGATOR_TIMEOUT_MS`, `ITINERARY_VENDOR_TIMEOUT_MS`, `ITINERARY_VIATOR_TIMEOUT_MS`, `ITINERARY_GYG_TIMEOUT_MS`<br>**Enrichment & Weather:** `TAVILY_API_KEY`, `GOOGLE_PLACES_API_KEY`, `GOOGLE_PLACES_LIVE_ENABLED`, `GOOGLE_PLACES_ACCESSIBILITY_ENABLED`, `MET_WEATHER_ENABLED`, `MET_USER_AGENT` | Keep `GOOGLE_PLACES_LIVE_ENABLED=false` and `MET_WEATHER_ENABLED=false` until billing, restrictions, and contact UA are verified.                                                                                    |
+| **Web Security, Deletion, Flags & Sentry (`apps/web/.env.example` + Vercel)**    | **Security:** `IP_HASH_SALT` (32+ char server-only HMAC salt), `CRON_SECRET`, `SHARED_REACTIONS_SECRET`, `ALLOWED_ORIGINS`<br>**Account Deletion:** `ACCOUNT_DELETION_ENABLED`, `APPLE_DELETION_CLIENT_ID`, `APPLE_DELETION_CLIENT_SECRET`, `ACCOUNT_DELETION_ENCRYPTION_KEY` (32-byte base64 AES-256-GCM key)<br>**Product & Push Flags:** `FAROWAY_BOOKING_CHECKLIST_ENABLED`, `FAROWAY_PLAN_EDITING_ENABLED`, `FAROWAY_PLANNING_PAUSED`, `PUSH_CONSENT_V2_ENABLED`, `PUSH_DELIVERY_ENABLED`<br>**Sentry:** `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `NEXT_PUBLIC_APP_VERSION`                                                                                                                                                                                                | `IP_HASH_SALT` and `CRON_SECRET` are required for production rate limits and `/api/cron/cleanup`.                                                                                                                    |
+| **Mobile (`apps/mobile/.env.example`, `apps/mobile/eas.json`, `app.config.ts`)** | **Required for `--mobile-release`:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`<br>**Optional / Release:** `EXPO_PUBLIC_WEB_URL`, `EXPO_PUBLIC_APP_STORE_URL`, `EXPO_PUBLIC_PLAY_STORE_URL`, `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY`, `EXPO_PUBLIC_ITINERARY_STREAMING_ENABLED`, `EXPO_PUBLIC_SENTRY_DSN`, `GOOGLE_SERVICES_JSON`<br>**QA Only:** `EXPO_PUBLIC_MOBILE_QA`, `EXPO_PUBLIC_QA_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_TEST_LOGIN`                                                                                                                                                                                                                                            | `eas.json` pins `EXPO_PUBLIC_API_URL="https://faroway.ai"` in `production`. `assertQaBuildEnvironment()` in `app.config.ts:9-42` blocks `EXPO_PUBLIC_MOBILE_QA=1` and `EXPO_PUBLIC_TEST_LOGIN=true` in `production`. |
+| **GitHub Actions (`.github/workflows/{ci,rotate-apple-secret}.yml`)**            | **`ci.yml`:** Secrets `TURBO_TOKEN`, `TURBO_TEAM`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`<br>**`rotate-apple-secret.yml`:** Vars `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_CLIENT_ID`; Secrets `APPLE_P8_PRIVATE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `NEXT_PUBLIC_SUPABASE_*` secrets are required only when running `workflow_dispatch` `full_verification=true` (`build-web`).                                                                                          |
+| **Script / Eval / Runtime-Injected Vars**                                        | `FAROWAY_STAGING_AI_GATEWAY_KEY`, `FAROWAY_UAT_API_URL`, `FAROWAY_QA_IOS_DEVICE`, `FAROWAY_SCHEDULE_EXPERIMENT`, `FAROWAY_DINING_SOURCE_EXPERIMENT`, `FAROWAY_OFFLINE_NETNS`, `FAROWAY_PERF_ACCESS_TOKEN`, `FAROWAY_PERF_AI_DISCLOSURE`, `FAROWAY_TEST_LOGS`, `ITINERARY_VENDOR_REQUIRE_ALL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `BASE_URL`, `E2E_BASE_URL`, `E2E_SHARED_TRIP_TOKEN`, `E2E_OWNED_TRIP_ID`, `E2E_INTEGRATED_MONETIZATION`, `MONETIZATION_ROUTES_E2E`, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, `CI`, `NODE_ENV`, `VERCEL`, `VERCEL_ENV`, `NEXT_PHASE`, `NEXT_RUNTIME`, `EAS_BUILD_PROFILE`                                                                                                                                                                                                                        | Dev/UAT/E2E/runtime vars—not required in production app runtime.                                                                                                                                                     |
 
-## Manual QA Results (2026-05-14)
+### 4.3 Code-vs-Docs Discrepancies Verified
 
-| Surface        | Platform                       | Pages                                          | Result            |
-| -------------- | ------------------------------ | ---------------------------------------------- | ----------------- |
-| Desktop Chrome | Chromium (Playwright)          | Marketing, create, world-map, legal, blog, API | ✅ 19/19 pass     |
-| Mobile Safari  | iPhone 14 (Playwright)         | All E2E suites                                 | ✅ 19/19 pass     |
-| Mobile Chrome  | Pixel 7 (Playwright)           | All E2E suites                                 | ✅ 19/19 pass     |
-| Desktop Chrome | Real browser (browser-harness) | Homepage, /create, /tools/world-map            | ✅ Visual QA pass |
-
-**57/57 E2E tests pass across Desktop Chrome, iPhone 14, and Pixel 7 viewports.**
-
-Real-device testing (physical iOS Safari, physical Android Chrome) not performed — requires hardware not available in this environment. Playwright device emulation with correct UA, viewport, and touch events is the highest fidelity available without physical devices.
+1. **`NEXT_PUBLIC_GA_MEASUREMENT_ID`**: Previously marked "Fixed — removed from `.env.example`" under P3-2, yet `# NEXT_PUBLIC_GA_MEASUREMENT_ID=` remains commented at `apps/web/.env.example:55` and listed in `scripts/check-env.ts:66`, while zero runtime files read it (`Analytics` from `@vercel/analytics/next` is used in `apps/web/app/layout.tsx:6,224`).
+2. **`WORKFLOW_WEBHOOK_SECRET`**: Commented at `apps/web/.env.example:59`, not read in runtime code or `scripts/check-env.ts`.
+3. **`FAROWAY_STAGING_AI_MAX_OUTPUT_TOKENS`**: Read in `apps/web/lib/ai/sdk.ts:44` when `VERCEL_ENV === "preview"`, not documented in `apps/web/.env.example` or `scripts/check-env.ts`.
+4. **`scripts/check-env.ts` Coverage Scope (54 vars checked)**: `check-env.ts` validates all primary partner keys and all 8 `*_WEBHOOK_SECRET` vars, but intentionally omits secondary/override partner params (`WISE_AFFILIATE_ID`, `KLOOK_AD_ID`, `SAFETYWING_AMBASSADOR_ID`, `AIRALO_IR_CLICK_ID`, `DISCOVERCARS_BID`, `IVISA_IR_CLICK_ID`, 8 `TRAVELPAYOUTS_*_PROGRAM_ID`), approval/sandbox flags (`VIATOR_SANDBOX`, `VIATOR_EXTERNAL_PROCESSING_*`, `VIATOR_HOSTED_CHECKOUT_ENABLED`, `LITEAPI_*` flags), Sentry/security/product flags (`CRON_SECRET`, `ALLOWED_ORIGINS`, `SHARED_REACTIONS_SECRET`, `SENTRY_*`, `FAROWAY_*`, `PUSH_*`, `GOOGLE_PLACES_LIVE_ENABLED`, `MET_*`), and mobile store/QA flags. Zero variables inside `check-env.ts` are missing from `.env*.example`.
 
 ---
 
-## Remaining Manual Steps Before Launch
+## 5. Verification, Test, Eval & Build Summary (`feat/prod-monetization-audit`)
 
-These items require an owner login, physical hardware, or partner approval.
-Exact environment-variable ownership is also documented in
-`docs/CREDENTIAL_SETUP.md`.
+All checks, tests, evals, builds, and release validations below were verified on `feat/prod-monetization-audit` (in a dotenv-free worktree with `0` `.env*.local` files):
 
-### 1. Rotate credentials (P0-0 — BLOCKING for launch)
-
-Credentials were scrubbed from git history but the actual keys are still active and must be rotated:
-
-**Supabase** (5 min):
-
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard) → your project → Project Settings → API
-2. Click "Regenerate" next to **service_role** key → confirm
-3. Click "Regenerate" next to **anon** key → confirm
-4. Update `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel → Settings → Environment Variables
-5. Trigger a new Vercel deploy (`git commit --allow-empty -m "chore: post-rotation redeploy" && git push`)
-
-**Google Cloud** (2 min):
-
-1. Go to [GCP Console](https://console.cloud.google.com) → IAM & Admin → Service Accounts
-2. Click `gsc-reader@gen-lang-client-0674595232.iam.gserviceaccount.com`
-3. Keys tab → find key ID `437485894c045ac5fdc0ed4de7ae473bdc46a46a` → Delete
-
-### 2. Set up Sentry end-to-end (P0-2)
-
-1. Go to [sentry.io](https://sentry.io) → create new project → Next.js
-2. Copy the DSN (looks like `https://xxx@oXXX.ingest.sentry.io/YYY`)
-3. In Vercel → Settings → Environment Variables, add for **Production + Preview**:
-   - `NEXT_PUBLIC_SENTRY_DSN` = DSN from step 2
-   - `SENTRY_DSN` = same DSN
-   - `SENTRY_AUTH_TOKEN` = create at sentry.io → Settings → Auth Tokens → Create New Token (scope: `project:releases`, `org:read`)
-   - `SENTRY_ORG` = your Sentry org slug (visible in Sentry URL: `sentry.io/organizations/<slug>/`)
-   - `SENTRY_PROJECT` = your Sentry project slug
-4. Trigger a redeploy
-5. Visit `https://<preview-deployment>/api/sentry-test` (the endpoint is
-   intentionally disabled in production) and verify the error appears in
-   Sentry Issues with a source-mapped stack trace
-
-### 3. Verify the Supabase-backed rate limiter
-
-1. Confirm `20260725000000_production_rate_limits.sql` is applied
-2. Set a server-only `IP_HASH_SALT` of at least 32 random characters in Vercel
-3. Redeploy and verify cost-sensitive endpoints return `429` when their limits are exceeded
-
-### 4. Real-device QA checklist
-
-Test on a physical iPhone (Safari) and Android device (Chrome):
-
-- [ ] Homepage loads, hero image visible, CTA works
-- [ ] `/create` — destination search, date picker, tapping "Generate Itinerary" navigates correctly
-- [ ] Auth flow — Google sign-in completes without redirect loop
-- [ ] Trip detail page renders
-- [ ] `/tools/world-map` — map loads, country tap works
-- [ ] Blog page loads
-- [ ] Legal pages (Privacy, Terms, Support) accessible
-
-### 5. Complete mobile-store signing and distribution
-
-- Run an interactive EAS iOS credentials setup with the Apple Developer
-  account; the non-interactive production build cannot validate the existing
-  distribution certificate.
-- Install the signed Android production artifact on physical hardware and
-  complete Play Console internal testing.
-- Add real App Store and Google Play listing URLs only after the listings
-  exist; until then the site correctly labels mobile as a private preview.
-
-### 6. Finish third-party entitlement checks
-
-- Complete Google Cloud passkey confirmation, restrict the Places key, and
-  verify OAuth consent/redirect configuration.
-- Create the Sentry organization/project and supply its DSNs and upload token.
-- Obtain or activate production access for TripAdvisor, travel suppliers,
-  Duffel, GetYourGuide, Tavily, and Viator as applicable. Faroway degrades to
-  supported fallbacks when optional providers are absent.
+| Verification Layer                    | Command                                                                                 | Verified Result (`feat/prod-monetization-audit`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Typecheck, Lint, Format**           | `bun run check` (`turbo type-check lint format:check && tsc -p scripts/tsconfig.json`)  | **PASS** — `11/11` Turbo tasks + `scripts/tsconfig.json`, `0` errors (`38` lint warnings in `@faroway/web`)                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Full Unit & Integration Tests**     | `bun run test` (`turbo test && bun run test:scripts && bun run test:python`)            | **PASS** — **3,521 tests across 365 files/suites**, `0` failures:<br>• `@faroway/web` (Vitest): `239` files / `2,146` tests<br>• `@faroway/mobile` (Jest): `89` suites / `888` tests<br>• `@faroway/constants`: `5` files / `77` tests<br>• `@faroway/validation`: `1` file / `50` tests<br>• `@faroway/api-client`: `1` file / `33` tests<br>• `@faroway/supabase`: `1` file / `9` tests<br>• `scripts` (`bun run test:scripts`): `28` files / `316` tests (`1,928` assertions)<br>• `python` (`bun run test:python`): `1` file (`test_native_ui.py`) / `2` tests |
+| **Offline Quality & Holdout Evals**   | `bun run test:evals`                                                                    | **PASS** (`0` paid API calls):<br>• `scripts/planning-quality-eval.py`: `17/17` fixtures matched (`3` pos, `14` neg, `11` rubric checks)<br>• `scripts/uat/traveler-holdout-eval.ts`: `11/11` planner cases, `18/18` negative controls, `accepted: true`<br>• `scripts/uat/generation-quality-eval.ts`: `accepted: true`, `40` briefs (`5/5` on all 6 dimensions + 6 affiliate metrics), `15/15` negative controls, `25/25` mutations, `5/5` streaming checks, `20` holdout prompts disjoint                                                                       |
+| **Monetization Offline Eval**         | `bun --no-env-file scripts/uat/eval-monetization.ts`                                    | **PASS** — `accepted: true`, `live_network_called: false`, **490 checks**, **110/110 negative controls caught**, `0` failures:<br>• Tier 1 (Security & Allowlist): `199` checks (`54/54` controls)<br>• Tier 2 (Attribution & SubIDs): `137` checks (`19/19` controls)<br>• Tier 3 (Payloads & Schemas): `135` checks (`27/27` controls)<br>• Tier 4 (Realistic Itineraries): `19` checks (`10/10` controls)                                                                                                                                                       |
+| **Isolated Monetization UI E2E**      | `(cd apps/web && bunx playwright test -c playwright.monetization.config.ts)`            | **PASS** — **36/36** (`2` files: `monetization-checkout.spec.ts`, `monetization-surfaces.spec.ts`; Desktop Chrome + Pixel 7)                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Isolated Monetization Route E2E**   | `(cd apps/web && bunx playwright test -c playwright.monetization-routes.config.ts)`     | **PASS** — **11/11** (`monetization-routes.spec.ts` against loopback Next + Supabase/Viator mocks)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Core Isolated E2E**                 | `bun run test:e2e:isolated`                                                             | **PASS** — **92/92** (`planning`: `30/30`; `checkout` + `places`: `28/28`; `recovery`: `34/34`)<br>_(Total isolated Playwright = **139** tests across 7 specs / 5 configs, plus **18/18** integrated via `playwright.monetization-integrated.config.ts`)_                                                                                                                                                                                                                                                                                                          |
+| **Integrated Live-App E2E (Track B)** | `(cd apps/web && bunx playwright test -c playwright.monetization-integrated.config.ts)` | **PASS** — **18/18** (`6` scenarios × `3` browsers/viewports: `chromium`, `Mobile Safari`, `Mobile Chrome` against loopback Next + Supabase/Viator mocks). Standalone `monetization-integrated.spec.ts` skips cleanly unless `E2E_INTEGRATED_MONETIZATION=true`.                                                                                                                                                                                                                                                                                                   |
+| **Production Web Build**              | `CI=true node scripts/verify-web-build.mjs </dev/null`                                  | **PASS** — **414/414** static pages + all dynamic/API routes built without `.env*.local`                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Mobile EAS Release Check**          | `(cd apps/mobile && bun ../../scripts/check-eas-release.ts)`                            | **PASS** — `0` failures, `0` warnings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| **Secret & Formatting Checks**        | `bun run format:check && bun run check && bun run test:secrets`                         | Re-verified cleanly on Tier-5 hardening (zero secrets, Prettier & Turbo checks green).                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |

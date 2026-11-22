@@ -22,7 +22,7 @@ beforeEach(() => {
   mocks.eq.mockReturnValue({ eq: mocks.eq, single: mocks.single });
 });
 
-test("shared preview keeps active-token filtering and uncached ink/ivory presentation", async () => {
+test("shared preview keeps active-token filtering and uncached Brand 2.0 Ocean Teal/Warm Paper presentation", async () => {
   mocks.single.mockResolvedValue({
     data: {
       destination: "Tokyo",
@@ -39,7 +39,11 @@ test("shared preview keeps active-token filtering and uncached ink/ivory present
   expect(mocks.eq).toHaveBeenCalledWith("is_shared", true);
   expect(html).toContain("Tokyo. Your journey.");
   expect(html).toContain("4 travelers");
-  expect(html).toContain("#253A34");
+  expect(html).toContain("#143D46");
+  expect(html).toContain("#FAF8F3");
+  expect(html).toContain("#F97066");
+  expect(html).toContain("#E04D43");
+  expect(html).not.toContain("#253A34");
   expect(html).not.toContain("AI-Generated");
   expect(image.headers.get("Cache-Control")).toBe(
     "private, no-store, max-age=0",

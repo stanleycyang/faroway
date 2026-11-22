@@ -4,7 +4,7 @@ import type { BlogPostMeta } from "@/lib/blog/types";
 
 export function FeaturedHero({ post }: { post: BlogPostMeta }) {
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-[#f5f7f8]">
+    <article className="overflow-hidden rounded-3xl border border-[#DCE5E3] bg-[#EFF5F3]">
       <Link
         href={`/blog/${post.slug}`}
         className="group grid md:grid-cols-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-900"

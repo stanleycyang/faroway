@@ -5,8 +5,12 @@
 /* Editorial atlas tokens — used by /tools/world-map and the share posters
  * served from /api/og/world-map. Ivory paper, deep ink, clay accent. */
 @theme {
-  --color-paper: #faf6ef;
+  --color-paper: #faf8f3;
   --color-paper-edge: #ede5d2;
+  --color-ocean: #143d46;
+  --color-mist: #eff5f3;
+  --color-primary-accessible: #c03a31;
+  --color-primary-deep: #9b2d25;
   --color-clay: #b91c1c;
   --color-clay-deep: #7f1d1d;
   --color-ink: #0f172a;
@@ -25,10 +29,16 @@
   :root {
     --background: #ffffff;
     --foreground: #0f172a;
+    --paper: #faf8f3;
+    --paper-legacy: #faf6ef;
+    --ocean: #143d46;
     --primary: #f97066;
+    --primary-accessible: #c03a31;
+    --primary-deep: #9b2d25;
     --primary-dark: #e04d43;
     --primary-light: #fa8c84;
     --accent: #14b8a6;
+    --accent-accessible: #0f766e;
     --surface-800: #111827;
     --surface-700: #1e293b;
     --surface-600: #475569;
@@ -197,16 +207,17 @@
 /* ===== Glassmorphism & Glow Utilities ===== */
 @layer components {
   .glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
 
   .glass-card-hover:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 30px rgba(249, 112, 102, 0.1);
+    background: rgba(255, 255, 255, 0.98);
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
   }
 
   .glow-shadow {
@@ -262,7 +273,7 @@
     font-size: 3.5em;
     line-height: 0.8;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--primary-accessible, #c03a31);
     margin-right: 0.1em;
     margin-top: 0.05em;
   }

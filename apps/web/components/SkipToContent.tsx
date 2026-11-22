@@ -7,7 +7,7 @@ export function SkipToContent() {
   return (
     <a
       href={pathname === "/" ? "#home-main-content" : "#main-content"}
-      className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:rounded-lg focus:shadow-lg"
+      className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:px-4 focus:py-2 focus:bg-white focus:text-primary-700 focus:rounded-lg focus:shadow-lg"
       onClick={(event) => {
         const content =
           document.querySelector<HTMLElement>("main") ??

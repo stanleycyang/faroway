@@ -83,7 +83,7 @@ function LoginContent() {
             <div className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">
+            <span className="px-4 bg-white text-slate-600">
               or continue with email
             </span>
           </div>
@@ -96,7 +96,7 @@ function LoginContent() {
         <div className="mt-4 text-center">
           <Link
             href={`/auth/forgot-password${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
-            className="text-sm text-gray-600 hover:text-primary transition-colors"
+            className="text-sm text-slate-600 hover:text-primary-700 transition-colors"
           >
             Forgot your password?
           </Link>
@@ -104,23 +104,23 @@ function LoginContent() {
 
         {/* Sign Up Link */}
         {copy.emphasizeSignup ? (
-          <div className="mt-6 rounded-xl border border-primary/20 bg-primary-50 px-4 py-3 text-center">
+          <div className="mt-6 rounded-xl border border-primary-700/20 bg-primary-50 px-4 py-3 text-center">
             <p className="text-sm font-medium text-primary-800">
               First time here? A free account is required to generate this trip.
             </p>
             <Link
               href={`/auth/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
-              className="mt-2 inline-block font-semibold text-primary hover:text-primary-dark transition-colors"
+              className="mt-2 inline-block font-semibold text-primary-700 hover:text-primary-800 transition-colors"
             >
               {copy.signupCta}
             </Link>
           </div>
         ) : (
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-slate-600">
             Don&apos;t have an account?{" "}
             <Link
               href={`/auth/signup${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
-              className="font-semibold text-primary hover:text-primary-dark transition-colors"
+              className="font-semibold text-primary-700 hover:text-primary-800 transition-colors"
             >
               Sign up
             </Link>

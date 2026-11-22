@@ -55,6 +55,18 @@
       "source": "supabase/migrations/20261028164200_restrict_remaining_function_execute.sql",
       "sha256": "4c1d56993eb1b6463d890a0bc85ff326c5acd2df3ce9b75f0c9b6747328bb13d",
       "applied": true
+    },
+    {
+      "path": "supabase/migrations/20261120001000_copilot_and_shared_reactions.sql",
+      "source": "supabase/migrations/20261120001000_copilot_and_shared_reactions.sql",
+      "sha256": "7dbe08d3786403a103e26d662162fed7a0965c55b55e5902f4387ee9093e42a0",
+      "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261121001000_redteam_security_and_integrity_hardening.sql",
+      "source": "supabase/migrations/20261121001000_redteam_security_and_integrity_hardening.sql",
+      "sha256": "ee810b65c27f1f488469d121c5ee0597c89668a48ae12adc578b1b7f8bb32874",
+      "applied": false
     }
   ],
   "constraints": [

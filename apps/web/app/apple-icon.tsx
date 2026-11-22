@@ -17,42 +17,23 @@ export default function Icon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #FF8A7A 0%, #F97066 100%)",
-        borderRadius: "40px",
+        background: "linear-gradient(180deg, #F97066 0%, #E04D43 100%)",
       }}
     >
-      {/* Paper airplane SVG as inline */}
       <svg
-        width="110"
-        height="110"
-        viewBox="0 0 110 110"
+        width="180"
+        height="180"
+        viewBox="0 0 1024 1024"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Dotted trail */}
-        <circle cx="18" cy="72" r="4" fill="white" opacity="0.3" />
-        <circle cx="28" cy="66" r="3.5" fill="white" opacity="0.4" />
-        <circle cx="39" cy="61" r="3" fill="white" opacity="0.5" />
-        <circle cx="50" cy="57" r="2.5" fill="white" opacity="0.55" />
-        <circle cx="61" cy="54" r="2" fill="white" opacity="0.6" />
-        <circle cx="72" cy="52" r="1.5" fill="white" opacity="0.65" />
-        {/* Paper airplane pointing upper-right */}
-        <g transform="translate(58, 52) rotate(-35)">
-          <polygon points="42,0 -22,-16 -14,0" fill="white" />
-          <polygon points="42,0 -22,16 -14,0" fill="white" opacity="0.82" />
-          <polygon points="-14,0 -22,16 -22,4" fill="white" opacity="0.45" />
-        </g>
-        {/* Sparkles */}
-        <path d="M80,22 L82,27 L87,22 L82,17 Z" fill="white" opacity="0.9" />
         <path
-          d="M88,30 L89.5,33 L93,30 L89.5,27 Z"
-          fill="white"
-          opacity="0.8"
+          d="M 237 526 C 236 420 237 338 262 296 C 296 238 380 218 525 204 L 784 184 C 804 182 811 193 806 213 C 795 256 774 303 744 331 C 728 345 706 349 664 352 L 460 364 C 344 371 268 416 244 504 C 241 516 238 524 237 526 Z"
+          fill="#FFF5EE"
         />
         <path
-          d="M76,32 L77,34.5 L80,32 L77,29.5 Z"
-          fill="white"
-          opacity="0.7"
+          d="M 238 528 C 254 486 308 463 402 454 L 728 434 C 746 433 753 443 748 463 C 737 506 716 547 686 567 C 668 579 642 581 598 584 L 444 592 C 396 595 379 612 379 658 L 379 746 C 379 814 342 846 276 846 L 245 846 C 238 846 235 843 235 836 L 235 612 C 235 568 236 538 238 528 Z"
+          fill="#FFF5EE"
         />
       </svg>
     </div>,

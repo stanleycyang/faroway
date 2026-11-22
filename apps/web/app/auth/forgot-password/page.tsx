@@ -71,10 +71,10 @@ function ForgotPasswordContent() {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-paper px-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
-            <Check className="w-10 h-10 text-green-600" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-100 flex items-center justify-center">
+            <Check className="w-10 h-10 text-emerald-700" />
           </div>
 
           <h1
@@ -110,7 +110,7 @@ function ForgotPasswordContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-paper px-4">
       <div className="w-full max-w-md">
         {/* Back Button */}
         <Link
@@ -155,7 +155,7 @@ function ForgotPasswordContent() {
                 Email address
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
                 <input
                   id="email"
                   type="email"
@@ -169,7 +169,7 @@ function ForgotPasswordContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-slate-500 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 transition-all"
                 />
               </div>
             </div>

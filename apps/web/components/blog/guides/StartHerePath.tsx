@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
-import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
+import type { ClusterDefinition } from "@/lib/blog/clusters";
+import { GUIDE_ACCENTS } from "./guide-accents";
 
 interface StartHerePathProps {
   cluster: ClusterDefinition;
 }
 
 export function StartHerePath({ cluster }: StartHerePathProps) {
-  const accent = ACCENT_COLORS[cluster.accent];
+  const accent = GUIDE_ACCENTS[cluster.accent];
 
   return (
-    <section className="py-20 bg-slate-50">
+    <section className="py-20 bg-[#FAF8F3]">
       <div className="max-w-7xl mx-auto px-6">
         <FadeInOnScroll>
           <div className="text-center mb-16">
@@ -20,7 +21,7 @@ export function StartHerePath({ cluster }: StartHerePathProps) {
             >
               Reading Path
             </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+            <h2 className="font-editorial text-3xl md:text-4xl font-bold text-slate-900">
               Start Here
             </h2>
             <p className="text-slate-600 mt-3 max-w-xl mx-auto">
@@ -32,19 +33,19 @@ export function StartHerePath({ cluster }: StartHerePathProps) {
         <div className="relative">
           {/* Connecting line — desktop horizontal, mobile vertical */}
           <div
-            className={`hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r ${accent.gradient} opacity-20 -translate-y-1/2`}
+            className={`hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 ${accent.lineBg} -translate-y-1/2`}
           />
           <div
-            className={`lg:hidden absolute top-0 bottom-0 left-8 w-0.5 bg-gradient-to-b ${accent.gradient} opacity-20`}
+            className={`lg:hidden absolute top-0 bottom-0 left-8 w-0.5 ${accent.lineBg}`}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
             {cluster.startHere.map((item, i) => (
               <FadeInOnScroll key={item.title} delay={i * 150}>
-                <div className="relative bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 group">
+                <div className="relative bg-white rounded-2xl border border-[#DCE5E3] p-6 hover:shadow-xl transition-all duration-300 group">
                   {/* Step number */}
                   <div
-                    className={`absolute -top-4 left-6 lg:left-1/2 lg:-translate-x-1/2 w-8 h-8 rounded-full bg-gradient-to-br ${accent.gradient} text-white text-sm font-bold flex items-center justify-center shadow-lg`}
+                    className={`absolute -top-4 left-6 lg:left-1/2 lg:-translate-x-1/2 w-8 h-8 rounded-full ${accent.stepBg} text-white text-sm font-bold flex items-center justify-center shadow-lg`}
                   >
                     {i + 1}
                   </div>
@@ -62,10 +63,10 @@ export function StartHerePath({ cluster }: StartHerePathProps) {
                         className={`inline-flex items-center gap-1.5 text-sm font-semibold ${accent.text} group-hover:gap-2.5 transition-all`}
                       >
                         Read article
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4" aria-hidden="true" />
                       </Link>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-400">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600">
                         Coming soon
                       </span>
                     )}

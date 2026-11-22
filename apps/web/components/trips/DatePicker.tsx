@@ -4,7 +4,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { getTripDuration } from "@/lib/trips/date-duration";
-import { Calendar } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { cn } from "@/lib/utils";
 import "react-day-picker/style.css";
@@ -126,8 +126,8 @@ export function DatePicker({
                 : "border-gray-200 hover:border-gray-300",
             )}
           >
-            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 shrink-0" />
-            <span className={startDate ? "text-gray-900" : "text-gray-400"}>
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 shrink-0" />
+            <span className={startDate ? "text-gray-900" : "text-slate-500"}>
               <span className="sm:hidden">
                 {startDate ? format(startDate, "MMM d") : "Add start"}
               </span>
@@ -166,8 +166,8 @@ export function DatePicker({
                 : "border-gray-200 hover:border-gray-300",
             )}
           >
-            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 shrink-0" />
-            <span className={endDate ? "text-gray-900" : "text-gray-400"}>
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 shrink-0" />
+            <span className={endDate ? "text-gray-900" : "text-slate-500"}>
               <span className="sm:hidden">
                 {endDate ? format(endDate, "MMM d") : "Add end"}
               </span>
@@ -232,7 +232,7 @@ export function DatePicker({
                       ? ` – ${format(draftRange.to, "MMM d, yyyy")}`
                       : " → pick end date"}
                     {getDraftDuration() && (
-                      <span className="text-primary-600 font-medium ml-1.5">
+                      <span className="text-primary-700 font-medium ml-1.5">
                         ({getDraftDuration()} day
                         {getDraftDuration()! > 1 ? "s" : ""})
                       </span>
@@ -243,10 +243,10 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={closeCalendar}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-xl leading-none ml-4"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-gray-100 ml-4"
                 aria-label="Close calendar"
               >
-                ✕
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 

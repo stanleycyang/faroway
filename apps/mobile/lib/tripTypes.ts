@@ -13,6 +13,7 @@ export interface Trip {
   travelerType: string;
   originCity?: string;
   originAirport?: string;
+  flightConsent?: boolean;
   requirements?: TravelerRequirements | null;
   vibes: string[];
   budget?: string;
@@ -34,6 +35,7 @@ export interface TripInput {
   travelerType: string;
   originCity?: string;
   originAirport?: string;
+  flightConsent?: boolean;
   requirements?: TravelerRequirements | null;
   vibes: string[];
   budget?: string;

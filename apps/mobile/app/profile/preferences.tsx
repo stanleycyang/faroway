@@ -4,33 +4,33 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { VibeSelector } from '../../components/ui';
-import { travelerTypes } from '@faroway/constants';
+import {
+  BUDGET_TIERS,
+  normalizeBudgetTier,
+  normalizeVibeList,
+  travelerTypes,
+} from '@faroway/constants';
 import { useUserStore } from '../../stores/userStore';
 import { updateUserProfile } from '../../services/api';
 import { ProfileEditorBoundary, type EditorProfile } from '../../components/ProfileEditorBoundary';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
-const budgetOptions = [
-  {
-    id: 'budget',
-    label: 'Budget',
-    icon: 'wallet-outline' as const,
-    description: 'Best value deals',
-  },
-  {
-    id: 'moderate',
-    label: 'Moderate',
-    icon: 'cash-outline' as const,
-    description: 'Balance of comfort & cost',
-  },
-  {
-    id: 'luxury',
-    label: 'Luxury',
-    icon: 'sparkles-outline' as const,
-    description: 'Premium experiences',
-  },
-];
+const BUDGET_ICONS: Record<
+  (typeof BUDGET_TIERS)[number]['id'],
+  'wallet-outline' | 'cash-outline' | 'sparkles-outline'
+> = {
+  budget: 'wallet-outline',
+  moderate: 'cash-outline',
+  luxury: 'sparkles-outline',
+};
+
+const budgetOptions = BUDGET_TIERS.map((tier) => ({
+  id: tier.id,
+  label: tier.label,
+  icon: BUDGET_ICONS[tier.id],
+  description: tier.description,
+}));
 
 export default function PreferencesScreen() {
   const router = useRouter();
@@ -73,11 +73,11 @@ export default function PreferencesScreen() {
 function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
   const router = useRouter();
   const { user, updatePreferences } = useUserStore();
-  const [selectedVibes, setSelectedVibes] = useState<string[]>(profile.preferences?.vibes || []);
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(() =>
+    normalizeVibeList(profile.preferences?.vibes ?? [], 5)
+  );
   const [selectedBudget, setSelectedBudget] = useState<string>(
-    budgetOptions.some((option) => option.id === profile.preferences?.budget)
-      ? profile.preferences!.budget!
-      : ''
+    () => normalizeBudgetTier(profile.preferences?.budget) ?? ''
   );
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -163,7 +163,7 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
           accessibilityState={{ disabled: isSaving, busy: isSaving }}
         >
           <Text style={styles.saveButtonText}>
-            {saved ? '✓ Saved' : isSaving ? 'Saving…' : 'Save'}
+            {saved ? 'Saved' : isSaving ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -210,7 +210,7 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
                   <Ionicons
                     name={option.icon}
                     size={28}
-                    color={isSelected ? colors.primary[500] : colors.neutral[600]}
+                    color={isSelected ? colors.action.primary : colors.neutral[600]}
                     style={styles.budgetIcon}
                     accessible={false}
                   />
@@ -221,7 +221,7 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
                     <Text style={styles.budgetDescription}>{option.description}</Text>
                   </View>
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary[500]} />
+                    <Ionicons name="checkmark-circle" size={24} color={colors.action.primary} />
                   )}
                 </TouchableOpacity>
               );
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   budgetOptionSelected: {
     backgroundColor: '#FFF5F4',
-    borderColor: colors.primary[500],
+    borderColor: colors.action.primary,
   },
   budgetIcon: {
     marginRight: 16,
@@ -319,11 +319,11 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   budgetLabelSelected: {
-    color: colors.action.primary,
+    color: colors.primary[800],
   },
   budgetDescription: {
     fontSize: 13,
-    color: '#64748b',
+    color: colors.surface[600],
     marginTop: 2,
   },
   signedOutContainer: {

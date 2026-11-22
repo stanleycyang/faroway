@@ -11,9 +11,18 @@ import {
   type ActivityResult,
   type VenueSource,
 } from "@faroway/types";
-import { readPrice } from "@faroway/constants";
+import {
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  normalizeAffiliatePartner,
+  readPrice,
+  resolveAffiliatePartnerByUrl,
+} from "@faroway/constants";
 import Image from "next/image";
-import { useTripCheckout } from "./TripCheckout";
+import { useTripCheckout } from "./TripCheckoutContext";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
+import { useAffiliateTracking } from "@/components/affiliates/AffiliateTrackingContext";
 import {
   MapPin,
   Clock,
@@ -24,6 +33,8 @@ import {
   Zap,
   TrendingUp,
   Compass,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
 export interface Activity {
@@ -109,84 +120,38 @@ export interface Restaurant {
   tripadvisorUrl?: string;
 }
 
-const categoryConfig: Record<
-  string,
-  {
-    emoji: string;
-    label: string;
-    gradient: string;
-    border: string;
-    badge: string;
-  }
-> = {
+const categoryConfig: Record<string, { label: string; badge: string }> = {
   sightseeing: {
-    emoji: "👀",
     label: "Sightseeing",
-    gradient: "from-amber-500 to-orange-500",
-    border: "border-l-amber-400",
-    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+    badge: "bg-amber-50 text-amber-800 ring-amber-200",
   },
   adventure: {
-    emoji: "🏔️",
     label: "Adventure",
-    gradient: "from-emerald-500 to-teal-500",
-    border: "border-l-emerald-400",
-    badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    badge: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   },
   cultural: {
-    emoji: "🏛️",
     label: "Cultural",
-    gradient: "from-violet-500 to-purple-500",
-    border: "border-l-violet-400",
-    badge: "bg-violet-50 text-violet-700 ring-violet-200",
+    badge: "bg-violet-50 text-violet-800 ring-violet-200",
   },
   relaxation: {
-    emoji: "🧘",
     label: "Relaxation",
-    gradient: "from-sky-500 to-blue-500",
-    border: "border-l-sky-400",
-    badge: "bg-sky-50 text-sky-700 ring-sky-200",
+    badge: "bg-sky-50 text-sky-800 ring-sky-200",
   },
   entertainment: {
-    emoji: "🎭",
     label: "Entertainment",
-    gradient: "from-pink-500 to-rose-500",
-    border: "border-l-pink-400",
-    badge: "bg-pink-50 text-pink-700 ring-pink-200",
+    badge: "bg-pink-50 text-pink-800 ring-pink-200",
   },
   shopping: {
-    emoji: "🛍️",
     label: "Shopping",
-    gradient: "from-rose-500 to-red-500",
-    border: "border-l-rose-400",
-    badge: "bg-rose-50 text-rose-700 ring-rose-200",
+    badge: "bg-rose-50 text-rose-800 ring-rose-200",
   },
 };
 
-const mealTypeConfig: Record<
-  string,
-  { emoji: string; label: string; gradient: string }
-> = {
-  breakfast: {
-    emoji: "🍳",
-    label: "Breakfast",
-    gradient: "from-amber-400 to-yellow-500",
-  },
-  lunch: {
-    emoji: "🥗",
-    label: "Lunch",
-    gradient: "from-green-400 to-emerald-500",
-  },
-  dinner: {
-    emoji: "🍽️",
-    label: "Dinner",
-    gradient: "from-indigo-400 to-violet-500",
-  },
-  snack: {
-    emoji: "☕",
-    label: "Café",
-    gradient: "from-orange-400 to-amber-500",
-  },
+const mealTypeConfig: Record<string, { label: string }> = {
+  breakfast: { label: "Breakfast" },
+  lunch: { label: "Lunch" },
+  dinner: { label: "Dinner" },
+  snack: { label: "Café" },
 };
 
 interface ActivityCardProps {
@@ -221,6 +186,7 @@ function getBadge(
 
 export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
   const checkout = useTripCheckout();
+  const affiliateCtx = useAffiliateTracking();
   const viatorContentEnabled = useViatorContentEnabled();
   if (!canDisplayViatorContent(activity, viatorContentEnabled)) return null;
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
@@ -233,12 +199,34 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
   const reviewCount = activity.reviewCount;
   const badge = getBadge(rating, reviewCount);
   const hasImage = activity.images && activity.images.length > 0;
-  const viatorCheckout =
+
+  const rawBookingUrl = activity.bookingInfo?.bookingUrl;
+  const hasAllowedBookingUrl = Boolean(
+    rawBookingUrl && isAllowedAffiliateUrl(rawBookingUrl),
+  );
+  const isViatorHostedItem = Boolean(
     checkout &&
+    checkout.mode === "owner" &&
     date &&
     activity.bookingInfo?.affiliateId === "viator" &&
-    /^activity_v_[a-zA-Z0-9]+$/.test(activity.id);
-  const hasBooking = !!activity.bookingInfo?.bookingUrl || !!viatorCheckout;
+    /^activity_v_[a-zA-Z0-9]+$/.test(activity.id),
+  );
+  const hasBooking = Boolean(rawBookingUrl) || isViatorHostedItem;
+
+  const resolvedBookingPartner = hasAllowedBookingUrl
+    ? (resolveAffiliatePartnerByUrl(rawBookingUrl!) ??
+      normalizeAffiliatePartner(activity.bookingInfo?.affiliateId))
+    : undefined;
+  const resolvedBookingPartnerLabel = resolvedBookingPartner
+    ? formatAffiliatePartnerName(resolvedBookingPartner)
+    : "Partner";
+  const activityPrice = readPrice(
+    activity.estimatedCost?.amount,
+    activity.estimatedCost?.currency,
+  );
+  const hasAllowedTripadvisorUrl = Boolean(
+    activity.tripadvisorUrl && isAllowedAffiliateUrl(activity.tripadvisorUrl),
+  );
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;
@@ -256,12 +244,43 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
     }).format(amount);
   };
 
-  const handleBookingClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleViatorHostedClick = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     event.currentTarget.focus();
-    if (viatorCheckout && checkout && date) {
-      checkout.review({ id: activity.id, name: activity.name, date });
-      return;
+    if (isViatorHostedItem && checkout && date) {
+      checkout.review({
+        id: activity.id,
+        name: activity.name,
+        date,
+        mode: "viator_hosted",
+        price: activityPrice?.amount,
+        currency: activityPrice?.currency,
+      });
     }
+  };
+
+  const handlePartnerCheckoutClick = (
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.currentTarget.focus();
+    if (!checkout || !hasAllowedBookingUrl || !rawBookingUrl) return;
+    checkout.review({
+      id: activity.id,
+      name: activity.name,
+      date: date || "",
+      mode: "partner_click",
+      itemType: "activity",
+      partner: resolvedBookingPartner,
+      partnerLabel: resolvedBookingPartnerLabel,
+      affiliateUrl: rawBookingUrl,
+      price: activityPrice?.amount,
+      currency: activityPrice?.currency,
+      source:
+        affiliateCtx?.source ??
+        (checkout.mode === "shared" ? "shared_trip" : "itinerary"),
+      placement: "activity_card",
+    });
   };
 
   return (
@@ -300,12 +319,12 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
           {/* Rating overlay on image */}
           {typeof rating === "number" && rating > 0 && (
             <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/95 backdrop-blur-sm rounded-full shadow-sm">
-              <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+              <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
               <span className="text-sm font-bold text-gray-900">
                 {rating.toFixed(1)}
               </span>
               {reviewCount != null && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-slate-600">
                   ({reviewCount.toLocaleString("en-US")})
                 </span>
               )}
@@ -327,7 +346,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
                   {activity.name}
                 </h4>
                 {badge && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 ring-1 ring-amber-200">
                     {badge.icon} {badge.label}
                   </span>
                 )}
@@ -361,9 +380,10 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
                 key={`${reason}-${idx}`}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/70"
               >
-                <span aria-hidden="true" className="text-emerald-600">
-                  ✦
-                </span>
+                <Sparkles
+                  aria-hidden="true"
+                  className="h-3 w-3 text-emerald-700"
+                />
                 {reason}
               </span>
             ))}
@@ -379,15 +399,15 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
         <VenueSourceNote value={activity.source} />
 
         {/* Metadata chips */}
-        <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs text-slate-600">
           {activity.duration != null && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-medium">
-              <Clock className="w-3.5 h-3.5 text-gray-400" />
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg font-medium">
+              <Clock className="w-3.5 h-3.5 text-slate-500" />
               {formatDuration(activity.duration)}
             </span>
           )}
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
-            <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg font-semibold text-slate-700">
+            <DollarSign className="w-3.5 h-3.5 text-slate-500" />
             {activity.estimatedCost?.status !== "unknown" &&
             activity.estimatedCost?.amount > 0 &&
             readPrice(
@@ -399,7 +419,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
           </span>
           {activity.location?.name && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg max-w-full"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg max-w-full"
               title={
                 activity.location.address &&
                 activity.location.address !== activity.location.name
@@ -407,7 +427,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
                   : activity.location.name
               }
             >
-              <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
               <span className="truncate max-w-[260px]">
                 {activity.location.address &&
                 activity.location.address !== activity.location.name
@@ -418,13 +438,13 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
           )}
           {/* Rating for non-image cards */}
           {!hasImage && typeof rating === "number" && rating > 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded-lg">
-              <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-              <span className="font-bold text-gray-700">
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg">
+              <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+              <span className="font-bold text-slate-800">
                 {rating.toFixed(1)}
               </span>
               {reviewCount != null && (
-                <span className="text-gray-400">
+                <span className="text-slate-600">
                   ({reviewCount.toLocaleString("en-US")})
                 </span>
               )}
@@ -438,7 +458,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
             {activity.vibeMatch.matchedVibes.slice(0, 3).map((vibe) => (
               <span
                 key={vibe}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 ring-1 ring-primary-200/50"
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-800 ring-1 ring-primary-200/50"
               >
                 {vibe}
               </span>
@@ -450,40 +470,97 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
         {activity.tripadvisorRating != null &&
           activity.tripadvisorRating > 0 && (
             <div className="flex items-center gap-2 mt-3">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
-                <span className="text-sm">&#9679;</span>
-                {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
-                {activity.tripadvisorReviewCount != null && (
-                  <span className="text-[#00af87]/70 font-normal">
-                    ({activity.tripadvisorReviewCount.toLocaleString("en-US")})
+              {hasAllowedTripadvisorUrl ? (
+                <TrackedAffiliateButton
+                  variant="badge"
+                  label={`${activity.tripadvisorRating.toFixed(1)} on TripAdvisor${
+                    activity.tripadvisorReviewCount != null
+                      ? ` (${activity.tripadvisorReviewCount.toLocaleString("en-US")})`
+                      : ""
+                  }`}
+                  affiliateUrl={activity.tripadvisorUrl!}
+                  partner="tripadvisor"
+                  itemType="activity"
+                  itemId={activity.id}
+                  itemName={activity.name}
+                  tripId={affiliateCtx?.tripId}
+                  source={affiliateCtx?.source ?? "itinerary"}
+                  placement="activity_tripadvisor_badge"
+                />
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#EFF5F3] rounded-lg text-xs font-semibold text-[#0F766E]">
+                  <span className="text-sm" aria-hidden="true">
+                    &#9679;
                   </span>
-                )}
-              </span>
+                  {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
+                  {activity.tripadvisorReviewCount != null && (
+                    <span className="text-slate-600 font-normal">
+                      ({activity.tripadvisorReviewCount.toLocaleString("en-US")}
+                      )
+                    </span>
+                  )}
+                </span>
+              )}
             </div>
           )}
 
         {/* Booking CTA — Primary conversion element */}
         {hasBooking && (
           <div className="mt-4 space-y-2">
-            {viatorCheckout && checkout?.enabled ? (
-              <button
-                onClick={handleBookingClick}
-                className="w-full inline-flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors"
-              >
-                <Shield className="w-4 h-4" />
-                Review on Viator
-              </button>
+            {isViatorHostedItem && checkout?.enabled ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleViatorHostedClick}
+                  className="w-full inline-flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-primary-700 text-white rounded-full text-sm font-semibold hover:bg-primary-800 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Review on Viator
+                </button>
+                <AffiliateDisclosure className="text-center text-xs text-slate-600" />
+              </>
+            ) : hasAllowedBookingUrl ? (
+              checkout ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePartnerCheckoutClick}
+                    className="w-full inline-flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-primary-700 text-white rounded-full text-sm font-semibold hover:bg-primary-800 transition-colors"
+                  >
+                    <span>Book on {resolvedBookingPartnerLabel}</span>
+                    <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                  <AffiliateDisclosure className="text-center text-xs text-slate-600" />
+                </>
+              ) : (
+                <TrackedAffiliateButton
+                  label={`Book on ${resolvedBookingPartnerLabel}`}
+                  affiliateUrl={rawBookingUrl!}
+                  partner={resolvedBookingPartner}
+                  itemType="activity"
+                  itemId={activity.id}
+                  itemName={activity.name}
+                  tripId={affiliateCtx?.tripId}
+                  price={activityPrice?.amount}
+                  currency={activityPrice?.currency}
+                  source={affiliateCtx?.source ?? "itinerary"}
+                  placement="activity_card"
+                  showDisclosure
+                />
+              )
             ) : (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
-                {viatorCheckout
-                  ? "Viator checkout unavailable. Refresh this trip and try again. Your plan stays saved."
-                  : "Booking isn’t available in Faroway for this stop. Check the provider for price and availability."}
-              </p>
+              <>
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                  {isViatorHostedItem
+                    ? "Viator checkout unavailable. Refresh this trip and try again. Your plan stays saved."
+                    : "Booking isn’t available in Faroway for this stop. Check the provider for price and availability."}
+                </p>
+                <p className="text-center text-xs text-slate-600">
+                  Final price, availability and cancellation terms are confirmed
+                  by the provider.
+                </p>
+              </>
             )}
-            <p className="text-center text-xs text-slate-600">
-              Final price, availability and cancellation terms are confirmed by
-              the provider.
-            </p>
           </div>
         )}
 
@@ -492,7 +569,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
           activity.bookingInfo?.requiresReservation &&
           !activity.bookingInfo.bookingUrl && (
             <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
-              <span className="text-xs text-amber-700 font-semibold">
+              <span className="text-xs text-amber-800 font-semibold">
                 Check reservation requirements with the venue.
               </span>
             </div>
@@ -504,10 +581,17 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  date?: string;
   rationale?: string[];
 }
 
-export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
+export function RestaurantCard({
+  restaurant,
+  date,
+  rationale,
+}: RestaurantCardProps) {
+  const checkout = useTripCheckout();
+  const affiliateCtx = useAffiliateTracking();
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!restaurant || typeof restaurant !== "object" || !restaurant.name)
     return null;
@@ -517,7 +601,64 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
   const mealConfig =
     mealTypeConfig[restaurant.mealType] || mealTypeConfig.dinner;
   const badge = getBadge(rating, reviewCount);
-  const hasReservation = !!restaurant.reservationInfo?.url;
+  const rawReservationUrl = restaurant.reservationInfo?.url;
+  const hasAllowedReservationUrl = Boolean(
+    rawReservationUrl && isAllowedAffiliateUrl(rawReservationUrl),
+  );
+  const hasAllowedTripadvisorUrl = Boolean(
+    restaurant.tripadvisorUrl &&
+    isAllowedAffiliateUrl(restaurant.tripadvisorUrl),
+  );
+  const restaurantPrice = readPrice(
+    restaurant.estimatedCost?.amount,
+    restaurant.estimatedCost?.currency,
+  );
+  const reservationPartner = hasAllowedReservationUrl
+    ? (resolveAffiliatePartnerByUrl(rawReservationUrl!) ?? "opentable")
+    : undefined;
+  const reservationPartnerLabel = reservationPartner
+    ? formatAffiliatePartnerName(reservationPartner)
+    : "Partner";
+
+  const openTableSearchFallbackUrl =
+    !rawReservationUrl &&
+    restaurant.reservationInfo?.recommended &&
+    affiliateCtx?.destination
+      ? `https://www.opentable.com/s?term=${encodeURIComponent(
+          `${restaurant.name} ${affiliateCtx.destination}`.trim(),
+        )}`
+      : undefined;
+  const hasAllowedOpenTableFallback = Boolean(
+    openTableSearchFallbackUrl &&
+    isAllowedAffiliateUrl(openTableSearchFallbackUrl),
+  );
+
+  const handleReservationCheckout = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    url: string,
+    partner: string,
+    partnerLabel: string,
+    placement: string,
+  ) => {
+    event.currentTarget.focus();
+    if (!checkout) return;
+    checkout.review({
+      id: restaurant.id,
+      name: restaurant.name,
+      date: date || "",
+      mode: "partner_click",
+      itemType: "restaurant",
+      partner,
+      partnerLabel,
+      affiliateUrl: url,
+      price: restaurantPrice?.amount,
+      currency: restaurantPrice?.currency,
+      source:
+        affiliateCtx?.source ??
+        (checkout.mode === "shared" ? "shared_trip" : "itinerary"),
+      placement,
+    });
+  };
 
   const formatCost = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
@@ -530,11 +671,15 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
 
   const renderPriceLevel = (level: number) => {
     return (
-      <span className="inline-flex items-center gap-0.5 px-2 py-1 bg-emerald-50 rounded-lg">
+      <span
+        aria-label={`Price tier ${level} of 4`}
+        className="inline-flex items-center gap-0.5 px-2 py-1 bg-emerald-50 rounded-lg"
+      >
         {[1, 2, 3, 4].map((i) => (
           <span
             key={i}
-            className={`text-xs font-bold ${i <= level ? "text-emerald-600" : "text-gray-300"}`}
+            aria-hidden="true"
+            className={`text-xs font-bold ${i <= level ? "text-emerald-700" : "text-emerald-800/45"}`}
           >
             $
           </span>
@@ -559,7 +704,7 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                 {restaurant.name}
               </h4>
               {badge && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 ring-1 ring-orange-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-800 ring-1 ring-orange-200">
                   {badge.icon} {badge.label}
                 </span>
               )}
@@ -579,9 +724,10 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                     key={`${reason}-${idx}`}
                     className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/70"
                   >
-                    <span aria-hidden="true" className="text-emerald-600">
-                      ✦
-                    </span>
+                    <Sparkles
+                      aria-hidden="true"
+                      className="h-3 w-3 text-emerald-700"
+                    />
                     {reason}
                   </span>
                 ))}
@@ -589,12 +735,12 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
             )}
 
             {/* Metadata chips */}
-            <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-slate-600">
               {restaurant.estimatedCost?.status !== "unknown" &&
                 restaurant.priceLevel != null &&
                 renderPriceLevel(restaurant.priceLevel)}
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
-                <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg font-semibold text-slate-700">
+                <DollarSign className="w-3.5 h-3.5 text-slate-500" />
                 {restaurant.estimatedCost?.status !== "unknown" &&
                 restaurant.estimatedCost?.amount > 0 &&
                 readPrice(
@@ -610,12 +756,12 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                     restaurant.estimatedCost.currency,
                   ) &&
                   restaurant.estimatedCost.perPerson && (
-                    <span className="text-gray-400">/pp</span>
+                    <span className="text-slate-500">/pp</span>
                   )}
               </span>
               {restaurant.location?.name && (
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg max-w-full"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-lg max-w-full"
                   title={
                     restaurant.location.address &&
                     restaurant.location.address !== restaurant.location.name
@@ -623,7 +769,7 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                       : restaurant.location.name
                   }
                 >
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                  <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
                   <span className="truncate max-w-[260px]">
                     {restaurant.location.address &&
                     restaurant.location.address !== restaurant.location.name
@@ -633,13 +779,13 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                 </span>
               )}
               {typeof rating === "number" && rating > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded-lg">
-                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                  <span className="font-bold text-gray-700">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 rounded-lg">
+                  <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                  <span className="font-bold text-slate-800">
                     {rating.toFixed(1)}
                   </span>
                   {reviewCount != null && (
-                    <span className="text-gray-400">
+                    <span className="text-slate-600">
                       ({reviewCount.toLocaleString("en-US")})
                     </span>
                   )}
@@ -654,7 +800,7 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                   {restaurant.cuisineType.slice(0, 3).map((cuisine) => (
                     <span
                       key={cuisine}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 ring-1 ring-orange-200/50"
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-800 ring-1 ring-orange-200/50"
                     >
                       {cuisine}
                     </span>
@@ -666,26 +812,86 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
             {restaurant.tripadvisorRating != null &&
               restaurant.tripadvisorRating > 0 && (
                 <div className="flex items-center gap-2 mt-3">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
-                    <span className="text-sm">&#9679;</span>
-                    {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
-                    {restaurant.tripadvisorReviewCount != null && (
-                      <span className="text-[#00af87]/70 font-normal">
-                        (
-                        {restaurant.tripadvisorReviewCount.toLocaleString(
-                          "en-US",
-                        )}
-                        )
+                  {hasAllowedTripadvisorUrl ? (
+                    <TrackedAffiliateButton
+                      variant="badge"
+                      label={`${restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor${
+                        restaurant.tripadvisorReviewCount != null
+                          ? ` (${restaurant.tripadvisorReviewCount.toLocaleString("en-US")})`
+                          : ""
+                      }`}
+                      affiliateUrl={restaurant.tripadvisorUrl!}
+                      partner="tripadvisor"
+                      itemType="restaurant"
+                      itemId={restaurant.id}
+                      itemName={restaurant.name}
+                      tripId={affiliateCtx?.tripId}
+                      source={affiliateCtx?.source ?? "itinerary"}
+                      placement="restaurant_tripadvisor_badge"
+                    />
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#EFF5F3] rounded-lg text-xs font-semibold text-[#0F766E]">
+                      <span className="text-sm" aria-hidden="true">
+                        &#9679;
                       </span>
-                    )}
-                  </span>
+                      {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
+                      {restaurant.tripadvisorReviewCount != null && (
+                        <span className="text-slate-600 font-normal">
+                          (
+                          {restaurant.tripadvisorReviewCount.toLocaleString(
+                            "en-US",
+                          )}
+                          )
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               )}
 
             <VenueSourceNote value={restaurant.source} />
 
             {/* Reserve CTA */}
-            {hasReservation && (
+            {hasAllowedReservationUrl ? (
+              <div className="mt-4 space-y-2">
+                {checkout ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(event) =>
+                        handleReservationCheckout(
+                          event,
+                          rawReservationUrl!,
+                          reservationPartner ?? "opentable",
+                          reservationPartnerLabel,
+                          "restaurant_card",
+                        )
+                      }
+                      className="w-full inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary-700 text-white rounded-full text-sm font-semibold hover:bg-primary-800 transition-colors"
+                    >
+                      <span>Reserve on {reservationPartnerLabel}</span>
+                      <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                    <AffiliateDisclosure className="text-center text-xs text-slate-600" />
+                  </>
+                ) : (
+                  <TrackedAffiliateButton
+                    label={`Reserve on ${reservationPartnerLabel}`}
+                    affiliateUrl={rawReservationUrl!}
+                    partner={reservationPartner ?? "opentable"}
+                    itemType="restaurant"
+                    itemId={restaurant.id}
+                    itemName={restaurant.name}
+                    tripId={affiliateCtx?.tripId}
+                    price={restaurantPrice?.amount}
+                    currency={restaurantPrice?.currency}
+                    source={affiliateCtx?.source ?? "itinerary"}
+                    placement="restaurant_card"
+                    showDisclosure
+                  />
+                )}
+              </div>
+            ) : rawReservationUrl ? (
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-sm font-medium text-slate-800">
                   Reservations aren’t made in Faroway
@@ -695,15 +901,102 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                   cancellation terms with the restaurant.
                 </p>
               </div>
-            )}
+            ) : null}
 
-            {/* Reservation recommended (no URL) */}
-            {restaurant.reservationInfo?.recommended &&
-              !restaurant.reservationInfo?.url && (
-                <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
-                  <span className="text-xs text-amber-700 font-semibold">
-                    ⚡ Reservations recommended — this spot fills up fast
-                  </span>
+            {/* Reservation recommended / TripAdvisor fallback (no direct reservation URL) */}
+            {!rawReservationUrl &&
+              (restaurant.reservationInfo?.recommended ||
+                hasAllowedTripadvisorUrl) && (
+                <div className="mt-3 space-y-2">
+                  {restaurant.reservationInfo?.recommended && (
+                    <div className="px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                      <span className="inline-flex items-center gap-1.5 text-xs text-amber-800 font-semibold">
+                        <Clock
+                          className="h-3.5 w-3.5 shrink-0 text-amber-800"
+                          aria-hidden="true"
+                        />
+                        Reservations recommended — this spot fills up fast
+                      </span>
+                    </div>
+                  )}
+                  {(hasAllowedOpenTableFallback ||
+                    hasAllowedTripadvisorUrl) && (
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap gap-2">
+                        {hasAllowedOpenTableFallback &&
+                          (checkout ? (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleReservationCheckout(
+                                  event,
+                                  openTableSearchFallbackUrl!,
+                                  "opentable",
+                                  "OpenTable",
+                                  "restaurant_search_fallback",
+                                )
+                              }
+                              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[#DCE5E3] bg-[#EFF5F3] px-3.5 py-1.5 text-xs font-semibold text-[#143D46] hover:bg-[#DCE5E3]/70 transition-colors"
+                            >
+                              <span>Find a table on OpenTable</span>
+                              <ExternalLink
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            </button>
+                          ) : (
+                            <TrackedAffiliateButton
+                              variant="subtle"
+                              label="Find a table on OpenTable"
+                              affiliateUrl={openTableSearchFallbackUrl!}
+                              partner="opentable"
+                              itemType="restaurant"
+                              itemId={restaurant.id}
+                              itemName={restaurant.name}
+                              tripId={affiliateCtx?.tripId}
+                              source={affiliateCtx?.source ?? "itinerary"}
+                              placement="restaurant_search_fallback"
+                            />
+                          ))}
+                        {hasAllowedTripadvisorUrl &&
+                          (checkout ? (
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleReservationCheckout(
+                                  event,
+                                  restaurant.tripadvisorUrl!,
+                                  "tripadvisor",
+                                  "Tripadvisor",
+                                  "restaurant_tripadvisor_cta",
+                                )
+                              }
+                              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                            >
+                              <span>View on Tripadvisor</span>
+                              <ExternalLink
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            </button>
+                          ) : (
+                            <TrackedAffiliateButton
+                              variant="secondary"
+                              label="View on Tripadvisor"
+                              affiliateUrl={restaurant.tripadvisorUrl!}
+                              partner="tripadvisor"
+                              itemType="restaurant"
+                              itemId={restaurant.id}
+                              itemName={restaurant.name}
+                              tripId={affiliateCtx?.tripId}
+                              source={affiliateCtx?.source ?? "itinerary"}
+                              placement="restaurant_tripadvisor_cta"
+                            />
+                          ))}
+                      </div>
+                      <AffiliateDisclosure className="text-xs text-slate-600" />
+                    </div>
+                  )}
                 </div>
               )}
           </div>

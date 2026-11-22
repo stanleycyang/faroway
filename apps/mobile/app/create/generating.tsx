@@ -28,7 +28,7 @@ import { useTripStore, Trip, TripInput } from '../../stores/tripStore';
 import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
-import { popularDestinations } from '@faroway/constants';
+import { normalizeBudgetTier, popularDestinations } from '@faroway/constants';
 import { colors } from '../../constants/theme';
 import {
   useStreamingItinerary,
@@ -40,7 +40,7 @@ import {
   type SeededItineraryOutline,
 } from '../../lib/itineraryPreview';
 import { validatePreviewBlocks } from '../../lib/json-render/validate-preview';
-import { registry } from '../../lib/json-render/registry';
+import { registry, StreamingTripContext } from '../../lib/json-render/registry';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
@@ -93,7 +93,13 @@ function convertStreamingDataToTrip(
   };
 }
 
-function JsonRenderRenderer({ blocks }: { blocks: StreamingBlock[] }) {
+function JsonRenderRenderer({
+  blocks,
+  tripId,
+}: {
+  blocks: StreamingBlock[];
+  tripId?: string | null;
+}) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const reduceMotion = useReduceMotion();
   const prevLengthRef = useRef(0);
@@ -113,7 +119,7 @@ function JsonRenderRenderer({ blocks }: { blocks: StreamingBlock[] }) {
 
   if (blocks.length === 0) return null;
 
-  return (
+  const content = (
     <Animated.View style={{ opacity: fadeAnim }}>
       {blocks.map((comp, index) => {
         if (!comp || !comp.type) return null;
@@ -125,6 +131,16 @@ function JsonRenderRenderer({ blocks }: { blocks: StreamingBlock[] }) {
       })}
     </Animated.View>
   );
+
+  if (StreamingTripContext) {
+    return (
+      <StreamingTripContext.Provider value={tripId ?? undefined}>
+        {content}
+      </StreamingTripContext.Provider>
+    );
+  }
+
+  return content;
 }
 
 // Pulsing dot for streaming indicator
@@ -553,9 +569,10 @@ function GenerationSession() {
             travelerType: draftInput.travelerType || 'couple',
             originCity: draftInput.originCity,
             originAirport: draftInput.originAirport,
+            flightConsent: draftInput.flightConsent,
             requirements: readTravelerRequirements(draftInput.requirements) ?? undefined,
             vibes: draftInput.vibes || [],
-            budget: draftInput.budget ?? savedProfileBudget,
+            budget: normalizeBudgetTier(draftInput?.budget ?? savedProfileBudget) ?? 'moderate',
           }
         : undefined,
     [canGenerate, draftInput, savedProfileBudget]
@@ -873,7 +890,7 @@ function GenerationSession() {
                   );
                 })}
               </View>
-              <JsonRenderRenderer blocks={preview.blocks} />
+              <JsonRenderRenderer blocks={preview.blocks} tripId={streaming.tripId} />
             </View>
           )}
         </SafeAreaView>
@@ -890,7 +907,7 @@ function GenerationSession() {
             accessibilityLabel="View your generated trip"
           >
             <LinearGradient
-              colors={[colors.primary[500], colors.primary[700]]}
+              colors={[colors.action.primary, colors.primary[800]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.viewButtonGradient}
@@ -1142,7 +1159,6 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: 20,
   },
-  errorEmoji: { fontSize: 48, marginBottom: 12 },
   errorTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 8 },
   errorMessage: {
     fontSize: 14,
@@ -1162,7 +1178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorButtonPrimary: {
-    backgroundColor: colors.primary[600],
+    backgroundColor: colors.action.primary,
   },
   errorButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 

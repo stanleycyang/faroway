@@ -1,0 +1,702 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { act, create } from "react-test-renderer";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { AFFILIATE_DISCLOSURE_SHORT } from "@faroway/constants";
+import {
+  ActivityCard,
+  RestaurantCard,
+  type Activity,
+  type Restaurant,
+} from "@/components/trips/ActivityCard";
+import { FeaturedHotelCard } from "@/components/trips/FeaturedHotelCard";
+import { ItineraryDay } from "@/components/trips/ItineraryDay";
+import { HotelQuotePanel } from "@/components/trips/HotelQuotePanel";
+import { TripCheckout } from "@/components/trips/TripCheckout";
+import { AffiliateTrackingProvider } from "@/components/affiliates/AffiliateTrackingContext";
+
+vi.mock("@/hooks/useModalFocusTrap", () => ({
+  useModalFocusTrap: () => undefined,
+}));
+vi.mock("@/lib/affiliates/viator-link", () => ({
+  buildViatorHandoffUrl: (url: string) => url,
+}));
+vi.mock("@/components/trips/ViatorContentPolicy", () => ({
+  useViatorContentEnabled: () => true,
+}));
+vi.mock("@/hooks/useUser", () => ({
+  useUser: () => ({
+    loading: false,
+    session: { user: { id: "owner-1" } },
+    accountRevision: 1,
+  }),
+}));
+vi.mock("@/lib/trips/hotel-quotes", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/trips/hotel-quotes")>();
+  return {
+    ...actual,
+    hotelSearchEnabled: () => true,
+  };
+});
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: () => ({
+    auth: {
+      getSession: async () => ({
+        data: { session: { user: { id: "owner-1" }, access_token: "tok" } },
+        error: null,
+      }),
+    },
+  }),
+}));
+
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("Itinerary card affiliate CTAs (Feature #13)", () => {
+  it("unblocks GetYourGuide bookingUrl in ActivityCard with disclosure and TripCheckout modal handoff", async () => {
+    const activity: Activity = {
+      id: "activity_gyg_987",
+      name: "Tsukiji Market Food Walk",
+      description: "Guided tasting tour",
+      duration: 180,
+      estimatedCost: { amount: 95, currency: "USD" },
+      timeOfDay: "morning",
+      category: "sightseeing",
+      location: { name: "Tsukiji" },
+      bookingInfo: {
+        requiresReservation: true,
+        bookingUrl:
+          "https://www.getyourguide.com/tokyo-l193/tsukiji-t987/?partner_id=GYG123",
+        affiliateId: "getyourguide",
+      },
+      tripadvisorRating: 4.9,
+      tripadvisorReviewCount: 412,
+      tripadvisorUrl:
+        "https://www.tripadvisor.com/AttractionProductReview-g1066444-d123.html",
+    };
+
+    const html = renderToStaticMarkup(
+      <TripCheckout mode="shared" travelers={2}>
+        <ActivityCard activity={activity} date="2026-11-01" />
+      </TripCheckout>,
+    );
+
+    expect(html).toContain("Book on GetYourGuide");
+    expect(html).toContain(AFFILIATE_DISCLOSURE_SHORT);
+    expect(html).not.toContain("Booking isn’t available in Faroway");
+    expect(html).not.toContain("✦");
+  });
+
+  it("renders Reserve on OpenTable for allowlisted RestaurantCard URLs and grounded search fallback without raw ⚡", () => {
+    const reserved: Restaurant = {
+      id: "rest-1",
+      name: "Narisawa",
+      cuisineType: ["Japanese"],
+      priceLevel: 4,
+      description: "Innovative seasonal tasting menu",
+      estimatedCost: { amount: 220, currency: "USD", perPerson: true },
+      mealType: "dinner",
+      location: { name: "Minato" },
+      dietaryOptions: [],
+      reservationInfo: {
+        recommended: true,
+        url: "https://www.opentable.com/r/narisawa-tokyo",
+      },
+    };
+
+    const reservedHtml = renderToStaticMarkup(
+      <RestaurantCard restaurant={reserved} date="2026-11-01" />,
+    );
+    expect(reservedHtml).toContain("Reserve on OpenTable");
+    expect(reservedHtml).toContain(AFFILIATE_DISCLOSURE_SHORT);
+    expect(reservedHtml).not.toContain("Reservations aren’t made in Faroway");
+
+    const recommendedOnly: Restaurant = {
+      ...reserved,
+      id: "rest-2",
+      name: "Sushi Saito",
+      reservationInfo: { recommended: true },
+    };
+    const fallbackHtml = renderToStaticMarkup(
+      <AffiliateTrackingProvider
+        value={{ destination: "Tokyo", source: "itinerary" }}
+      >
+        <RestaurantCard restaurant={recommendedOnly} date="2026-11-01" />
+      </AffiliateTrackingProvider>,
+    );
+    expect(fallbackHtml).toContain("Find a table on OpenTable");
+    expect(fallbackHtml).toContain("Reservations recommended");
+    expect(fallbackHtml).not.toContain("⚡");
+  });
+
+  it("renders Stay22 primary + comparison CTAs on FeaturedHotelCard", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateTrackingProvider
+        value={{
+          destination: "Kyoto",
+          startDate: "2026-11-01",
+          endDate: "2026-11-04",
+          source: "itinerary",
+          hotelPartnerLinks: {
+            primary: {
+              partner: "stay22",
+              label: "Check rates on Stay22",
+              vertical: "hotels",
+              url: "https://www.stay22.com/allez/roam?aid=test&address=Kyoto",
+              configured: true,
+              isSearchFallback: true,
+              disclosure: AFFILIATE_DISCLOSURE_SHORT,
+            },
+            alternatives: [
+              {
+                partner: "booking",
+                label: "Check availability on Booking.com",
+                vertical: "hotels",
+                url: "https://www.booking.com/searchresults.html?ss=Kyoto&aid=123",
+                configured: true,
+                isSearchFallback: true,
+                disclosure: AFFILIATE_DISCLOSURE_SHORT,
+              },
+            ],
+          },
+        }}
+      >
+        <FeaturedHotelCard
+          hotel={{
+            id: "h-1",
+            name: "The Ritz-Carlton Kyoto",
+            pricePerNight: 450,
+            currency: "USD",
+            affiliateUrl:
+              "https://www.stay22.com/allez/roam?aid=test&address=Ritz+Kyoto",
+            affiliatePartner: "stay22",
+          }}
+        />
+      </AffiliateTrackingProvider>,
+    );
+
+    expect(html).toContain("Check rates on Stay22");
+    expect(html).toContain("Check availability on Booking.com");
+    expect(html).toContain(AFFILIATE_DISCLOSURE_SHORT);
+    expect(html).not.toContain("Hotel checkout is not available");
+  });
+
+  it("renders Deep Ocean Teal hotel & Duffel return-leg flight CTAs in ItineraryDay without ★ or blue gradients", () => {
+    const html = renderToStaticMarkup(
+      <AffiliateTrackingProvider
+        value={{
+          destination: "Tokyo",
+          source: "itinerary",
+          flightFallbackLinks: [
+            {
+              partner: "skyscanner",
+              label: "Compare flights on Skyscanner",
+              vertical: "flights",
+              url: "https://www.skyscanner.com/transport/flights/hnd/sfo/261105/",
+              configured: true,
+              isSearchFallback: true,
+              disclosure: AFFILIATE_DISCLOSURE_SHORT,
+            },
+          ],
+        }}
+      >
+        <ItineraryDay
+          dayNumber={5}
+          date="2026-11-05"
+          title="Departure"
+          summary="Head home"
+          defaultExpanded={true}
+          morning={{ activities: [], meals: [] }}
+          afternoon={{ activities: [], meals: [] }}
+          evening={{ activities: [], meals: [] }}
+          hotel={{
+            id: "hotel-5",
+            name: "Park Hyatt Tokyo",
+            starRating: 5,
+            pricePerNight: 500,
+            currency: "USD",
+            affiliateUrl:
+              "https://www.booking.com/searchresults.html?ss=Park+Hyatt+Tokyo",
+            affiliatePartner: "booking",
+          }}
+          transport={{
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...({ id: "transport_duffel_offer123__return" } as any),
+            type: "flight",
+            provider: "ANA",
+            departure: {
+              airport: "HND",
+              city: "Tokyo",
+              dateTime: "2026-11-05T16:00:00+09:00",
+            },
+            arrival: {
+              airport: "SFO",
+              city: "San Francisco",
+              dateTime: "2026-11-05T09:00:00-08:00",
+            },
+            duration: 540,
+            stops: 0,
+            price: 920,
+            currency: "USD",
+            affiliatePartner: "duffel",
+            affiliateUrl: "https://links.duffel.com/offer_123",
+            expiresAt: "2020-01-01T00:00:00Z",
+          }}
+        />
+      </AffiliateTrackingProvider>,
+    );
+
+    expect(html).toContain("Check rates on Booking.com");
+    expect(html).toContain("Review round-trip flight on Duffel");
+    expect(html).toContain("Compare flights on Skyscanner");
+    expect(html).toContain("saved fare quote may have expired");
+    expect(html).toContain(AFFILIATE_DISCLOSURE_SHORT);
+    expect(html).toContain("#143D46");
+    expect(html).not.toContain("from-blue-");
+    expect(html).not.toContain("to-indigo-");
+    expect(html).not.toContain("★");
+  });
+
+  it("renders live rate comparison CTA on HotelQuotePanel search results", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            tripId: "trip-1",
+            tripUpdatedAt: "2026-10-01T00:00:00Z",
+            observedAt: "2026-10-02T00:00:00Z",
+            sandbox: true,
+            hotels: [
+              {
+                id: "lp-1",
+                name: "Hotel Century Southern Tower",
+                offers: [
+                  {
+                    id: "off-1",
+                    stayAmount: 640,
+                    currency: "USD",
+                    roomCount: 1,
+                    additionalTaxes: [],
+                    cancellationNote: "Free cancellation until Oct 28",
+                  },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <AffiliateTrackingProvider
+            value={{
+              destination: "Tokyo",
+              source: "itinerary",
+              hotelPartnerLinks: {
+                primary: {
+                  partner: "stay22",
+                  label: "Check rates on Stay22",
+                  vertical: "hotels",
+                  url: "https://www.stay22.com/allez/roam?aid=stay_1&address=Tokyo",
+                  configured: true,
+                  isSearchFallback: true,
+                  disclosure: AFFILIATE_DISCLOSURE_SHORT,
+                },
+                alternatives: [],
+              },
+            }}
+          >
+            <HotelQuotePanel
+              trip={{
+                id: "trip-1",
+                user_id: "owner-1",
+                destination: "Tokyo",
+                start_date: "2026-11-01",
+                end_date: "2026-11-04",
+                travelers: 2,
+                budget_tier: "moderate",
+                status: "completed",
+                vibes: [],
+                preferences: {
+                  hotelSearch: {
+                    consentVersion: "hotel-search-nuitee-v1",
+                    countryCode: "JP",
+                    guestNationality: "US",
+                    rooms: [{ adults: 2, children: [] }],
+                  },
+                },
+                created_at: "2026-10-01T00:00:00Z",
+                updated_at: "2026-10-01T00:00:00Z",
+                is_shared: false,
+                share_token: null,
+              }}
+            />
+          </AffiliateTrackingProvider>,
+        );
+      });
+
+      const searchBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Search hotel options"))!;
+      await act(async () => {
+        await searchBtn.props.onClick();
+      });
+
+      const out = JSON.stringify(renderer.toJSON());
+      expect(out).toContain("Hotel Century Southern Tower");
+      expect(out).toContain("Check live rates on Stay22");
+      expect(out).toContain(AFFILIATE_DISCLOSURE_SHORT);
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+  });
+
+  it("displays accurate Hostelworld partner label in HotelQuotePanel and excludes unallowlisted/ungated items from ItineraryDay bookable count", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            tripId: "trip-1",
+            tripUpdatedAt: "2026-10-01T00:00:00Z",
+            observedAt: "2026-10-02T00:00:00Z",
+            sandbox: true,
+            hotels: [
+              {
+                id: "lp-2",
+                name: "Khaosan Tokyo Kabuki",
+                offers: [
+                  {
+                    id: "off-2",
+                    stayAmount: 180,
+                    currency: "USD",
+                    roomCount: 1,
+                    additionalTaxes: [],
+                    cancellationNote: "Non-refundable",
+                  },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <AffiliateTrackingProvider
+            value={{
+              destination: "Tokyo",
+              source: "itinerary",
+              hotelPartnerLinks: {
+                primary: {
+                  partner: "hostelworld",
+                  label: "Check rates on Hostelworld",
+                  vertical: "hotels",
+                  url: "https://www.hostelworld.com/st/hostels/p/12345/khaosan/",
+                  configured: true,
+                  isSearchFallback: true,
+                  disclosure: AFFILIATE_DISCLOSURE_SHORT,
+                },
+                alternatives: [],
+              },
+            }}
+          >
+            <HotelQuotePanel
+              trip={{
+                id: "trip-1",
+                user_id: "owner-1",
+                destination: "Tokyo",
+                start_date: "2026-11-01",
+                end_date: "2026-11-04",
+                travelers: 2,
+                budget_tier: "budget",
+                status: "completed",
+                vibes: [],
+                preferences: {
+                  hotelSearch: {
+                    consentVersion: "hotel-search-nuitee-v1",
+                    countryCode: "JP",
+                    guestNationality: "US",
+                    rooms: [{ adults: 2, children: [] }],
+                  },
+                },
+                created_at: "2026-10-01T00:00:00Z",
+                updated_at: "2026-10-01T00:00:00Z",
+                is_shared: false,
+                share_token: null,
+              }}
+            />
+          </AffiliateTrackingProvider>,
+        );
+      });
+
+      const searchBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Search hotel options"))!;
+      await act(async () => {
+        await searchBtn.props.onClick();
+      });
+
+      const out = JSON.stringify(renderer.toJSON());
+      expect(out).toContain("Check live rates on Hostelworld");
+      expect(out).not.toContain("Check live rates on Stay22");
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+
+    const dayHtml = renderToStaticMarkup(
+      <ItineraryDay
+        dayNumber={1}
+        date="2026-11-01"
+        title="Arrival"
+        summary="Day 1"
+        defaultExpanded={false}
+        morning={{
+          activities: [
+            {
+              id: "act-evil",
+              name: "Untrusted Tour",
+              description: "Should not count",
+              duration: 60,
+              estimatedCost: { amount: 25, currency: "USD" },
+              category: "sightseeing",
+              timeOfDay: "morning",
+              location: { name: "Tokyo" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://evil.example/tour",
+                affiliateId: "evil",
+              },
+            },
+            {
+              id: "activity_v_legacy",
+              name: "Legacy Viator Tour",
+              description: "Missing version 1",
+              duration: 60,
+              estimatedCost: { amount: 45, currency: "USD" },
+              category: "sightseeing",
+              timeOfDay: "morning",
+              location: { name: "Tokyo" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://www.viator.com/tours/Tokyo/d334-1",
+                affiliateId: "viator",
+              },
+            },
+            {
+              id: "activity_gyg_valid",
+              name: "Valid GYG Tour",
+              description: "Allowlisted",
+              duration: 90,
+              estimatedCost: { amount: 55, currency: "USD" },
+              category: "sightseeing",
+              timeOfDay: "morning",
+              location: { name: "Tokyo" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://www.getyourguide.com/tokyo-l193/tour-t1/",
+                affiliateId: "getyourguide",
+              },
+            },
+          ],
+          meals: [],
+        }}
+        afternoon={{ activities: [], meals: [] }}
+        evening={{ activities: [], meals: [] }}
+      />,
+    );
+    expect(dayHtml).toContain("1 bookable experience");
+    expect(dayHtml).not.toContain("2 bookable");
+    expect(dayHtml).not.toContain("3 bookable");
+  });
+
+  it("delegates HotelQuotePanel live rate CTA through TripCheckout modal when checkout context is present", async () => {
+    const popup = {
+      opener: { parent: true } as unknown,
+      closed: false,
+      location: { replace: vi.fn(), href: "" },
+      close: vi.fn(),
+    };
+    const openMock = vi.fn().mockReturnValue(popup);
+    const fetchMock = vi.fn<
+      (url: string, init?: RequestInit) => Promise<Response>
+    >(async (url: string) => {
+      if (url.includes("/checkout")) {
+        return new Response(JSON.stringify({ enabled: true, attempts: [] }), {
+          status: 200,
+        });
+      }
+      if (url.includes("/hotels")) {
+        return new Response(
+          JSON.stringify({
+            tripId: "trip-1",
+            tripUpdatedAt: "2026-10-01T00:00:00Z",
+            observedAt: "2026-10-02T00:00:00Z",
+            sandbox: true,
+            hotels: [
+              {
+                id: "lp-99",
+                name: "Park Hyatt Tokyo",
+                offers: [
+                  {
+                    id: "off-99",
+                    stayAmount: 980,
+                    currency: "USD",
+                    roomCount: 1,
+                    additionalTaxes: [],
+                    cancellationNote: "Free cancellation",
+                  },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url === "/api/track/click") {
+        return new Response(
+          JSON.stringify({
+            clickId: "clk-hotel-panel",
+            redirectUrl:
+              "https://www.stay22.com/allez/roam?aid=stay_1&address=Park+Hyatt+Tokyo%2C+Tokyo&campaign=clk-hotel-panel",
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("window", {
+      open: openMock,
+      location: { assign: vi.fn() },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <AffiliateTrackingProvider
+            value={{
+              destination: "Tokyo",
+              source: "itinerary",
+              hotelPartnerLinks: {
+                primary: {
+                  partner: "stay22",
+                  label: "Check rates on Stay22",
+                  vertical: "hotels",
+                  url: "https://www.stay22.com/allez/roam?aid=stay_1&address=Tokyo",
+                  configured: true,
+                  isSearchFallback: true,
+                  disclosure: AFFILIATE_DISCLOSURE_SHORT,
+                },
+                alternatives: [],
+              },
+            }}
+          >
+            <TripCheckout tripId="trip-1" travelers={2}>
+              <HotelQuotePanel
+                trip={{
+                  id: "trip-1",
+                  user_id: "owner-1",
+                  destination: "Tokyo",
+                  start_date: "2026-11-01",
+                  end_date: "2026-11-04",
+                  travelers: 2,
+                  budget_tier: "moderate",
+                  status: "completed",
+                  vibes: [],
+                  preferences: {
+                    hotelSearch: {
+                      consentVersion: "hotel-search-nuitee-v1",
+                      countryCode: "JP",
+                      guestNationality: "US",
+                      rooms: [{ adults: 2, children: [] }],
+                    },
+                  },
+                  created_at: "2026-10-01T00:00:00Z",
+                  updated_at: "2026-10-01T00:00:00Z",
+                  is_shared: false,
+                  share_token: null,
+                }}
+              />
+            </TripCheckout>
+          </AffiliateTrackingProvider>,
+        );
+      });
+
+      const searchBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Search hotel options"))!;
+      await act(async () => {
+        await searchBtn.props.onClick();
+      });
+
+      const rateBtn = renderer.root
+        .findAllByType("button")
+        .find(
+          (b) =>
+            b.findAll(
+              (n) =>
+                typeof n.children?.[0] === "string" &&
+                n.children.join("").includes("Check live rates on Stay22"),
+            ).length > 0,
+        )!;
+      await act(async () => {
+        rateBtn.props.onClick({ currentTarget: { focus: vi.fn() } });
+      });
+
+      expect(renderer.root.findByProps({ role: "dialog" })).toBeTruthy();
+      const renderedJson = JSON.stringify(renderer.toJSON());
+      expect(renderedJson).toContain("Stay22");
+      expect(renderedJson).toContain("Park Hyatt Tokyo");
+
+      const continueBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Continue to Stay22"),
+          ),
+        )!;
+      await act(async () => {
+        await continueBtn.props.onClick();
+      });
+
+      const clickCall = fetchMock.mock.calls.find(
+        ([u]) => u === "/api/track/click",
+      );
+      expect(clickCall).toBeDefined();
+      expect(JSON.parse(String(clickCall![1]?.body))).toMatchObject({
+        itemType: "hotel",
+        itemId: "lp-99",
+        itemName: "Park Hyatt Tokyo",
+        affiliatePartner: "stay22",
+        placement: "hotel_quote_panel",
+      });
+      expect(popup.location.replace).toHaveBeenCalledWith(
+        expect.stringContaining("aid=stay_1"),
+      );
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+  });
+});

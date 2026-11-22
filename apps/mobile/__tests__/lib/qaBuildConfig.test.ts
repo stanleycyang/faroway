@@ -29,6 +29,13 @@ it('keeps store identifiers separate from the QA app', () => {
     expect(production.android?.package).toBe('ai.faroway.app');
     expect(production.ios?.bundleIdentifier).toBe('ai.faroway.app');
     expect(production.scheme).toBe('faroway');
+    expect(production.splash?.backgroundColor).toBe('#143D46');
+    expect(production.android?.adaptiveIcon?.backgroundColor).toBe('#F97066');
+    expect(production.plugins).toEqual(
+      expect.arrayContaining([
+        ['expo-notifications', expect.objectContaining({ color: '#C03A31' })],
+      ])
+    );
   } finally {
     process.env = original;
   }

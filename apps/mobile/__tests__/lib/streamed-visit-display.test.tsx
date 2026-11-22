@@ -15,7 +15,19 @@ jest.mock('expo-web-browser', () => ({
   openBrowserAsync: jest.fn().mockResolvedValue({ type: 'cancel' }),
 }));
 jest.mock('../../lib/savedTripBooking', () => ({ reviewSavedTripBooking: jest.fn() }));
-import { ActivityCard, RestaurantCard } from '../../lib/json-render/registry';
+jest.mock('../../lib/affiliateCheckout', () => ({
+  confirmAndOpenAffiliateLink: jest.fn(),
+  itemTypeForAffiliatePartner: jest.fn(() => 'activity'),
+  resolveAffiliatePartnerForItem: jest.fn(() => 'viator'),
+}));
+import {
+  ActivityCard,
+  BookingButton,
+  RestaurantCard,
+  StreamingTripContext,
+} from '../../lib/json-render/registry';
+import { confirmAndOpenAffiliateLink } from '../../lib/affiliateCheckout';
+import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
 import * as WebBrowser from 'expo-web-browser';
 
 const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
@@ -97,5 +109,46 @@ it('keeps activity source attribution through schema parsing and rendering', () 
   });
   expect(JSON.stringify(tree!.toJSON())).toContain('View source');
   expect(JSON.stringify(tree!.toJSON())).toContain(source.retrievedOn);
+  act(() => tree!.unmount());
+});
+
+it('passes tripId via StreamingTripContext for direct allowlisted handoff and fallback review', () => {
+  jest.clearAllMocks();
+  const tripId = '11111111-1111-4111-8111-111111111111';
+  let tree: ReactTestRenderer | undefined;
+  act(() => {
+    tree = create(
+      <StreamingTripContext.Provider value={tripId}>
+        <ActivityCard
+          name="Louvre Tour"
+          description="Skip the line"
+          duration="2 hours"
+          time="Morning"
+          bookingUrl="https://www.viator.com/tours/Paris/Louvre"
+        />
+        <BookingButton label="Check unsupported link" url="https://example.org/untrusted" />
+      </StreamingTripContext.Provider>
+    );
+  });
+
+  const activityBtn = tree!.root.findByProps({
+    accessibilityLabel: 'Check availability for Louvre Tour',
+  });
+  act(() => {
+    activityBtn.props.onPress();
+  });
+  expect(confirmAndOpenAffiliateLink).toHaveBeenCalledWith(
+    expect.objectContaining({
+      tripId,
+      affiliateUrl: 'https://www.viator.com/tours/Paris/Louvre',
+    }),
+    expect.any(Function)
+  );
+
+  const fallbackBtn = tree!.root.findByProps({ accessibilityLabel: 'Check unsupported link' });
+  act(() => {
+    fallbackBtn.props.onPress();
+  });
+  expect(reviewSavedTripBooking).toHaveBeenCalledWith(tripId, expect.any(Function));
   act(() => tree!.unmount());
 });

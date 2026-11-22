@@ -269,7 +269,7 @@ export function TripCopilotBar({
     >
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-50 text-primary">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-primary-50 text-primary-700">
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           </span>
           <div>
@@ -382,7 +382,7 @@ export function TripCopilotBar({
           maxLength={400}
           disabled={disabled || busy}
           placeholder="Tell Faroway how to tweak this trip… (e.g. Move museum to Day 2 afternoon)"
-          className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:bg-white focus:outline-none disabled:opacity-60"
+          className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-primary-700 focus:bg-white focus:outline-none disabled:opacity-60"
         />
         <button
           type="submit"
@@ -404,7 +404,7 @@ export function TripCopilotBar({
           role="status"
           className="mt-3 flex items-center gap-2 text-xs font-medium text-slate-600"
         >
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary-700" />
           {activeLabel}
         </p>
       )}
@@ -474,7 +474,7 @@ export function TripCopilotBar({
                 type="button"
                 onClick={() => setLastResult(null)}
                 aria-label="Dismiss diff summary"
-                className="p-1 text-slate-400 hover:text-slate-700"
+                className="p-1 text-slate-600 hover:text-slate-800"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -522,7 +522,7 @@ function DiffRow({ entry }: { entry: CopilotDiffEntry }) {
         <span className="line-through text-slate-500">{entry.before}</span>
       )}
       {entry.before && entry.after && (
-        <span className="text-slate-400" aria-hidden="true">
+        <span className="text-slate-500" aria-hidden="true">
           →
         </span>
       )}

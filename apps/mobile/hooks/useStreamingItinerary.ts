@@ -119,6 +119,7 @@ export interface UseStreamingItineraryOptions {
     travelerType: string;
     originCity?: string;
     originAirport?: string;
+    flightConsent?: boolean;
     requirements?: TravelerRequirements;
     vibes: string[];
     budget?: string;

@@ -72,7 +72,7 @@ export default async function CategoryPage({
           ]}
         />
 
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">
+        <h1 className="font-editorial text-4xl font-bold text-slate-900 mb-2">
           {String(label)}
         </h1>
         <p className="text-slate-600 mb-8">
@@ -91,7 +91,7 @@ export default async function CategoryPage({
         </div>
 
         {posts.length === 0 ? (
-          <p className="text-slate-500 text-center py-20">
+          <p className="text-slate-600 text-center py-20">
             No articles in this category yet.
           </p>
         ) : (

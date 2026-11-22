@@ -15,7 +15,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
       {items.map((item, index) => (
         <details key={index} className="group">
           <summary className="min-h-12 w-full cursor-pointer list-none flex items-center justify-between py-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-900">
-            <span className="text-lg font-medium text-gray-900 group-hover:text-primary transition-colors pr-4">
+            <span className="text-lg font-medium text-gray-900 group-hover:text-primary-700 transition-colors pr-4">
               {item.question}
             </span>
             <ChevronDown

@@ -5,6 +5,7 @@ import {
   buildTripExportText,
   type TripExportTrip,
 } from "@/lib/trips/export";
+import { sanitizeExportEssentials } from "@/lib/trips/export-links";
 
 const trip: TripExportTrip = {
   destination: "Tokyo, Japan",
@@ -78,6 +79,218 @@ describe("trip export helpers", () => {
     expect(text).toContain("Exported: 2026-04-08T12:00:00.000Z");
   });
 
+  it("includes allowed affiliate booking URLs, essentials, disclosure, and Viator gating", () => {
+    const day = {
+      dayNumber: 1,
+      date: "2026-04-01",
+      title: "Arrival",
+      summary: "Explore",
+      morning: {
+        activities: [
+          {
+            id: "gyg-1",
+            name: "Food Tour",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl:
+                "https://www.getyourguide.com/activity-t123/?partner_id=GYG1",
+              affiliateId: "getyourguide",
+            },
+          },
+          {
+            id: "activity_v_1",
+            name: "Viator Legacy Tour",
+            affiliatePartner: "viator",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl:
+                "https://www.viator.com/tours/Tokyo/t1?pid=P1&mcid=1&medium=api",
+              affiliateId: "viator",
+            },
+          },
+          {
+            id: "bad-1",
+            name: "Unallowed Link Tour",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl: "https://evil.example/book",
+            },
+          },
+        ],
+        meals: [
+          {
+            id: "meal-1",
+            name: "Sushi Counter",
+            reservationInfo: {
+              recommended: true,
+              url: "https://www.opentable.com/booking/restref/availability?rid=12345",
+            },
+          },
+        ],
+      },
+      afternoon: { activities: [], meals: [] },
+      evening: { activities: [], meals: [] },
+      transport: {
+        type: "flight",
+        provider: "JAL",
+        departure: {
+          airport: "SFO",
+          city: "San Francisco",
+          dateTime: "2026-04-01T10:00:00Z",
+        },
+        arrival: {
+          airport: "HND",
+          city: "Tokyo",
+          dateTime: "2026-04-02T14:00:00Z",
+        },
+        duration: 660,
+        stops: 0,
+        price: 900,
+        currency: "USD",
+        affiliateUrl: "https://links.duffel.com/sess_1",
+      },
+      tips: [],
+    } as unknown as TripDay;
+
+    const text = buildTripExportText(
+      trip,
+      {
+        overview: "Overview",
+        topHotel: {
+          id: "h1",
+          name: "Hotel Century",
+          description: "Central",
+          amenities: [],
+          location: { name: "Shinjuku", address: "1-1", lat: 0, lng: 0 },
+          images: [],
+          vibeScore: 90,
+          vibeMatch: [],
+          affiliateUrl:
+            "https://www.stay22.com/allez/roam?aid=s1&address=Tokyo",
+          affiliatePartner: "stay22",
+        },
+        days: [day],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+      {
+        viatorContentEnabled: false,
+        essentials: [
+          {
+            label: "Airalo Japan eSIM",
+            category: "esim",
+            url: "https://www.airalo.com/japan-esim?ref=a1",
+          },
+          {
+            label: "Blocked Essential",
+            category: "other",
+            url: "https://evil.example/bad",
+          },
+        ],
+      },
+    );
+
+    expect(text).toContain("Top Hotel: Hotel Century");
+    expect(text).toContain(
+      "https://www.stay22.com/allez/roam?aid=s1&address=Tokyo",
+    );
+    expect(text).toContain(
+      "https://www.getyourguide.com/activity-t123/?partner_id=GYG1",
+    );
+    expect(text).toContain(
+      "https://www.opentable.com/booking/restref/availability?rid=12345",
+    );
+    expect(text).toContain("https://links.duffel.com/sess_1");
+    expect(text).toContain("Airalo Japan eSIM");
+    expect(text).not.toContain("Viator Legacy Tour");
+    expect(text).not.toContain("evil.example");
+    expect(text).toContain("commission");
+    expect(text.match(/Transport:/g)).toHaveLength(1);
+  });
+
+  it("blocks viator.com URLs in sanitizeExportEssentials and exports when viatorContentEnabled is false", () => {
+    const essentials = [
+      {
+        label: "Tours on Viator",
+        category: "activities",
+        url: "https://www.viator.com/tours/Tokyo/t1?pid=P1&mcid=1&medium=api",
+      },
+      {
+        label: "Airalo Japan eSIM",
+        category: "esim",
+        url: "https://www.airalo.com/japan-esim?ref=a1",
+      },
+    ];
+
+    const filtered = sanitizeExportEssentials(essentials, "export_txt", false);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.label).toBe("Airalo Japan eSIM");
+
+    const text = buildTripExportText(
+      trip,
+      null,
+      new Date("2026-04-08T12:00:00.000Z"),
+      {
+        viatorContentEnabled: false,
+        essentials,
+      },
+    );
+    expect(text).toContain("Airalo Japan eSIM");
+    expect(text).not.toContain("viator.com");
+  });
+
+  it("never throws on missing, padded, or malformed currencies in totalEstimatedCost or day.totalEstimatedCost", () => {
+    const makeDay = (currency: unknown, amount = 140) =>
+      ({
+        dayNumber: 1,
+        date: "2026-04-01",
+        title: "Arrival",
+        summary: "Explore",
+        morning: { activities: [], meals: [] },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        totalEstimatedCost: { amount, currency },
+        tips: [],
+      }) as unknown as TripDay;
+
+    for (const badCurrency of ["", "INVALID", "US", undefined, null, 123]) {
+      const text = buildTripExportText(
+        trip,
+        {
+          totalEstimatedCost: {
+            amount: 1500,
+            currency: badCurrency as string,
+          },
+          days: [makeDay(badCurrency)],
+        },
+        new Date("2026-04-08T12:00:00.000Z"),
+      );
+      expect(text).not.toContain("Estimated total:");
+      expect(text).not.toContain("Day estimate:");
+    }
+
+    const paddedUsd = buildTripExportText(
+      trip,
+      {
+        totalEstimatedCost: { amount: 1500, currency: " usd " },
+        days: [makeDay(" eur ", 220)],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+    expect(paddedUsd).toContain("Estimated total: $1,500");
+    expect(paddedUsd).toContain("Day estimate: €220");
+
+    const nonFinite = buildTripExportText(
+      trip,
+      {
+        totalEstimatedCost: { amount: Number.NaN, currency: "USD" },
+        days: [makeDay("USD", Number.POSITIVE_INFINITY)],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+    expect(nonFinite).not.toContain("Estimated total:");
+    expect(nonFinite).not.toContain("Day estimate:");
+  });
+
   it("formats calendar dates without UTC day shift and ignores empty or invalid currencies", () => {
     const text = buildTripExportText(
       trip,
@@ -102,5 +315,32 @@ describe("trip export helpers", () => {
     expect(text).toContain("Date: Apr 1, 2026");
     expect(text).not.toContain("Estimated total:");
     expect(text).not.toContain("Day estimate:");
+  });
+
+  it("formats ISO UTC timestamps without timezone day shift", () => {
+    const isoTrip: TripExportTrip = {
+      ...trip,
+      start_date: "2026-04-01T00:00:00Z",
+      end_date: "2026-04-07T00:00:00Z",
+    };
+    const text = buildTripExportText(
+      isoTrip,
+      {
+        days: [
+          {
+            dayNumber: 1,
+            date: "2026-04-01T00:00:00Z",
+            title: "Arrival",
+            morning: { activities: [], meals: [] },
+            afternoon: { activities: [], meals: [] },
+            evening: { activities: [], meals: [] },
+          } as unknown as TripDay,
+        ],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+
+    expect(text).toContain("Dates: Apr 1, 2026 to Apr 7, 2026");
+    expect(text).toContain("Date: Apr 1, 2026");
   });
 });

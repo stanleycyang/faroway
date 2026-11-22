@@ -39,14 +39,38 @@ import {
   RefreshCw,
   Sparkles,
   Shield,
-  ChevronUp,
   Ticket,
   Plane,
   Printer,
   Download,
   Calendar,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
+import {
+  flightQuoteIsCurrent,
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  normalizeAffiliatePartner,
+  readPrice,
+  resolveAffiliatePartnerByUrl,
+} from "@faroway/constants";
+import { buildTripEssentials } from "@/lib/affiliates/essentials";
+import { buildHotelPartnerLinks } from "@/lib/affiliates/hotels";
+import { buildFlightFallbackLinks } from "@/lib/affiliates/flights";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
+import {
+  AffiliateTrackingProvider,
+  useAffiliateTracking,
+} from "@/components/affiliates/AffiliateTrackingContext";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
+import {
+  BookingsSheet,
+  buildTripBookingItems,
+} from "@/components/trips/BookingsSheet";
+import { useViatorContentEnabled } from "@/components/trips/ViatorContentPolicy";
+import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 
 /**
  * Error boundary that prevents a single broken itinerary day from crashing the whole page.
@@ -102,6 +126,7 @@ import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
 import { TripWeather } from "@/components/trips/TripWeather";
 import { PlacesExplorer } from "@/components/places/PlacesExplorer";
 import { TripCheckout } from "@/components/trips/TripCheckout";
+import { useTripCheckout } from "@/components/trips/TripCheckoutContext";
 import { TripFeedback } from "@/components/trips/TripFeedback";
 import { ShareButtons } from "@/components/ShareButtons";
 import {
@@ -130,6 +155,13 @@ interface TripDetailClientProps {
   initialShareUrl: string | null;
   planEditingEnabled?: boolean;
   bookingChecklistEnabled?: boolean;
+  essentials?: Record<string, AffiliateLinkResult>;
+  hotelPartnerLinks?: {
+    primary: AffiliateLinkResult | null;
+    alternatives: AffiliateLinkResult[];
+    liteapiLiveCheckoutEnabled?: boolean;
+  };
+  flightFallbackLinks?: AffiliateLinkResult[];
 }
 
 export function TripDetailClient({
@@ -138,12 +170,17 @@ export function TripDetailClient({
   initialShareUrl,
   planEditingEnabled = false,
   bookingChecklistEnabled = false,
+  essentials: serverEssentials,
+  hotelPartnerLinks: serverHotelPartnerLinks,
+  flightFallbackLinks: serverFlightFallbackLinks,
 }: TripDetailClientProps) {
   const router = useRouter();
+  const viatorContentEnabled = useViatorContentEnabled();
   const copilotBarId = `trip-${tripId}-copilot`;
   const [selectedDay, setSelectedDay] = useState(0);
   const hydrated = useHydrated();
   const [planEditorOpen, setPlanEditorOpen] = useState(false);
+  const [bookingsSheetOpen, setBookingsSheetOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
 
   const [initialPlan] = useState(() => {
@@ -653,10 +690,13 @@ export function TripDetailClient({
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
+    link.style.display = "none";
     document.body.appendChild(link);
     link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => {
+      link.remove();
+      URL.revokeObjectURL(url);
+    }, 1000);
   };
 
   const handleDownloadCalendar = () => {
@@ -668,10 +708,13 @@ export function TripDetailClient({
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
+    link.style.display = "none";
     document.body.appendChild(link);
     link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => {
+      link.remove();
+      URL.revokeObjectURL(url);
+    }, 1000);
   };
 
   const handleDeleteTrip = async () => {
@@ -718,13 +761,18 @@ export function TripDetailClient({
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
           count += slot.activities.filter(
-            (a) => a?.bookingInfo?.bookingUrl,
+            (a) =>
+              canDisplayViatorContent(a, viatorContentEnabled) &&
+              Boolean(
+                a?.bookingInfo?.bookingUrl &&
+                isAllowedAffiliateUrl(a.bookingInfo.bookingUrl),
+              ),
           ).length;
         }
       }
     }
     return count;
-  }, [itinerary]);
+  }, [itinerary, viatorContentEnabled]);
 
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
@@ -754,6 +802,118 @@ export function TripDetailClient({
       ? generation.days
       : itinerary?.days || null;
   const displayTopHotel = topHotel || generation.topHotel;
+
+  const resolvedEssentials = useMemo(() => {
+    const raw =
+      serverEssentials ??
+      (trip?.destination
+        ? buildTripEssentials({
+            destination: trip.destination,
+            startDate: trip.start_date,
+            endDate: trip.end_date,
+            trackingId: tripId,
+          })
+        : {});
+    const filtered: Record<string, AffiliateLinkResult> = {};
+    for (const [key, entry] of Object.entries(raw)) {
+      if (entry?.url && isAllowedAffiliateUrl(entry.url)) {
+        filtered[key] = entry;
+      }
+    }
+    return filtered;
+  }, [
+    serverEssentials,
+    trip?.destination,
+    trip?.start_date,
+    trip?.end_date,
+    tripId,
+  ]);
+
+  const resolvedHotelPartnerLinks = useMemo(() => {
+    const raw =
+      serverHotelPartnerLinks ??
+      (trip?.destination
+        ? buildHotelPartnerLinks({
+            destination: trip.destination,
+            checkIn: trip.start_date,
+            checkOut: trip.end_date,
+            adults: trip.travelers,
+            budgetTier: trip.budget_tier ?? undefined,
+            campaign: "trip_view",
+          })
+        : { primary: null, alternatives: [] });
+    return {
+      primary:
+        raw.primary?.url && isAllowedAffiliateUrl(raw.primary.url)
+          ? raw.primary
+          : null,
+      alternatives: (raw.alternatives ?? []).filter(
+        (item) => item?.url && isAllowedAffiliateUrl(item.url),
+      ),
+      liteapiLiveCheckoutEnabled: raw.liteapiLiveCheckoutEnabled,
+    };
+  }, [
+    serverHotelPartnerLinks,
+    trip?.destination,
+    trip?.start_date,
+    trip?.end_date,
+    trip?.travelers,
+    trip?.budget_tier,
+  ]);
+
+  const resolvedFlightFallbackLinks = useMemo(() => {
+    const firstTransport = displayDays?.find((d) => d.transport)?.transport;
+    const raw =
+      serverFlightFallbackLinks ??
+      (trip?.destination
+        ? buildFlightFallbackLinks({
+            originAirport: firstTransport?.departure?.airport,
+            destinationAirport: firstTransport?.arrival?.airport,
+            destinationCity: trip.destination,
+            departureDate: trip.start_date,
+            returnDate:
+              trip.end_date > trip.start_date ? trip.end_date : undefined,
+            adults: trip.travelers,
+            trackingId: tripId,
+          })
+        : []);
+    return raw.filter((item) => item?.url && isAllowedAffiliateUrl(item.url));
+  }, [
+    serverFlightFallbackLinks,
+    displayDays,
+    trip?.destination,
+    trip?.start_date,
+    trip?.end_date,
+    trip?.travelers,
+    tripId,
+  ]);
+
+  const bookingItems = useMemo(
+    () =>
+      buildTripBookingItems({
+        days: itinerary?.days ?? displayDays,
+        topHotel: displayTopHotel,
+        startDate: trip?.start_date,
+        endDate: trip?.end_date,
+        hotelPartnerLinks: resolvedHotelPartnerLinks,
+        flightFallbackLinks: resolvedFlightFallbackLinks,
+        essentials: resolvedEssentials,
+        viatorContentEnabled,
+        allowViatorHostedWithoutUrl: !trip?.preferences?.planNeedsRefresh,
+      }),
+    [
+      itinerary?.days,
+      displayDays,
+      displayTopHotel,
+      trip?.start_date,
+      trip?.end_date,
+      trip?.preferences?.planNeedsRefresh,
+      resolvedHotelPartnerLinks,
+      resolvedFlightFallbackLinks,
+      resolvedEssentials,
+      viatorContentEnabled,
+    ],
+  );
   const hasStreamedSpecBlocks = generation.specBlocks.length > 0;
   const readyScreenDescription =
     itinerary?.overview ||
@@ -893,9 +1053,9 @@ export function TripDetailClient({
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FAF8F3] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 text-primary-700 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading trip...</p>
         </div>
       </div>
@@ -905,7 +1065,7 @@ export function TripDetailClient({
   // Error state
   if (!trip) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#FAF8F3] flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
@@ -919,7 +1079,7 @@ export function TripDetailClient({
           </p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-primary-700 text-white rounded-full font-semibold hover:bg-primary-800 transition-colors"
           >
             Go to Dashboard
           </Link>
@@ -1063,29 +1223,13 @@ export function TripDetailClient({
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#f7f8fa]">
-      {/* Trip Header */}
-      <ShareConsentDialog
-        open={shareConsentOpen}
-        onCancel={() => setShareConsentOpen(false)}
-        onConfirm={() => handleShare(true)}
-      />
-      <TripHeader
-        destination={trip.destination}
-        startDate={trip.start_date}
-        endDate={trip.end_date}
-        travelers={trip.travelers}
-        heroImageUrl={readyScreenHeroImage}
-        status={tripStatus}
-        onShare={() => handleShare()}
-      />
-
+  const tripContent = (
+    <>
       <main className="finished-journey max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-28">
         {displayDays?.length ? (
           <nav
             aria-label="Trip sections"
-            className="print-hidden sticky top-0 z-40 -mx-4 mb-8 flex gap-2 overflow-x-auto border-b border-slate-200 bg-[#f7f8fa]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6"
+            className="print-hidden sticky top-0 z-40 -mx-4 mb-8 flex gap-2 overflow-x-auto border-b border-slate-200 bg-[#FAF8F3]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6"
           >
             {(
               [
@@ -1157,7 +1301,7 @@ export function TripDetailClient({
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
                 {trip.status === "draft" ? (
-                  <Sparkles className="w-5 h-5 text-primary" />
+                  <Sparkles className="w-5 h-5 text-primary-700" />
                 ) : (
                   <AlertCircle className="w-5 h-5 text-red-600" />
                 )}
@@ -1177,7 +1321,7 @@ export function TripDetailClient({
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-700 text-white rounded-lg font-medium hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`}
@@ -1351,7 +1495,7 @@ export function TripDetailClient({
               </section>
             )}
             {!trip.preferences?.planNeedsRefresh && (
-              <TripCheckout tripId={tripId} travelers={trip.travelers}>
+              <>
                 {!isGenerating && (
                   <TripDayNavigation
                     days={displayDays}
@@ -1401,7 +1545,7 @@ export function TripDetailClient({
                     </DayErrorBoundary>
                   </div>
                 ))}
-              </TripCheckout>
+              </>
             )}
             <PlacesExplorer key={tripId} />
             <TripWeather
@@ -1527,6 +1671,7 @@ export function TripDetailClient({
               key={`bookings:${trip.updated_at}`}
               tripId={trip.id}
               userId={trip.user_id}
+              days={itinerary?.days}
             />
           )}
 
@@ -1567,7 +1712,7 @@ export function TripDetailClient({
                   key={i}
                   className="text-sm text-primary-700 flex items-start gap-2"
                 >
-                  <span className="text-primary-400 mt-0.5">•</span>
+                  <span className="text-primary-700 mt-0.5">•</span>
                   <span>{tip}</span>
                 </li>
               ))}
@@ -1633,7 +1778,7 @@ export function TripDetailClient({
                   isShareBusy ||
                   !!trip.preferences?.planNeedsRefresh
                 }
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-50"
               >
                 {trip.preferences?.planNeedsRefresh
                   ? "Update plan before sharing"
@@ -1753,7 +1898,7 @@ export function TripDetailClient({
       )}
 
       {/* Sticky Booking Bar */}
-      {isComplete && bookableCount > 0 && (
+      {isComplete && (bookableCount > 0 || bookingItems.length > 0) && (
         <div
           role="region"
           aria-label="Booking options"
@@ -1769,42 +1914,86 @@ export function TripDetailClient({
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0">
-                  <Ticket className="w-5 h-5 text-primary" />
+                  <Ticket className="w-5 h-5 text-primary-700" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-900 truncate">
-                    {bookableCount} experience{bookableCount > 1 ? "s" : ""} to
-                    book
+                    {bookableCount > 0
+                      ? `${bookableCount} experience${bookableCount > 1 ? "s" : ""} to book`
+                      : `${bookingItems.length} booking option${bookingItems.length > 1 ? "s" : ""} ready`}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    Review options and confirm availability
+                  <p className="text-xs text-slate-600 truncate">
+                    Stays, flights, experiences &amp; trip essentials
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 disabled={!stickyBookingVisible}
-                onClick={() => {
-                  const section = document.getElementById("trip-itinerary");
-                  section?.scrollIntoView({
-                    behavior: window.matchMedia(
-                      "(prefers-reduced-motion: reduce)",
-                    ).matches
-                      ? "instant"
-                      : "smooth",
-                  });
-                  section
-                    ?.querySelector<HTMLElement>("h2")
-                    ?.focus({ preventScroll: true });
-                }}
-                className="flex-shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-[0.98]"
+                onClick={() => setBookingsSheetOpen(true)}
+                className="flex-shrink-0 inline-flex min-h-11 items-center gap-1.5 px-5 py-2.5 bg-primary-700 text-white rounded-full text-sm font-bold shadow-md hover:bg-primary-800 transition-all active:scale-[0.98]"
               >
-                <ChevronUp className="w-4 h-4" />
-                View itinerary
+                Review &amp; book
               </button>
             </div>
           </div>
         </div>
       )}
+      <BookingsSheet
+        open={bookingsSheetOpen}
+        onClose={() => setBookingsSheetOpen(false)}
+        items={bookingItems}
+        tripId={tripId}
+        source="itinerary"
+        destination={trip.destination}
+      />
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#FAF8F3]">
+      {/* Trip Header */}
+      <ShareConsentDialog
+        open={shareConsentOpen}
+        onCancel={() => setShareConsentOpen(false)}
+        onConfirm={() => handleShare(true)}
+      />
+      <TripHeader
+        destination={trip.destination}
+        startDate={trip.start_date}
+        endDate={trip.end_date}
+        travelers={trip.travelers}
+        heroImageUrl={readyScreenHeroImage}
+        status={tripStatus}
+        onShare={() => handleShare()}
+      />
+
+      <AffiliateTrackingProvider
+        value={{
+          tripId,
+          destination: trip.destination,
+          startDate: trip.start_date,
+          endDate: trip.end_date,
+          travelers: trip.travelers,
+          source: "itinerary",
+          hotelPartnerLinks: resolvedHotelPartnerLinks,
+          flightFallbackLinks: resolvedFlightFallbackLinks,
+          essentials: resolvedEssentials,
+        }}
+      >
+        {!trip.preferences?.planNeedsRefresh ? (
+          <TripCheckout
+            tripId={tripId}
+            travelers={trip.travelers}
+            mode="owner"
+            source="itinerary"
+          >
+            {tripContent}
+          </TripCheckout>
+        ) : (
+          tripContent
+        )}
+      </AffiliateTrackingProvider>
     </div>
   );
 }
@@ -1812,6 +2001,8 @@ export function TripDetailClient({
 // ── Featured Flights ────────────────────────────────────────────────────────
 
 function FeaturedFlights({ days }: { days: TripDay[] | null }) {
+  const checkout = useTripCheckout();
+  const affiliateCtx = useAffiliateTracking();
   if (!days?.length) return null;
 
   // Find outbound (first day with transport) and return (last day with transport)
@@ -1826,8 +2017,41 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
 
   if (!outbound?.transport) return null;
 
+  const outboundTransport = outbound.transport;
+  const outboundId = (outboundTransport as { id?: string }).id;
+  const hasAllowedOutboundUrl = Boolean(
+    outboundTransport.affiliateUrl &&
+    isAllowedAffiliateUrl(outboundTransport.affiliateUrl),
+  );
+  const outboundPartner = hasAllowedOutboundUrl
+    ? (resolveAffiliatePartnerByUrl(outboundTransport.affiliateUrl!) ??
+      normalizeAffiliatePartner(outboundTransport.affiliatePartner) ??
+      "duffel")
+    : undefined;
+  const outboundPartnerLabel = outboundPartner
+    ? formatAffiliatePartnerName(outboundPartner)
+    : "Partner";
+  const outboundPrice = readPrice(
+    outboundTransport.price,
+    outboundTransport.currency,
+  );
+  const outboundCurrent = flightQuoteIsCurrent(outboundTransport);
+  const routeLabel = `${outboundTransport.departure?.airport || "Origin"} → ${outboundTransport.arrival?.airport || "Destination"}`;
+  const flightFallbacks = (affiliateCtx?.flightFallbackLinks ?? []).filter(
+    (link): link is NonNullable<typeof link> & { url: string } =>
+      Boolean(link.url && isAllowedAffiliateUrl(link.url)),
+  );
+
+  const returnTransport = returnFlight?.transport;
+  const returnId = (returnTransport as { id?: string } | undefined)?.id;
+  const returnHasSeparateUrl = Boolean(
+    returnTransport?.affiliateUrl &&
+    isAllowedAffiliateUrl(returnTransport.affiliateUrl) &&
+    returnTransport.affiliateUrl !== outboundTransport.affiliateUrl,
+  );
+
   return (
-    <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/20 relative">
+    <div className="bg-gradient-to-br from-[#143D46] to-[#0E2C33] rounded-2xl overflow-hidden mb-6 shadow-lg relative">
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-[0.05]">
         <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full border-[24px] border-white" />
@@ -1836,12 +2060,12 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
 
       <div className="relative p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+          <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center backdrop-blur-sm">
             <Plane className="h-5 w-5 text-white" />
           </div>
           <div>
             <h3 className="text-base font-bold text-white">Your Flights</h3>
-            <p className="text-[11px] text-blue-200">
+            <p className="text-[11px] text-[#EFF5F3]/85">
               {returnFlight
                 ? "Outbound and return details"
                 : "Outbound details · Return details unavailable"}
@@ -1849,27 +2073,250 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
           </div>
           <div className="ml-auto text-right">
             <p className="text-xl font-black text-white">Estimates by flight</p>
-            <p className="text-[11px] text-blue-200">
+            <p className="text-[11px] text-[#EFF5F3]/85">
               Confirm fares with the provider
             </p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-          <FlightLeg transport={outbound.transport!} label="Outbound" />
+          <FlightLeg transport={outboundTransport} label="Outbound" />
           {returnFlight?.transport && (
             <>
-              <div className="hidden sm:block w-px bg-blue-500/30 self-stretch" />
-              <div className="sm:hidden h-px bg-blue-500/30" />
+              <div className="hidden sm:block w-px bg-white/20 self-stretch" />
+              <div className="sm:hidden h-px bg-white/20" />
               <FlightLeg transport={returnFlight.transport} label="Return" />
             </>
           )}
         </div>
 
-        <p className="mt-5 rounded-xl bg-white/95 px-4 py-3 text-sm font-medium text-blue-900">
-          Flight booking unavailable. Confirm the fare, times, and cancellation
-          terms with the airline or a flight seller.
-        </p>
+        {hasAllowedOutboundUrl ? (
+          <div className="mt-5 space-y-2">
+            {!outboundCurrent && outboundPartner === "duffel" && (
+              <p className="text-xs text-amber-200">
+                This saved fare quote may have expired — confirm live pricing or
+                compare carriers below.
+              </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {checkout ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.currentTarget.focus();
+                    checkout.review({
+                      id: outboundId || "featured-flight-outbound",
+                      name: `${outboundTransport.provider || "Flights"} (${routeLabel})`,
+                      date: outbound.date,
+                      dateLabel: `${routeLabel} · ${outbound.date}`,
+                      mode: "partner_click",
+                      itemType: "flight",
+                      partner: outboundPartner,
+                      partnerLabel: outboundPartnerLabel,
+                      affiliateUrl: outboundTransport.affiliateUrl!,
+                      price: outboundPrice?.amount,
+                      currency: outboundPrice?.currency,
+                      source: affiliateCtx?.source ?? "itinerary",
+                      placement: "featured_flights",
+                    });
+                  }}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#143D46] hover:bg-[#EFF5F3] transition-colors"
+                >
+                  <span>
+                    {outboundPartner === "duffel" && returnFlight
+                      ? "Book round-trip flights on Duffel"
+                      : `Book flights on ${outboundPartnerLabel}`}
+                  </span>
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                </button>
+              ) : (
+                <TrackedAffiliateButton
+                  variant="onDark"
+                  label={
+                    outboundPartner === "duffel" && returnFlight
+                      ? "Book round-trip flights on Duffel"
+                      : `Book flights on ${outboundPartnerLabel}`
+                  }
+                  affiliateUrl={outboundTransport.affiliateUrl!}
+                  partner={outboundPartner}
+                  itemType="flight"
+                  itemId={outboundId || "featured-flight-outbound"}
+                  itemName={`${outboundTransport.provider || "Flights"} (${routeLabel})`}
+                  tripId={affiliateCtx?.tripId}
+                  price={outboundPrice?.amount}
+                  currency={outboundPrice?.currency}
+                  source={affiliateCtx?.source ?? "itinerary"}
+                  placement="featured_flights"
+                />
+              )}
+
+              {returnHasSeparateUrl &&
+                returnTransport?.affiliateUrl &&
+                (() => {
+                  const returnPartner =
+                    resolveAffiliatePartnerByUrl(
+                      returnTransport.affiliateUrl,
+                    ) ??
+                    normalizeAffiliatePartner(
+                      returnTransport.affiliatePartner,
+                    ) ??
+                    "duffel";
+                  const returnPartnerLabel =
+                    formatAffiliatePartnerName(returnPartner);
+                  const returnRouteLabel = `${returnTransport.departure?.airport || "Return"} → ${returnTransport.arrival?.airport || "Origin"}`;
+                  const returnPrice = readPrice(
+                    returnTransport.price,
+                    returnTransport.currency,
+                  );
+                  return checkout ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.currentTarget.focus();
+                        checkout.review({
+                          id: returnId || "featured-flight-return",
+                          name: `${returnTransport.provider || "Return flight"} (${returnRouteLabel})`,
+                          date: returnFlight?.date || outbound.date,
+                          dateLabel: `${returnRouteLabel} · ${returnFlight?.date || outbound.date}`,
+                          mode: "partner_click",
+                          itemType: "flight",
+                          partner: returnPartner,
+                          partnerLabel: returnPartnerLabel,
+                          affiliateUrl: returnTransport.affiliateUrl!,
+                          price: returnPrice?.amount,
+                          currency: returnPrice?.currency,
+                          source: affiliateCtx?.source ?? "itinerary",
+                          placement: "featured_flights_return",
+                        });
+                      }}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#143D46] hover:bg-[#EFF5F3] transition-colors"
+                    >
+                      <span>Book return leg</span>
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <TrackedAffiliateButton
+                      variant="onDark"
+                      label="Book return leg"
+                      affiliateUrl={returnTransport.affiliateUrl}
+                      partner={returnPartner}
+                      itemType="flight"
+                      itemId={returnId || "featured-flight-return"}
+                      itemName={`${returnTransport.provider || "Return flight"}`}
+                      tripId={affiliateCtx?.tripId}
+                      price={returnPrice?.amount}
+                      currency={returnPrice?.currency}
+                      source={affiliateCtx?.source ?? "itinerary"}
+                      placement="featured_flights_return"
+                    />
+                  );
+                })()}
+
+              {(!outboundCurrent || outboundPartner !== "duffel") &&
+                flightFallbacks.slice(0, 2).map((link) => {
+                  const partnerLabel = formatAffiliatePartnerName(link.partner);
+                  return checkout ? (
+                    <button
+                      key={link.partner}
+                      type="button"
+                      onClick={(event) => {
+                        event.currentTarget.focus();
+                        checkout.review({
+                          id: `featured-flight-fallback-${link.partner}`,
+                          name: `${routeLabel} · ${partnerLabel}`,
+                          date: outbound.date,
+                          dateLabel: `${routeLabel} · ${outbound.date}`,
+                          mode: "partner_click",
+                          itemType: "flight",
+                          partner: link.partner,
+                          partnerLabel,
+                          affiliateUrl: link.url,
+                          source: affiliateCtx?.source ?? "itinerary",
+                          placement: "featured_flights_fallback",
+                        });
+                      }}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  ) : (
+                    <TrackedAffiliateButton
+                      key={link.partner}
+                      variant="onDark"
+                      label={link.label}
+                      affiliateUrl={link.url}
+                      partner={link.partner}
+                      itemType="flight"
+                      itemId={`featured-flight-fallback-${link.partner}`}
+                      itemName={`${routeLabel} · ${partnerLabel}`}
+                      tripId={affiliateCtx?.tripId}
+                      source={affiliateCtx?.source ?? "itinerary"}
+                      placement="featured_flights_fallback"
+                    />
+                  );
+                })}
+            </div>
+            <AffiliateDisclosure className="text-xs text-[#EFF5F3]/90" />
+          </div>
+        ) : !outboundTransport.affiliateUrl && flightFallbacks.length > 0 ? (
+          <div className="mt-5 space-y-2">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {flightFallbacks.slice(0, 2).map((link) => {
+                const partnerLabel = formatAffiliatePartnerName(link.partner);
+                return checkout ? (
+                  <button
+                    key={link.partner}
+                    type="button"
+                    onClick={(event) => {
+                      event.currentTarget.focus();
+                      checkout.review({
+                        id: `featured-flight-fallback-${link.partner}`,
+                        name: `${routeLabel} · ${partnerLabel}`,
+                        date: outbound.date,
+                        dateLabel: `${routeLabel} · ${outbound.date}`,
+                        mode: "partner_click",
+                        itemType: "flight",
+                        partner: link.partner,
+                        partnerLabel,
+                        affiliateUrl: link.url,
+                        source: affiliateCtx?.source ?? "itinerary",
+                        placement: "featured_flights_fallback",
+                      });
+                    }}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#143D46] hover:bg-[#EFF5F3] transition-colors"
+                  >
+                    <span>{link.label}</span>
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <TrackedAffiliateButton
+                    key={link.partner}
+                    variant="onDark"
+                    label={link.label}
+                    affiliateUrl={link.url}
+                    partner={link.partner}
+                    itemType="flight"
+                    itemId={`featured-flight-fallback-${link.partner}`}
+                    itemName={`${routeLabel} · ${partnerLabel}`}
+                    tripId={affiliateCtx?.tripId}
+                    source={affiliateCtx?.source ?? "itinerary"}
+                    placement="featured_flights_fallback"
+                  />
+                );
+              })}
+            </div>
+            <AffiliateDisclosure className="text-xs text-[#EFF5F3]/90" />
+          </div>
+        ) : outboundTransport.affiliateUrl ? (
+          <p className="mt-5 rounded-xl bg-white/95 px-4 py-3 text-sm font-medium text-[#143D46]">
+            Flight booking unavailable. Confirm the fare, times, and
+            cancellation terms with the airline or a flight seller.
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -1889,7 +2336,7 @@ function EmptyItinerary({
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <MapPin className="w-8 h-8 text-gray-400" />
+        <MapPin className="w-8 h-8 text-slate-500" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">
         No Itinerary Yet
@@ -1903,7 +2350,7 @@ function EmptyItinerary({
           type="button"
           onClick={onGenerate}
           disabled={isRetrying}
-          className="inline-flex min-h-11 items-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50"
+          className="inline-flex min-h-11 items-center gap-2 px-6 py-3 bg-primary-700 text-white rounded-full font-semibold hover:bg-primary-800 transition-colors disabled:opacity-50"
         >
           <Sparkles className="w-5 h-5" />
           {isRetrying ? "Starting…" : "Generate Itinerary"}

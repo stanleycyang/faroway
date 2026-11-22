@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ChevronDown } from "lucide-react";
-import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
+import type { ClusterDefinition } from "@/lib/blog/clusters";
+import { GUIDE_ACCENTS } from "./guide-accents";
 
 interface ClusterHeroProps {
   cluster: ClusterDefinition;
@@ -8,7 +9,7 @@ interface ClusterHeroProps {
 }
 
 export function ClusterHero({ cluster, postCount }: ClusterHeroProps) {
-  const accent = ACCENT_COLORS[cluster.accent];
+  const accent = GUIDE_ACCENTS[cluster.accent];
   const titleParts = cluster.title.split(cluster.gradientWord);
 
   return (
@@ -31,23 +32,23 @@ export function ClusterHero({ cluster, postCount }: ClusterHeroProps) {
       {/* Content */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-16 pt-32">
         {/* Post count pill */}
-        <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white/90 text-sm font-medium mb-6">
+        <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white/95 text-sm font-medium mb-6">
           {postCount} {postCount === 1 ? "article" : "articles"}
         </span>
 
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 max-w-4xl">
+        <h1 className="font-editorial text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 max-w-4xl">
           {titleParts[0]}
           <span className="text-gradient-hero">{cluster.gradientWord}</span>
           {titleParts[1] || ""}
         </h1>
 
-        <p className="text-lg md:text-xl text-white/80 max-w-2xl leading-relaxed mb-8">
+        <p className="text-lg md:text-xl text-white/90 max-w-2xl leading-relaxed mb-8">
           {cluster.tagline}
         </p>
 
         {/* Scroll indicator */}
-        <div className="flex items-center gap-2 text-white/50 text-sm animate-bounce">
-          <ChevronDown className="w-4 h-4" />
+        <div className="flex items-center gap-2 text-white/80 text-sm animate-bounce">
+          <ChevronDown className="w-4 h-4" aria-hidden="true" />
           <span>Scroll to explore</span>
         </div>
       </div>

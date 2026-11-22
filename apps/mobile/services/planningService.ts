@@ -1,4 +1,6 @@
+import { normalizeBudgetTier } from '@faroway/constants';
 import { readTravelerRequirements } from '../lib/travelerRequirements';
+import { resolveFlightSearchPreferences } from '../lib/flightOrigin';
 import type { SearchInput } from '@faroway/types';
 import { API_BASE_URL } from '../constants/api';
 import { withPlanningConsent } from '../lib/planningConsent';
@@ -23,22 +25,31 @@ async function checked(response: Response, fallback: string) {
 }
 
 export async function createAndStartTrip(
-  input: Omit<SearchInput, 'travelerType' | 'budget'> & { travelerType?: string; budget?: string },
+  input: Omit<SearchInput, 'travelerType' | 'budget'> & {
+    travelerType?: string;
+    budget?: string;
+    flightConsent?: boolean;
+  },
   onCreated: (id: string) => void,
   signal?: AbortSignal
 ): Promise<string> {
   // Freeze the brief shown when the user chose to plan; never read mutable draft
   // state after an asynchronous consent dialog.
+  const flightPreferences = resolveFlightSearchPreferences({
+    travelers: input.travelers,
+    originCity: input.originCity,
+    originAirport: input.originAirport,
+    flightConsent: input.flightConsent,
+  });
   const body = JSON.stringify({
     destination: input.destination,
     start_date: input.startDate,
     end_date: input.endDate,
     travelers: input.travelers,
-    budget: input.budget || 'moderate',
+    budget: normalizeBudgetTier(input.budget) ?? 'moderate',
     preferences: {
       travelerType: input.travelerType,
-      originCity: input.originCity,
-      originAirport: input.originAirport,
+      ...flightPreferences,
       vibes: input.vibes,
       requirements: readTravelerRequirements(input.requirements),
     },

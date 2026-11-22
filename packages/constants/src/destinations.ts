@@ -197,6 +197,25 @@ export const popularDestinations: Destination[] = [
   },
 ];
 
+export const CANONICAL_TRAVEL_VIBE_IDS = [
+  'adventure',
+  'relaxation',
+  'culture',
+  'foodie',
+  'nightlife',
+  'nature',
+  'romantic',
+  'family',
+  'budget',
+  'luxury',
+  'solo',
+  'wellness',
+  'shopping',
+  'photography',
+] as const;
+
+export type TravelVibeId = (typeof CANONICAL_TRAVEL_VIBE_IDS)[number];
+
 export interface TravelVibe {
   id: string;
   label: string;
@@ -216,7 +235,44 @@ export const travelVibes: TravelVibe[] = [
   { id: 'luxury', label: 'Luxury', emoji: '✨' },
   { id: 'solo', label: 'Solo', emoji: '🎒' },
   { id: 'wellness', label: 'Wellness', emoji: '🧘' },
+  { id: 'shopping', label: 'Shopping', emoji: '🛍️' },
+  { id: 'photography', label: 'Photography', emoji: '📷' },
 ];
+
+export const VIBE_ALIASES: Record<string, TravelVibeId> = {
+  cultural: 'culture',
+};
+
+const TRAVEL_VIBE_SET = new Set<string>(CANONICAL_TRAVEL_VIBE_IDS);
+
+export function normalizeVibeId(value: unknown): TravelVibeId | undefined {
+  if (typeof value !== 'string') return undefined;
+  const key = value.trim().toLowerCase();
+  if (!key) return undefined;
+  const aliased = Object.hasOwn(VIBE_ALIASES, key) ? VIBE_ALIASES[key] : key;
+  return TRAVEL_VIBE_SET.has(aliased) ? (aliased as TravelVibeId) : undefined;
+}
+
+export function normalizeVibeList(values: readonly unknown[], max = 5): TravelVibeId[] {
+  if (typeof max !== 'number' || Number.isNaN(max) || max <= 0) {
+    return [];
+  }
+  const limit = max === Infinity ? Infinity : Math.floor(max);
+  if (limit <= 0) {
+    return [];
+  }
+  const out: TravelVibeId[] = [];
+  const seen = new Set<TravelVibeId>();
+  for (const raw of values) {
+    if (out.length >= limit) break;
+    const id = normalizeVibeId(raw);
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
+}
 
 export interface TravelerTypeOption {
   id: string;

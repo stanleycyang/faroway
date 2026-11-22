@@ -113,7 +113,12 @@ test("requires explicit handoff consent and handles Escape with restored focus",
   await button.click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
-    page.getByText("Continuing does not reserve", { exact: false }),
+    page.getByText("Opens Viator in a new tab", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("We may earn a commission at no extra cost to you.", {
+      exact: false,
+    }),
   ).toBeVisible();
   expect(posts).toHaveLength(0);
   await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
@@ -131,9 +136,22 @@ test("requires explicit handoff consent and handles Escape with restored focus",
 
 test("navigates only after a successful saved handoff", async ({ page }) => {
   const posts = await mockHistory(page);
+  let openedPopup: Page | null = null;
+  page.once("popup", (popup) => {
+    openedPopup = popup;
+  });
   await page.getByRole("button", { name: "Review experience" }).click();
   await page.getByRole("button", { name: "Continue to Viator" }).click();
-  await expect(page).toHaveURL(/https:\/\/www.viator.com\/tours\//);
+  await expect
+    .poll(() =>
+      /https:\/\/www\.viator\.com\/tours\//.test(
+        openedPopup ? openedPopup.url() : page.url(),
+      ),
+    )
+    .toBe(true);
+  if (openedPopup) {
+    await expect(page).toHaveURL(fixtureUrl + "/");
+  }
   expect(posts).toHaveLength(1);
   expect(posts[0]).toMatchObject({
     activityId: "activity_v_123P1",

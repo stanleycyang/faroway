@@ -444,6 +444,77 @@ test('fallback provenance survives saved and cached activity/meal normalization'
   }
 });
 
+test('does not fabricate opentable on meals and normalizes hotel/activity/transport partners', () => {
+  const { transformApiHotel } = require('../../lib/itineraryNormalization');
+  const days = transformItineraryDays([
+    {
+      dayNumber: 1,
+      transport: {
+        type: 'flight',
+        provider: 'Flight',
+        affiliatePartner: 'retired-provider',
+        bookingUrl: 'https://links.duffel.com/offer/1',
+        departure: {},
+        arrival: {},
+      },
+      morning: {
+        activities: [
+          {
+            name: 'Louvre',
+            affiliatePartner: 'gyg',
+            bookingUrl: 'https://www.getyourguide.com/paris-l16/',
+          },
+        ],
+        meals: [
+          { name: 'Unlinked Cafe' },
+          { name: 'Tripadvisor Bistro', reservationUrl: 'https://www.tripadvisor.com/Restaurant' },
+          { name: 'OpenTable Spot', reservationUrl: 'https://www.opentable.com/r/spot' },
+        ],
+      },
+    },
+  ]);
+
+  expect(days[0].transport?.affiliatePartner).toBe('retired-provider');
+  expect(days[0].activities.find((a) => a.title === 'Louvre')?.affiliatePartner).toBe(
+    'getyourguide'
+  );
+  expect(
+    days[0].activities.find((a) => a.title === 'Unlinked Cafe')?.affiliatePartner
+  ).toBeUndefined();
+  expect(days[0].activities.find((a) => a.title === 'Tripadvisor Bistro')?.affiliatePartner).toBe(
+    'tripadvisor'
+  );
+  expect(days[0].activities.find((a) => a.title === 'OpenTable Spot')?.affiliatePartner).toBe(
+    'opentable'
+  );
+
+  const stay22Hotel = transformApiHotel({
+    name: 'Stay22 Hotel',
+    bookingUrl: 'https://www.stay22.com/embed/gm?aid=1',
+  });
+  expect(stay22Hotel?.affiliatePartner).toBe('stay22');
+
+  const bookingHotel = transformApiHotel({
+    name: 'Booking Hotel',
+    affiliatePartner: 'bookingcom',
+    bookingUrl: 'https://www.booking.com/hotel/fr/example.html',
+  });
+  expect(bookingHotel?.affiliatePartner).toBe('booking');
+
+  const bookingInfoHotel = transformApiHotel({
+    name: 'BookingInfo Hotel',
+    bookingInfo: {
+      affiliateId: 'stay22',
+      bookingUrl: 'https://www.stay22.com/embed/gm?aid=2',
+    },
+  });
+  expect(bookingInfoHotel?.bookingUrl).toBe('https://www.stay22.com/embed/gm?aid=2');
+  expect(bookingInfoHotel?.affiliatePartner).toBe('stay22');
+
+  const unlinkedHotel = transformApiHotel({ name: 'Unlinked Hotel' });
+  expect(unlinkedHotel?.bookingUrl).toBeUndefined();
+});
+
 test('transformApiHotel coerces string and negative coordinates to finite numbers for offline cache safety', () => {
   const hotel = transformApiHotel({
     id: 'hotel-coords',

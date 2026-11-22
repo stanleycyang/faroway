@@ -19,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from './AuthProvider';
 import { isRequestCanceled } from '../lib/authProviders';
 import { openSafeHttpsUrl } from '../lib/openExternalUrl';
-import { colors, borderRadius, shadows } from '../constants/theme';
+import { colors, borderRadius, shadows, fontFamilies } from '../constants/theme';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 type AuthGateTrigger = 'save' | 'book' | 'share' | 'access' | 'general' | 'generate';
@@ -219,7 +219,7 @@ export function AuthGate({
                     <Ionicons
                       name={benefit.icon as React.ComponentProps<typeof Ionicons>['name']}
                       size={20}
-                      color={colors.primary[500]}
+                      color={colors.action.primary}
                     />
                     <Text style={styles.benefitText}>{benefit.text}</Text>
                   </View>
@@ -366,10 +366,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  emoji: {
-    fontSize: 36,
-  },
   title: {
+    fontFamily: fontFamilies.display,
     fontSize: 28,
     fontWeight: '700',
     color: '#182B31',
@@ -449,12 +447,12 @@ const styles = StyleSheet.create({
   },
   terms: {
     fontSize: 12,
-    color: colors.surface[500],
+    color: colors.surface[600],
     textAlign: 'center',
     lineHeight: 18,
   },
   termsLink: {
-    color: colors.primary[400],
+    color: colors.action.primary,
     fontWeight: '600',
   },
 });

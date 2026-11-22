@@ -1,22 +1,60 @@
 "use client";
 
 import { useState } from "react";
+import {
+  Briefcase,
+  Building2,
+  Mountain,
+  Sparkles,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  isAllowedAffiliateUrl,
+  itemTypeForAffiliatePartner,
+} from "@faroway/constants";
 import { useHydrated } from "@/hooks/useHydrated";
 import { getAllGuides, type DestinationGuide } from "@/lib/destination-guides";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import {
-  generatePackingList,
   TRIP_TYPES,
-  type TripType,
+  generatePackingList,
   type PackingCategory,
+  type TripType,
 } from "@/lib/tools/packing-data";
 import { PackingChecklist } from "./PackingChecklist";
 import { ToolCTA } from "@/components/tools/ToolCTA";
 import { RelatedTools } from "@/components/tools/RelatedTools";
 import { ToolHero } from "@/components/tools/ToolHero";
+import {
+  ToolAffiliateCard,
+  type ToolAffiliateAction,
+} from "@/components/tools/ToolAffiliateCard";
 
 const guides = getAllGuides();
 
-export function PackingListClient() {
+const TRIP_TYPE_ICONS: Record<TripType, LucideIcon> = {
+  beach: Sun,
+  city: Building2,
+  hiking: Mountain,
+  business: Briefcase,
+  wellness: Sparkles,
+};
+
+export interface PackingAffiliateBundle {
+  esim: AffiliateLinkResult;
+  insurance: AffiliateLinkResult;
+  carRental: AffiliateLinkResult;
+  visa: AffiliateLinkResult;
+}
+
+export interface PackingListClientProps {
+  essentialsBySlug?: Record<string, PackingAffiliateBundle>;
+}
+
+export function PackingListClient({
+  essentialsBySlug,
+}: PackingListClientProps = {}) {
   const hydrated = useHydrated();
   const [destination, setDestination] = useState<DestinationGuide | null>(null);
   const [tripType, setTripType] = useState<TripType | null>(null);
@@ -37,23 +75,59 @@ export function PackingListClient() {
   };
 
   if (packingList && destination && tripType) {
+    const selectedType = TRIP_TYPES.find((t) => t.id === tripType);
+    const SelectedIcon = TRIP_TYPE_ICONS[tripType] ?? Sparkles;
+    const bundle = essentialsBySlug?.[destination.slug];
+    const actions: ToolAffiliateAction[] = [];
+
+    if (bundle) {
+      if (bundle.esim.url && isAllowedAffiliateUrl(bundle.esim.url)) {
+        actions.push({
+          key: `tool-packing-${destination.slug}-esim`,
+          link: bundle.esim,
+          itemType: itemTypeForAffiliatePartner(bundle.esim.partner),
+        });
+      }
+      if (bundle.insurance.url && isAllowedAffiliateUrl(bundle.insurance.url)) {
+        actions.push({
+          key: `tool-packing-${destination.slug}-insurance`,
+          link: bundle.insurance,
+          itemType: itemTypeForAffiliatePartner(bundle.insurance.partner),
+        });
+      }
+      const secondaryLink =
+        tripType === "hiking" || tripType === "beach"
+          ? bundle.carRental
+          : bundle.visa;
+      if (secondaryLink.url && isAllowedAffiliateUrl(secondaryLink.url)) {
+        actions.push({
+          key: `tool-packing-${destination.slug}-${secondaryLink.partner}`,
+          link: secondaryLink,
+          itemType: itemTypeForAffiliatePartner(secondaryLink.partner),
+        });
+      }
+    }
+
     return (
       <main className="min-h-screen">
         <div className="max-w-2xl mx-auto px-6 pt-28 lg:pt-32 pb-16">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="font-editorial text-2xl font-bold text-slate-900">
                 Packing for {destination.name}
               </h1>
-              <p className="text-sm text-slate-500">
-                {TRIP_TYPES.find((t) => t.id === tripType)?.emoji}{" "}
-                {TRIP_TYPES.find((t) => t.id === tripType)?.label} trip
+              <p className="text-sm text-slate-600 flex items-center gap-1.5 mt-0.5">
+                <SelectedIcon
+                  className="w-4 h-4 text-[#0F766E]"
+                  aria-hidden="true"
+                />
+                <span>{selectedType?.label} trip</span>
               </p>
             </div>
             <button
               type="button"
               onClick={handleReset}
-              className="text-sm text-primary font-medium hover:underline print-hidden"
+              className="text-sm text-primary-700 font-semibold hover:underline print-hidden"
             >
               New list
             </button>
@@ -63,6 +137,18 @@ export function PackingListClient() {
             categories={packingList}
             storageKey={`packing-${destination.slug}-${tripType}`}
           />
+
+          {actions.length > 0 && (
+            <div className="mt-10 print-hidden">
+              <ToolAffiliateCard
+                title={`Pre-trip essentials for ${destination.name}`}
+                subtitle={`Check off your eSIM data, travel protection, and ${tripType === "hiking" || tripType === "beach" ? "rental car" : "entry requirements"} before departure.`}
+                placement="packing_essentials"
+                campaign={`tool-packing-${destination.slug}`}
+                actions={actions}
+              />
+            </div>
+          )}
         </div>
 
         <div className="print-hidden">
@@ -103,7 +189,7 @@ export function PackingListClient() {
               const guide = guides.find((g) => g.slug === e.target.value);
               setDestination(guide || null);
             }}
-            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-700/30 focus:border-primary-700"
           >
             <option value="">Select a destination</option>
             {guides.map((g) => (
@@ -120,25 +206,37 @@ export function PackingListClient() {
             What type of trip?
           </legend>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {TRIP_TYPES.map((type) => (
-              <button
-                type="button"
-                key={type.id}
-                disabled={!hydrated}
-                onClick={() => setTripType(type.id)}
-                aria-pressed={tripType === type.id}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  tripType === type.id
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-slate-200 hover:border-primary/30"
-                }`}
-              >
-                <span className="text-2xl block mb-1">{type.emoji}</span>
-                <span className="text-sm font-medium text-slate-900">
-                  {type.label}
-                </span>
-              </button>
-            ))}
+            {TRIP_TYPES.map((type) => {
+              const Icon = TRIP_TYPE_ICONS[type.id] ?? Sparkles;
+              return (
+                <button
+                  type="button"
+                  key={type.id}
+                  disabled={!hydrated}
+                  onClick={() => setTripType(type.id)}
+                  aria-pressed={tripType === type.id}
+                  className={`p-4 rounded-xl border-2 text-center transition-all bg-white ${
+                    tripType === type.id
+                      ? "border-primary-700 bg-primary-50 shadow-sm"
+                      : "border-[#DCE5E3] hover:border-primary-700/40"
+                  }`}
+                >
+                  <div className="flex justify-center mb-1.5">
+                    <Icon
+                      className={`w-6 h-6 ${
+                        tripType === type.id
+                          ? "text-primary-700"
+                          : "text-[#143D46]"
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900">
+                    {type.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </fieldset>
 
@@ -147,7 +245,7 @@ export function PackingListClient() {
           type="button"
           onClick={handleGenerate}
           disabled={!hydrated || !destination || !tripType}
-          className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary to-amber-500 text-white font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          className="w-full py-3.5 rounded-full bg-primary-700 hover:bg-primary-800 text-white font-semibold shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Generate My Packing List
         </button>

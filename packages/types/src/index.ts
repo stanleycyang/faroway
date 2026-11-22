@@ -148,6 +148,24 @@ export type TravelStyle =
 
 export type BudgetLevel = "budget" | "moderate" | "luxury";
 
+export type BudgetTierLabel = "Budget" | "Moderate" | "Luxury";
+
+export type TravelVibeId =
+  | "adventure"
+  | "relaxation"
+  | "culture"
+  | "foodie"
+  | "nightlife"
+  | "nature"
+  | "romantic"
+  | "family"
+  | "budget"
+  | "luxury"
+  | "solo"
+  | "wellness"
+  | "shopping"
+  | "photography";
+
 export type TravelerType =
   | "solo"
   | "couple"
@@ -690,8 +708,58 @@ export interface SearchStatusResponse {
 // Affiliate Types
 // =============================================================================
 
+export type AffiliatePartnerId =
+  | "viator"
+  | "getyourguide"
+  | "travelpayouts"
+  | "stay22"
+  | "booking"
+  | "expedia"
+  | "safetywing"
+  | "airalo"
+  | "klook"
+  | "discovercars"
+  | "hostelworld"
+  | "duffel"
+  | "tripadvisor"
+  | "opentable"
+  | "skyscanner"
+  | "ivisa"
+  | "wise";
+
+export type AffiliateVertical =
+  | "hotels"
+  | "activities"
+  | "flights"
+  | "dining"
+  | "cars"
+  | "insurance"
+  | "esim"
+  | "visas"
+  | "finance"
+  | "multi";
+
+export type AffiliateClickItemType =
+  | "hotel"
+  | "activity"
+  | "restaurant"
+  | "flight"
+  | "transport";
+
+export type AffiliateClickSource =
+  | "search_results"
+  | "trip_view"
+  | "itinerary"
+  | "email"
+  | "shared_trip"
+  | "blog"
+  | "destination_guide"
+  | "tool"
+  | "booking_checklist"
+  | "on_trip";
+
 export interface TrackClickParams {
-  itemType: "hotel" | "activity" | "restaurant" | "flight" | "transport";
+  itemType: AffiliateClickItemType;
   itemId: string;
   itemName: string;
   affiliatePartner: string;
@@ -700,7 +768,10 @@ export interface TrackClickParams {
   tripId?: string;
   price?: number;
   currency?: string;
-  source?: "search_results" | "trip_view" | "itinerary" | "email";
+  source?: AffiliateClickSource;
+  clickId?: string;
+  placement?: string;
+  campaign?: string;
 }
 
 export interface TrackClickResponse {

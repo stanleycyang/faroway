@@ -74,7 +74,7 @@ const hotel = z
     reviewCount: amount,
     amenities: z.array(text),
     images: z.array(text),
-    bookingUrl: text,
+    bookingUrl: optionalText,
     location: z
       .object({ name: text, address: text, lat: amount, lng: amount, neighborhood: optionalText })
       .passthrough(),

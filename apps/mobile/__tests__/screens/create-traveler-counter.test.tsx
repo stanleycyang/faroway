@@ -13,7 +13,15 @@ jest.mock('../../stores/userStore', () => ({
     { getState: () => ({ user: mockUser, accountRevision: mockRevision }) }
   ),
 }));
-let mockDraft: { travelers: number; destination?: string; country?: string } = { travelers: 2 };
+let mockDraft: {
+  travelers: number;
+  destination?: string;
+  country?: string;
+  originCity?: string;
+  originAirport?: string;
+  flightConsent?: boolean;
+  budget?: string;
+} = { travelers: 2 };
 const mockSetDraft = jest.fn((changes: Partial<typeof mockDraft>) => {
   mockDraft = { ...mockDraft, ...changes };
 });
@@ -42,6 +50,7 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: 'Gradient' }));
 jest.mock('../../components/ui', () => ({
   Button: 'Button',
+  Input: 'Input',
   PlacesAutocomplete: 'PlacesAutocomplete',
   DateRangePicker: 'DateRangePicker',
   VibeSelector: 'VibeSelector',
@@ -272,5 +281,102 @@ it('failed receipt read preserves the draft and permits a later review', async (
     });
     mockUser = null;
     mockRevision = 0;
+  }
+});
+
+it('captures departure city, uppercases airport code, shows IATA warning, toggles flight consent, and renders Moderate budget', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  mockDraft = { travelers: 2 };
+  mockSetDraft.mockClear();
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripScreen />);
+    });
+
+    const rendered = JSON.stringify(renderer.toJSON());
+    expect(rendered).toContain('Budget');
+    expect(rendered).toContain('Moderate');
+    expect(rendered).toContain('Luxury');
+    expect(rendered).not.toContain('"Comfort"');
+    expect(rendered).toContain('Flight search shares your origin');
+
+    const cityInput = renderer.root.findByProps({ label: 'Departure city (optional)' });
+    await act(async () => cityInput.props.onChangeText('San Francisco'));
+    expect(mockDraft.originCity).toBe('San Francisco');
+
+    const airportInput = renderer.root.findByProps({ label: 'Departure airport (optional)' });
+    await act(async () => airportInput.props.onChangeText('sf'));
+    expect(mockDraft.originAirport).toBe('SF');
+
+    await act(async () => {
+      renderer.update(<CreateTripScreen />);
+    });
+    expect(
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.error
+    ).toContain('3-letter IATA');
+
+    const consentCheckbox = renderer.root.findByProps({
+      accessibilityLabel: 'Include flight options',
+    });
+    await act(async () => consentCheckbox.props.onPress());
+    expect(mockDraft.flightConsent).toBe(true);
+  } finally {
+    await act(async () => renderer?.unmount());
+    mockDraft = { travelers: 2 };
+  }
+});
+
+it('disables Generate itinerary when flightConsent=true and origin is missing or airportCodeError is set, then enables once valid', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  mockDraft = {
+    travelers: 2,
+    destination: 'Tokyo',
+    country: 'Japan',
+    startDate: '2099-07-01',
+    endDate: '2099-07-05',
+    flightConsent: true,
+  } as typeof mockDraft & { startDate: string; endDate: string };
+  mockSetDraft.mockClear();
+
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripScreen />);
+    });
+
+    const getGenerateButton = () => renderer.root.findByProps({ title: 'Generate itinerary' });
+
+    // Missing both originCity and originAirport with flightConsent=true disables submit
+    expect(getGenerateButton().props.disabled).toBe(true);
+
+    // Invalid 2-letter airport code keeps submit disabled via airportCodeError
+    await act(async () => {
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.onChangeText('sf');
+    });
+    await act(async () => {
+      renderer.update(<CreateTripScreen />);
+    });
+    expect(
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.error
+    ).toContain('3-letter IATA');
+    expect(getGenerateButton().props.disabled).toBe(true);
+
+    // Completing valid 3-letter IATA code enables Generate itinerary
+    await act(async () => {
+      renderer.root
+        .findByProps({ label: 'Departure airport (optional)' })
+        .props.onChangeText('sfo');
+    });
+    await act(async () => {
+      renderer.update(<CreateTripScreen />);
+    });
+    expect(
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.error
+    ).toBeUndefined();
+    expect(getGenerateButton().props.disabled).toBe(false);
+  } finally {
+    await act(async () => renderer?.unmount());
+    mockDraft = { travelers: 2 };
   }
 });

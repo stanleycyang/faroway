@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { usePromptStore } from '../stores/promptStore';
 import { colors, borderRadius, shadows } from '../constants/theme';
 import { requestStoreReview } from '../lib/storeReview';
@@ -50,7 +51,7 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
           <View style={styles.content}>
             {/* Icon */}
             <View style={styles.iconContainer}>
-              <Text style={styles.emoji}>⭐</Text>
+              <Ionicons name="star" size={32} color="#F59E0B" />
             </View>
 
             {/* Title & Subtitle */}
@@ -131,9 +132,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  emoji: {
-    fontSize: 36,
-  },
   title: {
     fontSize: 28,
     fontWeight: '800',
@@ -143,14 +141,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: colors.surface[400],
+    color: colors.surface[300],
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
   rateButton: {
     width: '100%',
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     alignItems: 'center',

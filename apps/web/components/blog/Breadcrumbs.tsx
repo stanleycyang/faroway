@@ -38,26 +38,28 @@ export function Breadcrumbs({
       />
       <nav
         aria-label="Breadcrumb"
-        className={`text-sm ${isDark ? "text-white/50" : "text-gray-500"} mb-6`}
+        className={`text-sm ${isDark ? "text-white/80" : "text-slate-600"} mb-6`}
       >
         <ol className="flex flex-wrap items-center gap-1.5">
           {items.map((item, i) => (
             <li key={i} className="flex items-center gap-1.5">
               {i > 0 && (
-                <span className={isDark ? "text-white/30" : "text-gray-600"}>
+                <span className={isDark ? "text-white/60" : "text-slate-600"}>
                   /
                 </span>
               )}
               {item.href ? (
                 <Link
                   href={item.href}
-                  className="hover:text-primary transition-colors"
+                  className={`${
+                    isDark ? "hover:text-white" : "hover:text-primary-700"
+                  } transition-colors`}
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
-                  className={`${isDark ? "text-white/80" : "text-slate-900"} font-medium`}
+                  className={`${isDark ? "text-white" : "text-slate-900"} font-medium`}
                 >
                   {item.label}
                 </span>

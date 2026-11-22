@@ -35,16 +35,32 @@ import {
   ShoppingBag,
   Flower2,
   Camera,
+  Wallet,
+  Plane,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { format } from "date-fns";
 import { destinations as destinationCatalog } from "@/lib/planner-destination-catalog";
 import {
+  BUDGET_LABELS,
+  BUDGET_TIERS,
+  FLIGHT_SEARCH_CONSENT_VERSION,
+  FLIGHT_SEARCH_DISCLOSURE,
   IMAGE_PATHS,
   destinationCoverCatalog,
   getImageUrl,
-  validateHotelSearchDetails,
   hotelGuestCounts,
+  normalizeBudgetTier,
+  normalizeVibeId,
+  normalizeVibeList,
+  parseHotelChildrenAges,
+  travelVibes,
+  validateFlightSearchDetails,
+  validateHotelSearchDetails,
+  type BudgetTierId,
+  type FlightSearchDetails,
   type HotelSearchDetails,
+  type TravelVibeId,
 } from "@faroway/constants";
 import { HotelSearchFields } from "@/components/trips/HotelSearchFields";
 import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
@@ -74,7 +90,6 @@ import {
   type AppliedKickoffSummary,
 } from "@/components/create/DreamTripPromptBar";
 import {
-  summarizeParsedDreamTrip,
   type ParsedDreamTrip,
   type VibeId,
   type DietaryOption,
@@ -112,6 +127,25 @@ const allCatalogCovers = destinationCoverCatalog.map(
   }),
 );
 
+const draftRestoreCatalog = [
+  ...destinations,
+  ...allCatalogCovers
+    .filter(
+      (cover) =>
+        !destinations.some(
+          (d) =>
+            d.id === cover.slug ||
+            d.name.toLowerCase() === cover.name.toLowerCase(),
+        ),
+    )
+    .map((cover) => ({
+      id: cover.slug,
+      name: cover.name,
+      lat: 0,
+      lng: 0,
+    })),
+];
+
 const allAutocompleteDestinations = [
   ...destinations.map((d) => ({ name: d.name, country: d.country })),
   ...allCatalogCovers
@@ -142,11 +176,7 @@ const ACCESSIBILITY_OPTIONS = [
 
 type AccessibilityOptionId = (typeof ACCESSIBILITY_OPTIONS)[number]["id"];
 
-const budgetOptions = [
-  { id: "budget", label: "Budget", description: "Thoughtful value" },
-  { id: "moderate", label: "Comfort", description: "A little more room" },
-  { id: "luxury", label: "Luxury", description: "Exceptional stays" },
-] as const;
+const budgetOptions = BUDGET_TIERS;
 
 const travelerTypes = [
   { id: "solo", label: "Solo", icon: UserRound },
@@ -156,18 +186,129 @@ const travelerTypes = [
   { id: "business", label: "Business", icon: Briefcase },
 ];
 
-const vibes = [
-  { id: "adventure", label: "Adventure", icon: Mountain },
-  { id: "relaxation", label: "Relaxation", icon: Palmtree },
-  { id: "cultural", label: "Cultural", icon: Landmark },
-  { id: "foodie", label: "Foodie", icon: Utensils },
-  { id: "nightlife", label: "Nightlife", icon: Music },
-  { id: "romantic", label: "Romantic", icon: Heart },
-  { id: "nature", label: "Nature", icon: Trees },
-  { id: "shopping", label: "Shopping", icon: ShoppingBag },
-  { id: "wellness", label: "Wellness", icon: Flower2 },
-  { id: "photography", label: "Photography", icon: Camera },
-];
+const VIBE_ICONS: Record<
+  TravelVibeId,
+  React.ComponentType<{ className?: string }>
+> = {
+  adventure: Mountain,
+  relaxation: Palmtree,
+  culture: Landmark,
+  foodie: Utensils,
+  nightlife: Music,
+  nature: Trees,
+  romantic: Heart,
+  family: Users,
+  budget: Wallet,
+  luxury: Sparkles,
+  solo: UserRound,
+  wellness: Flower2,
+  shopping: ShoppingBag,
+  photography: Camera,
+};
+
+const vibes = travelVibes.map((vibe) => ({
+  id: vibe.id as TravelVibeId,
+  label: vibe.label,
+  icon: VIBE_ICONS[vibe.id as TravelVibeId] ?? Compass,
+}));
+
+const PARSER_VIBE_MAP: Partial<Record<TravelVibeId, VibeId>> = {
+  adventure: "adventure",
+  relaxation: "relaxation",
+  culture: "cultural",
+  foodie: "foodie",
+  nightlife: "nightlife",
+  romantic: "romantic",
+  nature: "nature",
+  shopping: "shopping",
+  wellness: "wellness",
+  photography: "photography",
+};
+
+function toMemoryVibes(values: readonly string[]): VibeId[] {
+  return normalizeVibeList(values, 5)
+    .map((id) => PARSER_VIBE_MAP[id])
+    .filter((id): id is VibeId => Boolean(id));
+}
+
+const PROMPT_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+const PROMPT_GROUP_LABELS: Record<
+  NonNullable<ParsedDreamTrip["travelerType"]>,
+  string
+> = {
+  solo: "Solo",
+  couple: "Couple",
+  family: "Family",
+  friends: "Friends",
+  business: "Business",
+};
+
+function getCanonicalVibeLabel(raw: string): string {
+  const canonical = normalizeVibeId(raw);
+  if (!canonical) return raw;
+  return travelVibes.find((v) => v.id === canonical)?.label ?? raw;
+}
+
+function formatParsedDreamTripChips(parsed: ParsedDreamTrip): string[] {
+  const summary: string[] = [];
+  if (parsed.destination) {
+    summary.push(parsed.destination.name);
+  }
+  if (parsed.startDate && parsed.endDate) {
+    const [, sm, sd] = parsed.startDate.split("-").map(Number);
+    const [, em, ed] = parsed.endDate.split("-").map(Number);
+    const startMonth = PROMPT_MONTH_NAMES[sm - 1];
+    const endMonth = PROMPT_MONTH_NAMES[em - 1];
+    if (startMonth && endMonth && Number.isFinite(sd) && Number.isFinite(ed)) {
+      const startLabel = `${startMonth.slice(0, 3)} ${sd}`;
+      const endLabel = sm === em ? `${ed}` : `${endMonth.slice(0, 3)} ${ed}`;
+      summary.push(`${startLabel}–${endLabel}`);
+    }
+  }
+  if (parsed.travelers !== undefined || parsed.travelerType) {
+    const parts: string[] = [];
+    if (parsed.travelers !== undefined) parts.push(`${parsed.travelers}`);
+    if (parsed.travelerType)
+      parts.push(PROMPT_GROUP_LABELS[parsed.travelerType]);
+    summary.push(parts.join(" · "));
+  }
+  if (parsed.budget) {
+    const budgetId = normalizeBudgetTier(parsed.budget) ?? "moderate";
+    summary.push(BUDGET_LABELS[budgetId]);
+  }
+  if (parsed.vibes.length > 0) {
+    summary.push(parsed.vibes.map((v) => getCanonicalVibeLabel(v)).join(", "));
+  }
+  if (parsed.dietaryPreferences.length > 0) {
+    summary.push(parsed.dietaryPreferences.join(", "));
+  }
+  if (parsed.allergies.length > 0) {
+    summary.push(`Allergies: ${parsed.allergies.join(", ")}`);
+  }
+  if (parsed.accessibility.length > 0) {
+    summary.push(
+      `${parsed.accessibility.length} accessibility ${parsed.accessibility.length === 1 ? "need" : "needs"}`,
+    );
+  }
+  if (parsed.mobilityNotes) {
+    summary.push(parsed.mobilityNotes);
+  }
+  return summary;
+}
 
 type SelectedPlace = PlannerDestination;
 
@@ -181,7 +322,12 @@ interface StoredCreateDraft {
   showAdvanced: boolean;
   hotelSearch?: HotelSearchDetails | null;
   hotelAgeText?: string[];
-  budget?: (typeof budgetOptions)[number]["id"];
+  originCity?: string;
+  originAirport?: string;
+  flightConsent?: boolean;
+  flightChildrenCount?: number;
+  flightAgeText?: string;
+  budget?: BudgetTierId;
   dietaryPreferences?: string[];
   allergiesText?: string;
   accessibility?: AccessibilityOptionId[];
@@ -195,13 +341,18 @@ interface PlannerUndoSnapshot {
   endDate: Date | undefined;
   travelers: number;
   travelerType: string;
-  budget: (typeof budgetOptions)[number]["id"];
+  budget: BudgetTierId;
   selectedVibes: string[];
   dietaryPreferences: string[];
   allergiesText: string;
   accessibility: AccessibilityOptionId[];
   mobilityNotes: string;
   showAdvanced: boolean;
+  originCity: string;
+  originAirport: string;
+  flightConsent: boolean;
+  flightChildrenCount: number;
+  flightAgeText: string;
 }
 
 function startOfLocalToday(): Date {
@@ -322,9 +473,13 @@ function CreateTripPlanner({
     null,
   );
   const [hotelAgeText, setHotelAgeText] = useState<string[]>([]);
+  const [originCity, setOriginCity] = useState("");
+  const [originAirport, setOriginAirport] = useState("");
+  const [flightConsent, setFlightConsent] = useState(false);
+  const [flightChildrenCount, setFlightChildrenCount] = useState(0);
+  const [flightAgeText, setFlightAgeText] = useState("");
   const [travelers, setTravelers] = useState(2);
-  const [budget, setBudget] =
-    useState<(typeof budgetOptions)[number]["id"]>("moderate");
+  const [budget, setBudget] = useState<BudgetTierId>("moderate");
   const [travelerType, setTravelerType] = useState("couple");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
@@ -457,7 +612,9 @@ function CreateTripPlanner({
           ? restoredEnd
           : undefined;
 
-      setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
+      setSelectedPlace(
+        plannerDestination(draft.selectedPlace, draftRestoreCatalog),
+      );
       if (validStart) {
         setStartDate(validStart);
         if (validEnd) {
@@ -481,25 +638,31 @@ function CreateTripPlanner({
         setTravelerType(draft.travelerType);
       }
       if (Array.isArray(draft.selectedVibes)) {
-        setSelectedVibes(
-          [
-            ...new Set(
-              draft.selectedVibes.filter(
-                (value): value is string =>
-                  typeof value === "string" &&
-                  vibes.some((vibe) => vibe.id === value),
-              ),
-            ),
-          ].slice(0, 5),
-        );
+        setSelectedVibes(normalizeVibeList(draft.selectedVibes, 5));
+      }
+      const restoredBudget = normalizeBudgetTier(draft.budget);
+      if (restoredBudget) setBudget(restoredBudget);
+      setShowAdvanced(draft.showAdvanced === true);
+      if (typeof draft.originCity === "string") {
+        setOriginCity(draft.originCity.slice(0, 200));
+      }
+      if (typeof draft.originAirport === "string") {
+        setOriginAirport(draft.originAirport.trim().toUpperCase().slice(0, 10));
+      }
+      if (typeof draft.flightConsent === "boolean") {
+        setFlightConsent(draft.flightConsent);
       }
       if (
-        draft.budget === "budget" ||
-        draft.budget === "moderate" ||
-        draft.budget === "luxury"
-      )
-        setBudget(draft.budget);
-      setShowAdvanced(draft.showAdvanced === true);
+        typeof draft.flightChildrenCount === "number" &&
+        Number.isInteger(draft.flightChildrenCount) &&
+        draft.flightChildrenCount >= 0 &&
+        draft.flightChildrenCount <= 49
+      ) {
+        setFlightChildrenCount(draft.flightChildrenCount);
+      }
+      if (typeof draft.flightAgeText === "string") {
+        setFlightAgeText(draft.flightAgeText.slice(0, 200));
+      }
       if (Array.isArray(draft.dietaryPreferences)) {
         setDietaryPreferences(
           [
@@ -558,45 +721,45 @@ function CreateTripPlanner({
               guide.name.toLowerCase() === normalized,
           )
         : undefined;
-      setSelectedPlace(
-        recommended
-          ? {
-              name: recommended.name,
-              lat: recommended.lat,
-              lng: recommended.lng,
-              placeId: recommended.id,
-              isRecommended: true,
-              source: "catalog",
-            }
-          : guideMatch
-            ? {
-                name: guideMatch.name,
-                lat: 0,
-                lng: 0,
-                placeId: "",
-                isRecommended: false,
-                source: "user",
-              }
-            : {
-                name: requestedDestination
-                  .replace(/-/g, " ")
-                  .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-                lat: 0,
-                lng: 0,
-                placeId: "",
-                isRecommended: false,
-                source: "user",
-              },
-      );
+      if (recommended) {
+        setSelectedPlace({
+          name: recommended.name,
+          lat: recommended.lat,
+          lng: recommended.lng,
+          placeId: recommended.id,
+          isRecommended: true,
+          source: "catalog",
+        });
+      } else if (guideMatch) {
+        setSelectedPlace({
+          name: guideMatch.name,
+          lat: 0,
+          lng: 0,
+          placeId: "",
+          isRecommended: false,
+          source: "user",
+        });
+      } else {
+        const cleanedCustomName = requestedDestination
+          .replace(/-/g, " ")
+          .trim()
+          .replace(/\s+/g, " ")
+          .replace(/\b\w/g, (letter) => letter.toUpperCase());
+        if (cleanedCustomName.length >= 1 && cleanedCustomName.length <= 200) {
+          setSelectedPlace({
+            name: cleanedCustomName,
+            lat: 0,
+            lng: 0,
+            placeId: "",
+            isRecommended: false,
+            source: "user",
+          });
+        }
+      }
     }
 
-    const requestedBudget = params.get("budget")?.toLowerCase();
     const validRequestedBudget =
-      requestedBudget === "budget" ||
-      requestedBudget === "moderate" ||
-      requestedBudget === "luxury"
-        ? requestedBudget
-        : null;
+      normalizeBudgetTier(params.get("budget")) ?? null;
     if (validRequestedBudget) {
       setBudget(validRequestedBudget);
     }
@@ -610,17 +773,19 @@ function CreateTripPlanner({
       if (requestedTravelers === 1) setTravelerType("solo");
     }
     const requestedVibes = params.get("vibes");
-    let parsedUrlVibes: string[] = [];
+    let parsedUrlVibes: TravelVibeId[] = [];
     if (requestedVibes) {
-      parsedUrlVibes = [
-        ...new Set(
-          requestedVibes
-            .split(",")
-            .map((v) => v.trim().toLowerCase())
-            .filter((id) => vibes.some((v) => v.id === id)),
-        ),
-      ].slice(0, 5);
+      parsedUrlVibes = normalizeVibeList(requestedVibes.split(","), 5);
       if (parsedUrlVibes.length > 0) setSelectedVibes(parsedUrlVibes);
+    }
+
+    if (loadedMemory.homeAirport) {
+      const trimmedHome = loadedMemory.homeAirport.trim();
+      if (/^[A-Za-z]{3}$/.test(trimmedHome)) {
+        setOriginAirport(trimmedHome.toUpperCase());
+      } else if (trimmedHome) {
+        setOriginCity(trimmedHome.slice(0, 200));
+      }
     }
 
     // Apply saved Traveler Memory defaults without clobbering explicit URL params or drafts.
@@ -645,7 +810,7 @@ function CreateTripPlanner({
         setBudget(merged.budget);
       }
       if (parsedUrlVibes.length === 0 && merged.selectedVibes.length > 0) {
-        setSelectedVibes(merged.selectedVibes);
+        setSelectedVibes(normalizeVibeList(merged.selectedVibes, 5));
       }
       if (merged.dietaryPreferences.length > 0) {
         setDietaryPreferences(merged.dietaryPreferences);
@@ -678,6 +843,11 @@ function CreateTripPlanner({
           showAdvanced,
           hotelSearch,
           hotelAgeText,
+          originCity,
+          originAirport,
+          flightConsent,
+          flightChildrenCount,
+          flightAgeText,
           budget,
           dietaryPreferences,
           allergiesText,
@@ -702,6 +872,11 @@ function CreateTripPlanner({
     showAdvanced,
     hotelSearch,
     hotelAgeText,
+    originCity,
+    originAirport,
+    flightConsent,
+    flightChildrenCount,
+    flightAgeText,
     budget,
     dietaryPreferences,
     allergiesText,
@@ -741,6 +916,48 @@ function CreateTripPlanner({
     );
   };
 
+  const resolvedHotelCounts = hotelSearch
+    ? hotelGuestCounts(hotelSearch)
+    : null;
+  const safeFlightChildrenCount =
+    hotelSearch === null && travelers > 1
+      ? Math.max(0, Math.min(travelers - 1, flightChildrenCount))
+      : 0;
+  const resolvedAdults = resolvedHotelCounts
+    ? resolvedHotelCounts.adults
+    : Math.max(1, travelers - safeFlightChildrenCount);
+  const resolvedChildren = resolvedHotelCounts
+    ? resolvedHotelCounts.children
+    : safeFlightChildrenCount;
+  const resolvedChildAges = resolvedHotelCounts
+    ? hotelSearch!.rooms.flatMap((room) => room.children)
+    : safeFlightChildrenCount > 0
+      ? parseHotelChildrenAges(flightAgeText)
+      : [];
+  const flightSearchPayload: FlightSearchDetails | null = flightConsent
+    ? {
+        childAges: resolvedChildAges,
+        consentVersion: FLIGHT_SEARCH_CONSENT_VERSION,
+      }
+    : null;
+  const originCityTrimmed = originCity.trim();
+  const originAirportTrimmed = originAirport.trim().toUpperCase();
+  const hasInvalidOriginAirport =
+    originAirportTrimmed.length > 0 && !/^[A-Z]{3}$/.test(originAirportTrimmed);
+  const flightOriginMissing =
+    flightConsent && !originCityTrimmed && !originAirportTrimmed;
+  const isFlightDetailsValid =
+    !flightConsent ||
+    (resolvedAdults >= 1 &&
+      resolvedAdults + resolvedChildren === travelers &&
+      validateFlightSearchDetails(flightSearchPayload, resolvedChildren));
+
+  const hasValidDestination = Boolean(
+    selectedPlace &&
+    selectedPlace.name.trim().length >= 1 &&
+    selectedPlace.name.trim().length <= 200,
+  );
+
   const today = startOfLocalToday();
   const hasValidDateOrder = Boolean(
     startDate && endDate && endDate >= startDate,
@@ -748,10 +965,13 @@ function CreateTripPlanner({
   const hasPastStartDate = Boolean(startDate && startDate < today);
   const validDates = Boolean(hasValidDateOrder && !hasPastStartDate);
   const canGenerate =
-    selectedPlace &&
+    hasValidDestination &&
     validDates &&
     (hotelSearch === null ||
-      validateHotelSearchDetails(hotelSearch, travelers));
+      validateHotelSearchDetails(hotelSearch, travelers)) &&
+    isFlightDetailsValid &&
+    !hasInvalidOriginAirport &&
+    !flightOriginMissing;
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
     setUndoSnapshot(null);
@@ -770,14 +990,14 @@ function CreateTripPlanner({
     setUndoSnapshot(null);
     const entry =
       place.source === "catalog"
-        ? destinations.find((d) => d.name === place.name)
+        ? draftRestoreCatalog.find((d) => d.name === place.name)
         : undefined;
     setSelectedPlace(
       plannerDestination(
         entry
           ? { source: "catalog", name: entry.name, placeId: entry.id }
           : { source: "user", name: place.name },
-        destinations,
+        draftRestoreCatalog,
       ),
     );
     setShowDestinations(false);
@@ -847,6 +1067,11 @@ function CreateTripPlanner({
     accessibility: [...accessibility],
     mobilityNotes,
     showAdvanced,
+    originCity,
+    originAirport,
+    flightConsent,
+    flightChildrenCount,
+    flightAgeText,
   });
 
   const handleApplyParsedPrompt = (parsed: ParsedDreamTrip) => {
@@ -890,11 +1115,20 @@ function CreateTripPlanner({
         setTravelerType(parsed.travelerType);
       }
     }
-    if (parsed.budget) {
-      setBudget(parsed.budget);
+    if (parsed.originHint) {
+      const hint = parsed.originHint.trim();
+      if (/^[A-Za-z]{3}$/.test(hint)) {
+        setOriginAirport(hint.toUpperCase());
+      } else if (hint) {
+        setOriginCity(hint.slice(0, 200));
+      }
+    }
+    const parsedBudget = normalizeBudgetTier(parsed.budget);
+    if (parsedBudget) {
+      setBudget(parsedBudget);
     }
     if (parsed.vibes.length > 0) {
-      setSelectedVibes(parsed.vibes.slice(0, 5));
+      setSelectedVibes(normalizeVibeList(parsed.vibes, 5));
     }
     // Replace prompt-derived requirement fields cleanly when re-applying a prompt,
     // while keeping previously saved requirements if the new prompt didn't mention any.
@@ -911,7 +1145,7 @@ function CreateTripPlanner({
       setShowAdvanced(true);
     }
     setAppliedKickoffSummary({
-      chips: summarizeParsedDreamTrip(parsed),
+      chips: formatParsedDreamTripChips(parsed),
       hasSafetyNotice:
         parsed.dietaryPreferences.length > 0 ||
         parsed.allergies.length > 0 ||
@@ -926,17 +1160,15 @@ function CreateTripPlanner({
       resolveKickoffDestination(suggestion.name, suggestion.slug),
     );
     setShowDestinations(false);
-    setBudget(suggestion.prefillParams.budget);
+    const sugBudget =
+      normalizeBudgetTier(suggestion.prefillParams.budget) ?? "moderate";
+    setBudget(sugBudget);
     if (suggestion.prefillParams.vibes.length > 0) {
-      setSelectedVibes(suggestion.prefillParams.vibes.slice(0, 5));
+      setSelectedVibes(normalizeVibeList(suggestion.prefillParams.vibes, 5));
     }
     const chips = [
       `${suggestion.name}, ${suggestion.country}`,
-      suggestion.prefillParams.budget === "budget"
-        ? "Budget"
-        : suggestion.prefillParams.budget === "luxury"
-          ? "Luxury"
-          : "Comfort",
+      BUDGET_LABELS[sugBudget],
     ];
     if (
       suggestion.prefillParams.startDate &&
@@ -980,6 +1212,11 @@ function CreateTripPlanner({
     setAccessibility(undoSnapshot.accessibility);
     setMobilityNotes(undoSnapshot.mobilityNotes);
     setShowAdvanced(undoSnapshot.showAdvanced);
+    setOriginCity(undoSnapshot.originCity);
+    setOriginAirport(undoSnapshot.originAirport);
+    setFlightConsent(undoSnapshot.flightConsent);
+    setFlightChildrenCount(undoSnapshot.flightChildrenCount);
+    setFlightAgeText(undoSnapshot.flightAgeText);
     setUndoSnapshot(null);
     setAppliedKickoffSummary(null);
   };
@@ -996,13 +1233,13 @@ function CreateTripPlanner({
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
-    const validVibes = selectedVibes.filter((v): v is VibeId =>
-      vibes.some((entry) => entry.id === v),
-    );
+    const validVibes = toMemoryVibes(selectedVibes);
     const validDietary = dietaryPreferences.filter((d): d is DietaryOption =>
       DIETARY_PREFERENCE_OPTIONS.some((option) => option === d),
     );
+    const homeOrigin = (originAirport.trim() || originCity.trim()).slice(0, 60);
     const saved = saveTravelerMemory(memoryScopeId, {
+      ...(homeOrigin ? { homeAirport: homeOrigin } : {}),
       defaultBudget: budget,
       defaultVibes: validVibes,
       dietaryPreferences: validDietary,
@@ -1059,6 +1296,11 @@ function CreateTripPlanner({
         showAdvanced,
         hotelSearch,
         hotelAgeText,
+        originCity,
+        originAirport,
+        flightConsent,
+        flightChildrenCount,
+        flightAgeText,
         budget,
         dietaryPreferences,
         allergiesText,
@@ -1094,9 +1336,14 @@ function CreateTripPlanner({
         parsedAllergies.length > 0 ||
         accessibility.length > 0 ||
         mobilityNotes.trim().length > 0;
+      const trimmedOriginCity = originCity.trim().slice(0, 200);
+      const normalizedOriginAirport = originAirport
+        .trim()
+        .toUpperCase()
+        .slice(0, 10);
       const candidate = pendingRequest ?? {
         requestId: crypto.randomUUID(),
-        destination: selectedPlace!.name,
+        destination: selectedPlace!.name.trim(),
         start_date: format(startDate!, "yyyy-MM-dd"),
         end_date: format(endDate!, "yyyy-MM-dd"),
         travelers,
@@ -1104,6 +1351,11 @@ function CreateTripPlanner({
         preferences: {
           travelerType,
           vibes: selectedVibes,
+          ...(trimmedOriginCity ? { originCity: trimmedOriginCity } : {}),
+          ...(normalizedOriginAirport
+            ? { originAirport: normalizedOriginAirport }
+            : {}),
+          flightSearch: flightSearchPayload,
           ...(hasRequirements
             ? {
                 requirements: {
@@ -1114,11 +1366,11 @@ function CreateTripPlanner({
                 },
               }
             : {}),
-          ...(hotelSearch
+          ...(hotelSearch !== null || flightConsent
             ? {
-                hotelSearch,
-                adults: hotelGuestCounts(hotelSearch).adults,
-                children: hotelGuestCounts(hotelSearch).children,
+                ...(hotelSearch ? { hotelSearch } : {}),
+                adults: resolvedAdults,
+                children: resolvedChildren,
               }
             : {}),
         },
@@ -1181,7 +1433,7 @@ function CreateTripPlanner({
       try {
         recordTripPreferenceSignal(memoryScopeId, {
           budget: payload.budget ?? budget,
-          vibes: payload.preferences?.vibes ?? selectedVibes,
+          vibes: toMemoryVibes(payload.preferences?.vibes ?? selectedVibes),
           dietaryPreferences:
             payload.preferences?.requirements?.dietaryPreferences ??
             dietaryPreferences,
@@ -1200,6 +1452,8 @@ function CreateTripPlanner({
 
       const generationHeaders = await planningHeaders();
       if (!mounted.current) return;
+      const genOriginCity = payload.preferences?.originCity;
+      const genOriginAirport = payload.preferences?.originAirport;
       const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {
         method: "POST",
         signal: AbortSignal.timeout(25_000),
@@ -1207,6 +1461,8 @@ function CreateTripPlanner({
         body: JSON.stringify({
           preferences: {
             vibes: pendingRequest?.preferences?.vibes ?? selectedVibes,
+            ...(genOriginCity ? { originCity: genOriginCity } : {}),
+            ...(genOriginAirport ? { originAirport: genOriginAirport } : {}),
           },
         }),
       });
@@ -1325,7 +1581,7 @@ function CreateTripPlanner({
               aria-label={`Select ${dest.name}, ${dest.country}`}
               aria-pressed={selectedPlace?.name === dest.name}
               onClick={() => handleSelectRecommended(dest)}
-              className={`relative h-40 w-40 shrink-0 snap-start rounded-2xl overflow-hidden group text-left sm:h-44 sm:w-48 ${selectedPlace?.name === dest.name ? "ring-2 ring-primary ring-offset-2" : ""}`}
+              className={`relative h-40 w-40 shrink-0 snap-start rounded-2xl overflow-hidden group text-left sm:h-44 sm:w-48 ${selectedPlace?.name === dest.name ? "ring-2 ring-primary-700 ring-offset-2" : ""}`}
             >
               <Image
                 src={dest.image}
@@ -1339,10 +1595,10 @@ function CreateTripPlanner({
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-3">
                 <p className="text-white font-semibold">{dest.name}</p>
-                <p className="text-white/70 text-xs">{dest.country}</p>
+                <p className="text-white/75 text-xs">{dest.country}</p>
               </div>
               {selectedPlace?.name === dest.name && (
-                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                <div className="absolute top-2 right-2 w-6 h-6 bg-primary-700 rounded-full flex items-center justify-center">
                   <Check className="w-4 h-4 text-white" />
                 </div>
               )}
@@ -1353,24 +1609,32 @@ function CreateTripPlanner({
     );
   };
 
-  const datesReady = Boolean(selectedPlace && validDates);
+  const datesReady = Boolean(hasValidDestination && validDates);
   const preview = selectedRecommendedDest || destinations[0];
-  const missingMessage = !selectedPlace
+  const hotelDetailsInvalid =
+    hotelSearch !== null && !validateHotelSearchDetails(hotelSearch, travelers);
+  const missingMessage = !hasValidDestination
     ? "Choose a destination to get started"
     : !startDate || !endDate
       ? "Choose your dates to continue"
       : !validDates
         ? "Choose a start date from today onward"
-        : !canGenerate
+        : hotelDetailsInvalid
           ? "Complete your hotel room details or turn off hotel searches"
-          : "Your trip is ready to plan";
+          : hasInvalidOriginAirport
+            ? "Enter a 3-letter IATA airport code (e.g., SFO)"
+            : flightOriginMissing
+              ? "Add a departure city or airport code, or turn off live flight search"
+              : !isFlightDetailsValid
+                ? "Complete children's ages (0–17) or turn off live flight search"
+                : "Your trip is ready to plan";
 
   return (
     <div
       aria-busy={!draftLoaded}
-      className="trip-planner min-h-screen bg-white text-slate-900"
+      className="trip-planner min-h-screen bg-[#FAF8F3] text-slate-900"
     >
-      <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:h-20 lg:px-10">
           <button
             onClick={() => {
@@ -1385,33 +1649,25 @@ function CreateTripPlanner({
           >
             <X className="h-5 w-5" />
           </button>
-          <Link
-            href="/"
-            aria-label="Faroway home"
-            className="hidden items-center gap-2 text-xl font-extrabold tracking-tight lg:flex"
-          >
-            <Compass className="h-7 w-7 text-primary-700" />
-            faroway<span className="text-primary-700">.</span>
-          </Link>
+          <Logo size="md" variant="dark" className="hidden lg:flex" />
           <p className="text-base font-bold lg:hidden">Plan your trip</p>
           <Link
             href="/dashboard"
-            className="flex min-h-11 items-center text-sm font-semibold text-gray-600"
+            className="flex min-h-11 items-center text-sm font-semibold text-slate-700 hover:text-slate-900"
           >
             My trips
           </Link>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-5 pb-44 pt-6 sm:px-6 lg:px-10 lg:pt-10">
-        <div className="mb-8 hidden lg:block">
-          <h1 className="font-editorial text-4xl tracking-[-0.04em] sm:text-5xl">
+        <div className="mb-6 lg:mb-8">
+          <h1 className="font-editorial text-3xl tracking-[-0.04em] text-slate-900 sm:text-4xl lg:text-5xl">
             Your next chapter starts here.
           </h1>
-          <p className="mt-3 text-gray-500">
+          <p className="mt-2 text-sm text-slate-600 lg:mt-3 lg:text-base">
             Tell us where you want to go. We’ll bring the journey together.
           </p>
         </div>
-        <h1 className="sr-only lg:hidden">Plan your trip</h1>
         <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-20">
           <fieldset
             disabled={!draftLoaded || isGenerating}
@@ -1508,7 +1764,7 @@ function CreateTripPlanner({
                         );
                       }}
                       disabled={travelers <= 1 || hotelSearch !== null}
-                      className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-slate-600 hover:border-primary-700 hover:text-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -1533,14 +1789,14 @@ function CreateTripPlanner({
                         );
                       }}
                       disabled={travelers >= 50 || hotelSearch !== null}
-                      className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-slate-600 hover:border-primary-700 hover:text-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
                 {hotelSearch !== null && (
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-slate-600">
                     Traveler count is currently managed by your hotel room
                     details below.
                   </p>
@@ -1568,8 +1824,8 @@ function CreateTripPlanner({
                       aria-pressed={travelerType === type.id}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 transition-all ${
                         travelerType === type.id
-                          ? "border-primary bg-primary-50 text-primary-700"
-                          : "border-gray-200 text-gray-600 hover:border-gray-300"
+                          ? "border-primary-700 bg-primary-50 text-primary-800"
+                          : "border-gray-200 bg-white text-slate-700 hover:border-gray-300"
                       }`}
                     >
                       <type.icon className="h-4 w-4" aria-hidden="true" />
@@ -1582,7 +1838,7 @@ function CreateTripPlanner({
             <section
               id="planner-comfort"
               aria-label="Travel comfort"
-              className="scroll-mt-24 border-t border-gray-100 pt-8"
+              className="scroll-mt-24 border-t border-gray-200/80 pt-8"
             >
               <h2
                 tabIndex={-1}
@@ -1603,7 +1859,7 @@ function CreateTripPlanner({
                       setBudget(option.id);
                     }}
                     aria-pressed={budget === option.id}
-                    className={`min-h-24 rounded-2xl border px-2 py-4 text-center transition-colors sm:px-4 ${budget === option.id ? "border-primary-700 bg-primary-50 text-primary-800" : "border-gray-200 bg-white text-slate-600 hover:border-slate-400"}`}
+                    className={`min-h-24 rounded-2xl border px-2 py-4 text-center transition-colors sm:px-4 ${budget === option.id ? "border-primary-700 bg-primary-50 text-primary-800" : "border-gray-200 bg-white text-slate-700 hover:border-slate-400"}`}
                   >
                     <span className="block text-sm font-semibold">
                       {option.label}
@@ -1614,15 +1870,15 @@ function CreateTripPlanner({
                   </button>
                 ))}
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">
-                A preference to guide your plan. No bookings or payments are
-                made.
+              <p className="mt-3 text-xs leading-5 text-slate-600">
+                Guides hotel, dining, and activity recommendations across your
+                itinerary.
               </p>
             </section>
             <section
               id="planner-vibes"
               aria-label="Travel preferences"
-              className="scroll-mt-24 border-t border-gray-100 pt-8"
+              className="scroll-mt-24 border-t border-gray-200/80 pt-8"
             >
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
@@ -1632,14 +1888,14 @@ function CreateTripPlanner({
                   >
                     What’s your travel vibe?
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-slate-600">
                     Choose up to 5, or leave it open to discovery.
                   </p>
                 </div>
                 <span
                   role="status"
                   aria-label={`${selectedVibes.length} of 5 interests selected`}
-                  className="shrink-0 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold tabular-nums"
+                  className="shrink-0 rounded-full bg-white border border-gray-200 px-3 py-1.5 text-xs font-semibold tabular-nums text-slate-700"
                 >
                   {selectedVibes.length}/5
                 </span>
@@ -1656,8 +1912,8 @@ function CreateTripPlanner({
                     }
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 transition-all ${
                       selectedVibes.includes(vibe.id)
-                        ? "border-primary bg-primary-50 text-primary-700"
-                        : "border-gray-200 text-gray-600 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        ? "border-primary-700 bg-primary-50 text-primary-800"
+                        : "border-gray-200 bg-white text-slate-700 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     }`}
                   >
                     <vibe.icon className="h-4 w-4" aria-hidden="true" />
@@ -1670,13 +1926,14 @@ function CreateTripPlanner({
               <section
                 id="planner-hotels"
                 aria-label="Hotel preferences"
-                className="scroll-mt-24 border-t border-gray-100 pt-8"
+                className="scroll-mt-24 border-t border-gray-200/80 pt-8"
               >
                 <h2 tabIndex={-1} className="text-lg font-bold outline-none">
                   Your stay preferences
                 </h2>
                 <p className="mt-2 text-sm text-slate-600">
-                  Optional room details for hotel quotes. No booking is made.
+                  Optional room details to tailor hotel picks and live rates to
+                  your group.
                 </p>
                 <HotelSearchFields
                   value={hotelSearch}
@@ -1704,9 +1961,166 @@ function CreateTripPlanner({
               </section>
             )}
             <section
+              id="planner-flights"
+              aria-label="Departure and flights"
+              className="scroll-mt-24 border-t border-gray-200/80 pt-8"
+            >
+              <h2
+                tabIndex={-1}
+                className="text-lg font-bold outline-none sm:text-xl"
+              >
+                Departure &amp; flight options
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Optional — add your departure city or airport to tailor route
+                suggestions and flight links.
+              </p>
+              <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="create-origin-city"
+                      className="mb-1.5 block text-sm font-medium text-slate-700"
+                    >
+                      Departure city (optional)
+                    </label>
+                    <input
+                      id="create-origin-city"
+                      type="text"
+                      maxLength={200}
+                      value={originCity}
+                      onChange={(e) => setOriginCity(e.target.value)}
+                      placeholder="e.g., San Francisco"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="create-origin-airport"
+                      className="mb-1.5 block text-sm font-medium text-slate-700"
+                    >
+                      Departure airport (IATA, optional)
+                    </label>
+                    <input
+                      id="create-origin-airport"
+                      type="text"
+                      maxLength={10}
+                      value={originAirport}
+                      aria-invalid={hasInvalidOriginAirport || undefined}
+                      onChange={(e) =>
+                        setOriginAirport(e.target.value.toUpperCase())
+                      }
+                      placeholder="e.g., SFO"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm uppercase text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
+                    />
+                    {hasInvalidOriginAirport && (
+                      <p className="mt-1.5 text-xs text-slate-600">
+                        Enter a 3-letter IATA airport code (e.g., SFO, JFK, LHR)
+                        for exact flight routes.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 pt-4">
+                  <label
+                    htmlFor="create-flight-consent"
+                    className="flex items-start gap-3 cursor-pointer"
+                  >
+                    <input
+                      id="create-flight-consent"
+                      type="checkbox"
+                      checked={flightConsent}
+                      onChange={(e) => setFlightConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-700"
+                    />
+                    <span className="text-sm font-medium text-slate-800">
+                      Include live flight options via Duffel
+                    </span>
+                  </label>
+                  <p className="mt-1.5 pl-7 text-xs leading-5 text-slate-600">
+                    {FLIGHT_SEARCH_DISCLOSURE}
+                  </p>
+                  {flightOriginMissing && (
+                    <p
+                      role="status"
+                      className="mt-1.5 pl-7 text-xs font-medium text-amber-800"
+                    >
+                      Add a departure city or 3-letter airport code to include
+                      live flight options.
+                    </p>
+                  )}
+
+                  {flightConsent && hotelSearch === null && travelers > 1 && (
+                    <div className="mt-4 grid gap-4 rounded-xl border border-gray-200 bg-[#FAF8F3] p-4 sm:grid-cols-2">
+                      <div>
+                        <label
+                          htmlFor="create-flight-children"
+                          className="mb-1.5 block text-xs font-medium text-slate-700"
+                        >
+                          Children under 18
+                        </label>
+                        <input
+                          id="create-flight-children"
+                          type="number"
+                          min={0}
+                          max={travelers - 1}
+                          value={safeFlightChildrenCount}
+                          onChange={(e) => {
+                            const nextCount = Number(e.target.value);
+                            setFlightChildrenCount(
+                              Number.isFinite(nextCount)
+                                ? Math.max(
+                                    0,
+                                    Math.min(
+                                      travelers - 1,
+                                      Math.trunc(nextCount),
+                                    ),
+                                  )
+                                : 0,
+                            );
+                          }}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
+                        />
+                      </div>
+                      {safeFlightChildrenCount > 0 && (
+                        <div>
+                          <label
+                            htmlFor="create-flight-child-ages"
+                            className="mb-1.5 block text-xs font-medium text-slate-700"
+                          >
+                            Children’s ages (comma-separated, 0–17)
+                          </label>
+                          <input
+                            id="create-flight-child-ages"
+                            type="text"
+                            maxLength={200}
+                            value={flightAgeText}
+                            onChange={(e) => setFlightAgeText(e.target.value)}
+                            placeholder="e.g., 6, 10"
+                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
+                          />
+                          {!isFlightDetailsValid && (
+                            <p
+                              role="status"
+                              className="mt-1.5 text-xs text-amber-800"
+                            >
+                              Enter {safeFlightChildrenCount}{" "}
+                              {safeFlightChildrenCount === 1 ? "age" : "ages"}{" "}
+                              between 0 and 17.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+            <section
               id="planner-requirements"
               aria-label="Dietary and accessibility needs"
-              className="scroll-mt-24 border-t border-gray-100 pt-8"
+              className="scroll-mt-24 border-t border-gray-200/80 pt-8"
             >
               <button
                 type="button"
@@ -1718,19 +2132,19 @@ function CreateTripPlanner({
                   <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
                     Dietary, allergies &amp; accessibility
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm text-slate-600">
                     Optional — add dietary preferences, allergies, or mobility
                     notes before we plan.
                   </p>
                 </div>
-                <span className="ml-4 shrink-0 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700">
+                <span className="ml-4 shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
                   {showAdvanced ? "Hide" : "Add details"}
                 </span>
               </button>
               {showAdvanced && (
-                <div className="mt-5 space-y-5 rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                <div className="mt-5 space-y-5 rounded-2xl border border-gray-200 bg-white p-5">
                   <div>
-                    <p className="mb-2.5 text-sm font-medium text-gray-700">
+                    <p className="mb-2.5 text-sm font-medium text-slate-700">
                       Dietary preferences
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1751,8 +2165,8 @@ function CreateTripPlanner({
                             }}
                             className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${
                               active
-                                ? "border-primary bg-primary-50 text-primary-700"
-                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                ? "border-primary-700 bg-primary-50 text-primary-800"
+                                : "border-gray-200 bg-white text-slate-700 hover:border-gray-300"
                             }`}
                           >
                             {option}
@@ -1764,7 +2178,7 @@ function CreateTripPlanner({
                   <div>
                     <label
                       htmlFor="create-allergies"
-                      className="mb-1.5 block text-sm font-medium text-gray-700"
+                      className="mb-1.5 block text-sm font-medium text-slate-700"
                     >
                       Food allergies (comma-separated)
                     </label>
@@ -1778,11 +2192,11 @@ function CreateTripPlanner({
                         setAllergiesText(e.target.value);
                       }}
                       placeholder="e.g. peanuts, shellfish, sesame"
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
                     />
                   </div>
                   <div>
-                    <p className="mb-2.5 text-sm font-medium text-gray-700">
+                    <p className="mb-2.5 text-sm font-medium text-slate-700">
                       Accessibility needs
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1803,8 +2217,8 @@ function CreateTripPlanner({
                             }}
                             className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${
                               active
-                                ? "border-primary bg-primary-50 text-primary-700"
-                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                                ? "border-primary-700 bg-primary-50 text-primary-800"
+                                : "border-gray-200 bg-white text-slate-700 hover:border-gray-300"
                             }`}
                           >
                             {option.label}
@@ -1816,7 +2230,7 @@ function CreateTripPlanner({
                   <div>
                     <label
                       htmlFor="create-mobility-notes"
-                      className="mb-1.5 block text-sm font-medium text-gray-700"
+                      className="mb-1.5 block text-sm font-medium text-slate-700"
                     >
                       Mobility or pacing notes
                     </label>
@@ -1830,7 +2244,7 @@ function CreateTripPlanner({
                         setMobilityNotes(e.target.value);
                       }}
                       placeholder="e.g. Stroller-friendly routes, midday rest every day, arrive on day 1 at 14:00"
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
                     />
                   </div>
                 </div>
@@ -1884,7 +2298,7 @@ function CreateTripPlanner({
           </fieldset>
           <aside
             aria-label="Your trip summary"
-            className={`overflow-hidden rounded-3xl bg-[#f5f7f8] lg:sticky lg:top-8 hidden lg:block`}
+            className="overflow-hidden rounded-3xl border border-[#DCE5E3] bg-[#EFF5F3] lg:sticky lg:top-8 hidden lg:block"
           >
             <div className="relative h-52 sm:h-64">
               {!selectedPlace || selectedRecommendedDest ? (
@@ -1921,9 +2335,9 @@ function CreateTripPlanner({
               <h2 className="text-lg font-bold">Your trip, taking shape</h2>
               <dl className="mt-5 space-y-5 text-sm">
                 <div className="flex gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 text-gray-500" />
+                  <MapPin className="mt-0.5 h-4 w-4 text-slate-600" />
                   <div>
-                    <dt className="text-gray-500">
+                    <dt className="text-slate-600">
                       Destination{" "}
                       <button
                         onClick={() => scrollToSection("planner-destination")}
@@ -1937,10 +2351,31 @@ function CreateTripPlanner({
                     </dd>
                   </div>
                 </div>
+                {(originAirport.trim() || originCity.trim()) && (
+                  <div className="flex gap-3">
+                    <Plane className="mt-0.5 h-4 w-4 text-slate-600" />
+                    <div>
+                      <dt className="text-slate-600">
+                        Departing{" "}
+                        <button
+                          onClick={() => scrollToSection("planner-flights")}
+                          className="ml-2 text-xs font-semibold underline underline-offset-4"
+                        >
+                          Edit
+                        </button>
+                      </dt>
+                      <dd className="mt-1 font-semibold">
+                        {[originCity.trim(), originAirport.trim().toUpperCase()]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </dd>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-3">
-                  <Calendar className="mt-0.5 h-4 w-4 text-gray-500" />
+                  <Calendar className="mt-0.5 h-4 w-4 text-slate-600" />
                   <div>
-                    <dt className="text-gray-500">
+                    <dt className="text-slate-600">
                       Dates{" "}
                       <button
                         onClick={() => scrollToSection("planner-dates")}
@@ -1957,9 +2392,9 @@ function CreateTripPlanner({
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Users className="mt-0.5 h-4 w-4 text-gray-500" />
+                  <Users className="mt-0.5 h-4 w-4 text-slate-600" />
                   <div>
-                    <dt className="text-gray-500">Travelers</dt>
+                    <dt className="text-slate-600">Travelers</dt>
                     <dd className="mt-1 font-semibold">
                       {travelers} {travelers === 1 ? "traveler" : "travelers"}
                     </dd>
@@ -1971,14 +2406,14 @@ function CreateTripPlanner({
                   {selectedVibes.map((id) => (
                     <span
                       key={id}
-                      className="rounded-full bg-white px-3 py-1.5 text-xs font-medium"
+                      className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-800"
                     >
                       {vibes.find((v) => v.id === id)?.label}
                     </span>
                   ))}
                 </div>
               )}
-              <p className="mt-6 border-t border-gray-200 pt-5 text-sm leading-6 text-gray-500">
+              <p className="mt-6 border-t border-[#DCE5E3] pt-5 text-sm leading-6 text-slate-600">
                 We’ll bring together places to explore, food to try, and a
                 day-by-day itinerary built around you.
               </p>
@@ -2003,12 +2438,14 @@ function CreateTripPlanner({
                 scrollToSection(
                   pendingRequest || generateError
                     ? "planner-notices"
-                    : !selectedPlace
+                    : !hasValidDestination
                       ? "planner-destination"
                       : !startDate || !endDate
                         ? "planner-dates"
                         : !canGenerate
-                          ? "planner-hotels"
+                          ? hotelDetailsInvalid
+                            ? "planner-hotels"
+                            : "planner-flights"
                           : "planner-destination",
                 )
               }

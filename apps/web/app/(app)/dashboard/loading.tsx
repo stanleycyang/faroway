@@ -4,7 +4,7 @@ export default function DashboardLoading() {
       role="status"
       aria-busy="true"
       aria-label="Loading dashboard"
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-paper"
     >
       {/* Header Skeleton */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">

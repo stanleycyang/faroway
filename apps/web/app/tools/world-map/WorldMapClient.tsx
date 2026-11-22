@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { MapLoading } from "@/components/trips/MapLoading";
+import type { WorldMapAffiliateBundle } from "@/components/tools/world-map/world-map-affiliates";
 
 const WorldMapApp = dynamic(
   () =>
@@ -14,6 +15,19 @@ const WorldMapApp = dynamic(
   },
 );
 
-export function WorldMapClient() {
-  return <WorldMapApp />;
+export interface WorldMapClientProps {
+  bundlesByCountryKey?: Record<string, WorldMapAffiliateBundle>;
+  defaultLinks?: WorldMapAffiliateBundle;
+}
+
+export function WorldMapClient({
+  bundlesByCountryKey,
+  defaultLinks,
+}: WorldMapClientProps = {}) {
+  return (
+    <WorldMapApp
+      bundlesByCountryKey={bundlesByCountryKey}
+      defaultLinks={defaultLinks}
+    />
+  );
 }

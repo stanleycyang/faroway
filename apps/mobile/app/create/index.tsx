@@ -29,7 +29,13 @@ const useOptionalFocusEffect =
   typeof useFocusEffect === 'function' ? useFocusEffect : (_cb: () => void) => {};
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button, PlacesAutocomplete, DateRangePicker, VibeSelector } from '../../components/ui';
+import {
+  Button,
+  Input,
+  PlacesAutocomplete,
+  DateRangePicker,
+  VibeSelector,
+} from '../../components/ui';
 import { useTripStore, type TripInput } from '../../stores/tripStore';
 import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
@@ -45,9 +51,16 @@ import {
 } from '../../lib/tripCreationRecovery';
 import { useGuestTripBrief } from '../../hooks/useGuestTripBrief';
 import { tripInputFromLink } from '../../lib/tripLinkInput';
+import { isValidIataAirportCode } from '../../lib/flightOrigin';
 import { AuthGate } from '../../components/AuthGate';
-import { popularDestinations, travelerTypes } from '@faroway/constants';
-import { colors, borderRadius, shadows } from '../../constants/theme';
+import {
+  BUDGET_TIERS,
+  FLIGHT_SEARCH_DISCLOSURE,
+  normalizeBudgetTier,
+  popularDestinations,
+  travelerTypes,
+} from '@faroway/constants';
+import { colors, borderRadius, shadows, fontFamilies } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
 export default function CreateTripScreen() {
@@ -67,7 +80,7 @@ export default function CreateTripScreen() {
   const userId = user?.id;
   const accountRevision = useUserStore((state) => state.accountRevision);
   const savedProfileBudget = useUserStore((state) => state.user?.preferences?.budget);
-  const activeBudget = draftInput?.budget ?? savedProfileBudget ?? 'moderate';
+  const activeBudget = normalizeBudgetTier(draftInput?.budget ?? savedProfileBudget) ?? 'moderate';
   const recoveryScope = `${userId ?? 'guest'}:${accountRevision}`;
   const recoveryOwner = useRef<string | undefined>(recoveryScope);
   const discardLock = useRef(false);
@@ -345,8 +358,8 @@ export default function CreateTripScreen() {
         Alert.alert(
           'Defaults saved',
           saved
-            ? 'Your comfort tier, vibes, and dietary/access notes will prefill future trips. You can edit or clear them anytime.'
-            : 'Choose a comfort tier, vibes, or dietary/access needs first to save defaults.'
+            ? 'Your budget tier, vibes, and dietary/access notes will prefill future trips. You can edit or clear them anytime.'
+            : 'Choose a budget tier, vibes, or dietary/access needs first to save defaults.'
         );
       })
       .catch(() => {
@@ -395,7 +408,19 @@ export default function CreateTripScreen() {
   const requirementsValid = travelerRequirementsSchema
     .nullish()
     .safeParse(draftInput?.requirements).success;
-  const canProceed = missingRequirements.length === 0 && requirementsValid;
+  const originCityTrimmed = draftInput?.originCity?.trim() || '';
+  const originAirportTrimmed = draftInput?.originAirport?.trim() || '';
+  const airportCodeError =
+    originAirportTrimmed && !isValidIataAirportCode(originAirportTrimmed)
+      ? 'Enter a 3-letter IATA code like SFO or JFK'
+      : undefined;
+  const flightOriginMissing =
+    Boolean(draftInput?.flightConsent) && !originCityTrimmed && !originAirportTrimmed;
+  const canProceed =
+    missingRequirements.length === 0 &&
+    requirementsValid &&
+    !airportCodeError &&
+    !flightOriginMissing;
 
   const handleContinue = () => {
     if (!canProceed) {
@@ -474,7 +499,7 @@ export default function CreateTripScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Sign in to save your trips to your account"
                 >
-                  <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
+                  <Ionicons name="cloud-upload-outline" size={18} color={colors.action.primary} />
                   <Text style={styles.signInBannerText}>
                     Sign in to save your trips to your account
                   </Text>
@@ -486,7 +511,7 @@ export default function CreateTripScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Dismiss sign-in reminder"
                 >
-                  <Ionicons name="close" size={18} color={colors.primary[400]} />
+                  <Ionicons name="close" size={18} color={colors.action.primary} />
                 </TouchableOpacity>
               </View>
             )}
@@ -591,12 +616,12 @@ export default function CreateTripScreen() {
                     />
                   ) : (
                     <LinearGradient
-                      colors={[colors.primary[800], colors.primary[600]]}
+                      colors={[colors.primary[800], colors.action.primary]}
                       style={styles.selectedDestinationImage}
                     />
                   )}
                   <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.7)']}
+                    colors={['transparent', 'rgba(20,61,70,0.85)']}
                     style={styles.selectedDestinationGradient}
                   />
                   {!selectedDestination && (
@@ -752,8 +777,8 @@ export default function CreateTripScreen() {
                       size={20}
                       color={
                         draftInput?.travelerType === type.id
-                          ? colors.primary[600]
-                          : colors.neutral[500]
+                          ? colors.action.primary
+                          : colors.surface[600]
                       }
                     />
                     <Text
@@ -769,30 +794,68 @@ export default function CreateTripScreen() {
               </View>
             </View>
 
+            {/* Flights & Departure (optional) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Flights & departure (optional)</Text>
+              <View style={styles.flightOriginCard}>
+                <Input
+                  label="Departure city (optional)"
+                  placeholder="e.g., San Francisco"
+                  value={draftInput?.originCity || ''}
+                  onChangeText={(text) => setDraftInput({ originCity: text.slice(0, 200) })}
+                  icon="airplane-outline"
+                  autoCapitalize="words"
+                />
+                <Input
+                  label="Departure airport (optional)"
+                  placeholder="e.g., SFO"
+                  value={draftInput?.originAirport || ''}
+                  onChangeText={(text) =>
+                    setDraftInput({ originAirport: text.toUpperCase().slice(0, 10) })
+                  }
+                  icon="navigate-outline"
+                  autoCapitalize="characters"
+                  error={airportCodeError}
+                />
+                <TouchableOpacity
+                  style={styles.flightConsentRow}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    setDraftInput({ flightConsent: !draftInput?.flightConsent });
+                  }}
+                  activeOpacity={0.7}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: Boolean(draftInput?.flightConsent) }}
+                  accessibilityLabel="Include flight options"
+                >
+                  <Ionicons
+                    name={draftInput?.flightConsent ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={draftInput?.flightConsent ? colors.action.primary : colors.surface[600]}
+                  />
+                  <Text style={styles.flightConsentLabel}>Include flight options</Text>
+                </TouchableOpacity>
+                <Text style={styles.flightDisclosureText}>{FLIGHT_SEARCH_DISCLOSURE}</Text>
+                {flightOriginMissing ? (
+                  <Text accessibilityRole="alert" style={styles.flightOriginWarning}>
+                    Add a departure city or 3-letter airport code to include flight options.
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+
             {/* Budget */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Your kind of comfort</Text>
+              <Text style={styles.sectionTitle}>Your budget tier</Text>
               <View style={styles.travelerTypes}>
-                {(
-                  [
-                    {
-                      id: 'budget',
-                      label: 'Budget',
-                      icon: 'wallet-outline' as const,
-                    },
-                    {
-                      id: 'moderate',
-                      label: 'Comfort',
-                      icon: 'cash-outline' as const,
-                    },
-                    {
-                      id: 'luxury',
-                      label: 'Luxury',
-                      icon: 'sparkles-outline' as const,
-                    },
-                  ] as const
-                ).map((option) => {
+                {BUDGET_TIERS.map((option) => {
                   const selected = activeBudget === option.id;
+                  const budgetIcon =
+                    option.id === 'budget'
+                      ? 'wallet-outline'
+                      : option.id === 'luxury'
+                        ? 'sparkles-outline'
+                        : 'cash-outline';
                   return (
                     <TouchableOpacity
                       key={option.id}
@@ -810,9 +873,9 @@ export default function CreateTripScreen() {
                       accessibilityLabel={`Budget tier: ${option.label}`}
                     >
                       <Ionicons
-                        name={option.icon}
+                        name={budgetIcon}
                         size={18}
-                        color={selected ? colors.primary[600] : colors.neutral[500]}
+                        color={selected ? colors.action.primary : colors.surface[600]}
                       />
                       <Text
                         style={[
@@ -1002,6 +1065,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 18,
     fontWeight: '700',
     color: '#0f172a',
@@ -1026,7 +1090,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[600],
+    color: colors.action.primary,
   },
   signInBannerClose: {
     minWidth: 44,
@@ -1201,15 +1265,45 @@ const styles = StyleSheet.create({
   },
   travelerTypeButtonSelected: {
     backgroundColor: '#FFF5F4',
-    borderColor: colors.primary[500],
+    borderColor: colors.action.primary,
   },
   travelerTypeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.surface[600],
   },
   travelerTypeLabelSelected: {
-    color: colors.primary[400],
+    color: colors.primary[800],
+  },
+  flightOriginCard: {
+    backgroundColor: '#FAF8F3',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#DCE5E3',
+    padding: 16,
+  },
+  flightConsentRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  flightConsentLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  flightDisclosureText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#475569',
+    marginTop: 4,
+  },
+  flightOriginWarning: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary[800],
+    marginTop: 8,
   },
   bottomBar: {
     backgroundColor: '#ffffff',

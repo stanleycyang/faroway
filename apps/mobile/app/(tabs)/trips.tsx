@@ -20,7 +20,7 @@ import { useTrips } from '../../hooks/useTrips';
 import { useAuthContext } from '../../components/AuthProvider';
 import { isRequestCanceled } from '../../lib/authProviders';
 import { useTripStore } from '../../stores/tripStore';
-import { colors, borderRadius } from '../../constants/theme';
+import { colors, borderRadius, shadows, fontFamilies } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { openSafeHttpsUrl } from '../../lib/openExternalUrl';
 import { formatTripDate, tripDurationDays } from '../../lib/tripDate';
@@ -309,7 +309,7 @@ function AuthenticatedTripsView() {
         ) : trips.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyStateIcon}>
-              <Ionicons name="airplane-outline" size={48} color={colors.surface[400]} />
+              <Ionicons name="airplane-outline" size={48} color={colors.surface[600]} />
             </View>
             <Text style={styles.emptyStateTitle}>No trips yet</Text>
             <Text style={styles.emptyStateSubtitle}>
@@ -375,6 +375,22 @@ export default function TripsScreen() {
       </View>
 
       {isAuthenticated ? <AuthenticatedTripsView /> : <GuestTripsView />}
+
+      {/* Thumb-zone Plan Trip CTA */}
+      <TouchableOpacity
+        style={styles.planTripFab}
+        onPress={() => {
+          hapticFeedback.medium();
+          router.push('/create');
+        }}
+        activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel="Plan Trip"
+        accessibilityHint="Opens the AI trip planner"
+      >
+        <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+        <Text style={styles.planTripFabText}>Plan Trip</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -395,6 +411,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 28,
     fontWeight: '700',
     color: '#0f172a',
@@ -411,7 +428,7 @@ const styles = StyleSheet.create({
   // ─── Guest / Signed-Out ──────────
   guestScrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingBottom: 88,
   },
   heroSection: {
     alignItems: 'center',
@@ -455,7 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   termsLink: {
-    color: colors.primary[600],
+    color: colors.action.primary,
     textDecorationLine: 'underline',
   },
   socialButton: {
@@ -508,14 +525,14 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.surface[600],
   },
   tabTextActive: {
     color: '#fff',
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingBottom: 88,
   },
   emptyState: {
     alignItems: 'center',
@@ -577,5 +594,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#dc2626',
+  },
+  planTripFab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 16,
+    minHeight: 48,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.action.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...shadows.lg,
+  },
+  planTripFabText: {
+    fontFamily: fontFamilies.sans,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

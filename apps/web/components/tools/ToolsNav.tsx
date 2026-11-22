@@ -18,7 +18,7 @@ export function ToolsNav() {
   const pathname = usePathname() ?? "";
 
   return (
-    <div className="sticky top-16 lg:top-20 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/60">
+    <div className="sticky top-16 lg:top-20 z-40 bg-[#FAF8F3]/95 backdrop-blur-xl border-b border-[#DCE5E3]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
           {TOOL_LINKS.map((link) => {
@@ -33,8 +33,8 @@ export function ToolsNav() {
                 href={link.href}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                   isActive
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    ? "bg-primary-700 text-white shadow-sm"
+                    : "text-slate-700 hover:text-[#143D46] hover:bg-[#EFF5F3]"
                 }`}
               >
                 {link.label}

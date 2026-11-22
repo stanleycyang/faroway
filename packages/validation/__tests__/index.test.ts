@@ -8,6 +8,9 @@ import {
   loginSchema,
   tripStatusSchema,
   budgetLevelSchema,
+  budgetTierInputSchema,
+  travelVibeIdSchema,
+  normalizedTravelVibeSchema,
   travelerTypeSchema,
   createTripSchema,
   updateTripSchema,
@@ -19,7 +22,11 @@ import {
   paginationSchema,
   tripQuerySchema,
   searchInputSchema,
+  affiliatePartnerIdSchema,
+  affiliateClickItemTypeSchema,
+  affiliateClickSourceSchema,
   trackClickSchema,
+  conversionWebhookSchema,
 } from "../src/index";
 
 describe("uuidSchema", () => {
@@ -372,5 +379,190 @@ describe("trackClickSchema", () => {
       source: "search_results",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts transport itemType and expanded monetization sources", () => {
+    const result = trackClickSchema.safeParse({
+      ...valid,
+      itemType: "transport",
+      source: "shared_trip",
+      clickId: "clk-123",
+      placement: "sticky_drawer",
+      campaign: "paris_q2",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("travelVibeIdSchema & normalizedTravelVibeSchema", () => {
+  it("validates canonical vibe IDs and maps cultural alias to culture", () => {
+    expect(travelVibeIdSchema.safeParse("culture").success).toBe(true);
+    expect(travelVibeIdSchema.safeParse("shopping").success).toBe(true);
+    expect(travelVibeIdSchema.safeParse("photography").success).toBe(true);
+    expect(travelVibeIdSchema.safeParse("cultural").success).toBe(false);
+
+    const aliased = normalizedTravelVibeSchema.safeParse("cultural");
+    expect(aliased.success).toBe(true);
+    if (aliased.success) expect(aliased.data).toBe("culture");
+
+    const trimmed = normalizedTravelVibeSchema.safeParse("  Culture ");
+    expect(trimmed.success).toBe(true);
+    if (trimmed.success) expect(trimmed.data).toBe("culture");
+
+    expect(normalizedTravelVibeSchema.safeParse("invalid").success).toBe(false);
+  });
+});
+
+describe("budgetTierInputSchema", () => {
+  it("normalizes Comfort and mid_range to moderate while preserving strict budgetLevelSchema", () => {
+    for (const [raw, expected] of [
+      ["Budget", "budget"],
+      ["Comfort", "moderate"],
+      ["Moderate", "moderate"],
+      ["mid_range", "moderate"],
+      ["mid-range", "moderate"],
+      ["Luxury", "luxury"],
+    ] as const) {
+      const parsed = budgetTierInputSchema.safeParse(raw);
+      expect(parsed.success).toBe(true);
+      if (parsed.success) expect(parsed.data).toBe(expected);
+    }
+
+    expect(budgetTierInputSchema.safeParse("extreme").success).toBe(false);
+    expect(budgetLevelSchema.safeParse("comfort").success).toBe(false);
+  });
+});
+
+describe("affiliatePartnerIdSchema & conversionWebhookSchema", () => {
+  it("accepts all 17 canonical affiliate partners and valid webhook payloads", () => {
+    const partners = [
+      "viator",
+      "getyourguide",
+      "travelpayouts",
+      "stay22",
+      "booking",
+      "expedia",
+      "safetywing",
+      "airalo",
+      "klook",
+      "discovercars",
+      "hostelworld",
+      "duffel",
+      "tripadvisor",
+      "opentable",
+      "skyscanner",
+      "ivisa",
+      "wise",
+    ];
+    for (const partner of partners) {
+      expect(affiliatePartnerIdSchema.safeParse(partner).success).toBe(true);
+    }
+    expect(affiliatePartnerIdSchema.safeParse("unknown").success).toBe(false);
+
+    expect(affiliateClickItemTypeSchema.safeParse("transport").success).toBe(
+      true,
+    );
+    expect(affiliateClickSourceSchema.safeParse("on_trip").success).toBe(true);
+
+    const webhook = conversionWebhookSchema.safeParse({
+      partner: "stay22",
+      clickId: "clk-777",
+      externalTransactionId: "tx-999",
+      bookingAmount: 420.5,
+      commissionAmount: 25.2,
+      currency: "USD",
+      occurredAt: "2026-11-21T07:00:00Z",
+    });
+    expect(webhook.success).toBe(true);
+    if (webhook.success) {
+      expect(webhook.data.status).toBe("confirmed");
+      expect(webhook.data.currency).toBe("USD");
+      expect(webhook.data.occurredAt).toBe("2026-11-21T07:00:00Z");
+    }
+
+    expect(
+      conversionWebhookSchema.safeParse({
+        partner: "stay22",
+        clickId: "clk-777",
+        externalTransactionId: "tx-1000",
+        occurredAt: "2026-11-21",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects non-finite amounts, invalid currencies, and non-ISO occurredAt values", () => {
+    const base = {
+      partner: "viator",
+      clickId: "clk-1",
+      externalTransactionId: "tx-1",
+    } as const;
+
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, bookingAmount: Infinity }).success,
+    ).toBe(false);
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, bookingAmount: Number.NaN }).success,
+    ).toBe(false);
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, commissionAmount: Infinity }).success,
+    ).toBe(false);
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, commissionAmount: -1 }).success,
+    ).toBe(false);
+
+    for (const badCurrency of ["12$", "usd", "US", "USDX", " USD "]) {
+      expect(
+        conversionWebhookSchema.safeParse({ ...base, currency: badCurrency }).success,
+      ).toBe(false);
+    }
+
+    for (const badDate of ["0", "not-a-date", "2026-02-30", "2026-13-01", "2026/11/21"]) {
+      expect(
+        conversionWebhookSchema.safeParse({ ...base, occurredAt: badDate }).success,
+      ).toBe(false);
+    }
+  });
+
+  it("restricts conversionWebhookSchema.partner to the 8 webhook-supported partners", () => {
+    const supported = [
+      "viator",
+      "getyourguide",
+      "klook",
+      "travelpayouts",
+      "stay22",
+      "duffel",
+      "safetywing",
+      "airalo",
+    ];
+    for (const partner of supported) {
+      expect(
+        conversionWebhookSchema.safeParse({
+          partner,
+          clickId: "clk-1",
+          externalTransactionId: "tx-1",
+        }).success,
+      ).toBe(true);
+    }
+
+    const nonWebhook = [
+      "booking",
+      "expedia",
+      "discovercars",
+      "hostelworld",
+      "tripadvisor",
+      "opentable",
+      "skyscanner",
+      "ivisa",
+      "wise",
+    ];
+    for (const partner of nonWebhook) {
+      expect(
+        conversionWebhookSchema.safeParse({
+          partner,
+          clickId: "clk-1",
+          externalTransactionId: "tx-1",
+        }).success,
+      ).toBe(false);
+    }
   });
 });

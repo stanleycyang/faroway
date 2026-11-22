@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Backpack, Gem, Minus, Plus, Wallet } from "lucide-react";
+import { BUDGET_RANGES, isAllowedAffiliateUrl } from "@faroway/constants";
 import { getAllGuides, type DestinationGuide } from "@/lib/destination-guides";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import { getCostProfile } from "@/lib/tools/cost-data";
-import { BUDGET_RANGES } from "@faroway/constants";
 import { CostBreakdown } from "./CostBreakdown";
 import { ToolHero } from "@/components/tools/ToolHero";
+import {
+  ToolAffiliateCard,
+  type ToolAffiliateAction,
+} from "@/components/tools/ToolAffiliateCard";
 
 const guides = getAllGuides().filter((guide) => getCostProfile(guide.slug));
 
@@ -14,24 +19,36 @@ const BUDGET_OPTIONS = [
   {
     key: "budget",
     label: "Budget",
-    emoji: "🎒",
+    icon: Backpack,
     description: "Hostels, street food, public transit",
   },
   {
     key: "moderate",
     label: "Mid-Range",
-    emoji: "💳",
+    icon: Wallet,
     description: "Hotels, restaurants, some tours",
   },
   {
     key: "luxury",
     label: "Luxury",
-    emoji: "👑",
+    icon: Gem,
     description: "Top hotels, fine dining, private tours",
   },
 ] as const;
 
-export function CostEstimatorClient() {
+export interface TripCostAffiliateBundle {
+  staysByTier: Record<"budget" | "moderate" | "luxury", AffiliateLinkResult[]>;
+  flights: AffiliateLinkResult[];
+  fx: AffiliateLinkResult | null;
+}
+
+export interface CostEstimatorClientProps {
+  affiliateLinksBySlug?: Record<string, TripCostAffiliateBundle>;
+}
+
+export function CostEstimatorClient({
+  affiliateLinksBySlug,
+}: CostEstimatorClientProps = {}) {
   const [destination, setDestination] = useState<DestinationGuide | null>(null);
   const [days, setDays] = useState(5);
   const [travelers, setTravelers] = useState(2);
@@ -55,15 +72,45 @@ export function CostEstimatorClient() {
     const budgetLabel =
       BUDGET_OPTIONS.find((o) => o.key === budgetKey)?.label || "";
 
+    const bundle = affiliateLinksBySlug?.[destination.slug];
+    const actions: ToolAffiliateAction[] = [];
+    if (bundle) {
+      for (const stay of bundle.staysByTier[budgetKey] ?? []) {
+        if (stay.url && isAllowedAffiliateUrl(stay.url)) {
+          actions.push({
+            key: `tool-cost-${destination.slug}-${budgetKey}-stay-${stay.partner}`,
+            link: stay,
+            itemType: "hotel",
+          });
+        }
+      }
+      for (const flight of bundle.flights.slice(0, 1)) {
+        if (flight.url && isAllowedAffiliateUrl(flight.url)) {
+          actions.push({
+            key: `tool-cost-${destination.slug}-flight-${flight.partner}`,
+            link: flight,
+            itemType: "flight",
+          });
+        }
+      }
+      if (bundle.fx?.url && isAllowedAffiliateUrl(bundle.fx.url)) {
+        actions.push({
+          key: `tool-cost-${destination.slug}-wise-fx`,
+          link: bundle.fx,
+          itemType: "activity",
+        });
+      }
+    }
+
     return (
       <div>
         <div className="max-w-xl mx-auto px-6 pt-28 lg:pt-32 pb-16">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="font-editorial text-2xl font-bold text-slate-900">
                 {destination.name} Trip Cost
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-600">
                 {days} days, {travelers} {travelers === 1 ? "person" : "people"}
                 , {budgetLabel.toLowerCase()} budget
               </p>
@@ -71,7 +118,7 @@ export function CostEstimatorClient() {
             <button
               type="button"
               onClick={handleReset}
-              className="text-sm text-primary font-medium hover:underline"
+              className="text-sm text-primary-700 font-semibold hover:underline"
             >
               New estimate
             </button>
@@ -85,6 +132,18 @@ export function CostEstimatorClient() {
             budgetLabel={budgetLabel}
             destinationName={destination.name}
           />
+
+          {actions.length > 0 && (
+            <ToolAffiliateCard
+              title={`Compare real prices for ${destination.name}`}
+              subtitle={`Check ${budgetLabel.toLowerCase()} stays for ${travelers} ${travelers === 1 ? "traveler" : "travelers"}, flights, and ${profile.currency} exchange rates.`}
+              placement="trip_cost_result"
+              campaign={`tool-trip-cost-${destination.slug}`}
+              actions={actions}
+              editorialNote="Financial & exchange rates vary by provider and market timing; verify current fees and rates directly with Wise before transferring."
+              className="mt-8"
+            />
+          )}
         </div>
       </div>
     );
@@ -116,7 +175,7 @@ export function CostEstimatorClient() {
               setDestination(guide || null);
               setShowResult(false);
             }}
-            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-700/30 focus:border-primary-700"
           >
             <option value="">Select a destination</option>
             {guides.map((g) => (
@@ -138,9 +197,9 @@ export function CostEstimatorClient() {
               aria-label="Decrease trip duration"
               onClick={() => setDays((d) => Math.max(1, d - 1))}
               disabled={days <= 1}
-              className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-10 h-10 rounded-xl border border-slate-300 bg-white flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-4 h-4" aria-hidden="true" />
             </button>
             <output
               aria-live="polite"
@@ -154,9 +213,9 @@ export function CostEstimatorClient() {
               aria-label="Increase trip duration"
               onClick={() => setDays((d) => Math.min(30, d + 1))}
               disabled={days >= 30}
-              className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-10 h-10 rounded-xl border border-slate-300 bg-white flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </fieldset>
@@ -172,9 +231,9 @@ export function CostEstimatorClient() {
               aria-label="Decrease number of travelers"
               onClick={() => setTravelers((t) => Math.max(1, t - 1))}
               disabled={travelers <= 1}
-              className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-10 h-10 rounded-xl border border-slate-300 bg-white flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Minus className="w-4 h-4" />
+              <Minus className="w-4 h-4" aria-hidden="true" />
             </button>
             <output
               aria-live="polite"
@@ -188,9 +247,9 @@ export function CostEstimatorClient() {
               aria-label="Increase number of travelers"
               onClick={() => setTravelers((t) => Math.min(10, t + 1))}
               disabled={travelers >= 10}
-              className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-10 h-10 rounded-xl border border-slate-300 bg-white flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </fieldset>
@@ -201,27 +260,39 @@ export function CostEstimatorClient() {
             Budget Level
           </legend>
           <div className="grid grid-cols-3 gap-3">
-            {BUDGET_OPTIONS.map((opt) => (
-              <button
-                type="button"
-                key={opt.key}
-                onClick={() => setBudgetKey(opt.key)}
-                aria-pressed={budgetKey === opt.key}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  budgetKey === opt.key
-                    ? "border-primary bg-primary/5 shadow-sm"
-                    : "border-slate-200 hover:border-primary/30"
-                }`}
-              >
-                <span className="text-2xl block mb-1">{opt.emoji}</span>
-                <span className="text-sm font-semibold text-slate-900 block">
-                  {opt.label}
-                </span>
-                <span className="text-xs text-slate-500">
-                  ${BUDGET_RANGES[opt.key].daily}/day
-                </span>
-              </button>
-            ))}
+            {BUDGET_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  type="button"
+                  key={opt.key}
+                  onClick={() => setBudgetKey(opt.key)}
+                  aria-pressed={budgetKey === opt.key}
+                  className={`p-4 rounded-xl border-2 text-center transition-all bg-white ${
+                    budgetKey === opt.key
+                      ? "border-primary-700 bg-primary-50 shadow-sm"
+                      : "border-[#DCE5E3] hover:border-primary-700/40"
+                  }`}
+                >
+                  <div className="flex justify-center mb-2">
+                    <Icon
+                      className={`w-6 h-6 ${
+                        budgetKey === opt.key
+                          ? "text-primary-700"
+                          : "text-[#143D46]"
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-slate-900 block">
+                    {opt.label}
+                  </span>
+                  <span className="text-xs text-slate-600">
+                    ${BUDGET_RANGES[opt.key].daily}/day
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </fieldset>
 
@@ -229,7 +300,7 @@ export function CostEstimatorClient() {
           type="button"
           onClick={handleEstimate}
           disabled={!profile}
-          className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary to-amber-500 text-white font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          className="w-full py-3.5 rounded-full bg-primary-700 hover:bg-primary-800 text-white font-semibold shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Calculate My Trip Cost
         </button>

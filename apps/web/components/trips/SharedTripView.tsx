@@ -8,11 +8,40 @@ import React, {
   useState,
 } from "react";
 import Link from "next/link";
-import { Copy, Sparkles } from "lucide-react";
-import Image from "next/image";
+import {
+  Copy,
+  ExternalLink,
+  Heart,
+  Lightbulb,
+  Luggage,
+  Share2,
+  Sparkles,
+  ThumbsUp,
+  Ticket,
+} from "lucide-react";
+import {
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  itemTypeForAffiliatePartner,
+} from "@faroway/constants";
+import { Logo } from "@/components/Logo";
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
+import { TripCheckout } from "@/components/trips/TripCheckout";
+import { useTripCheckout } from "@/components/trips/TripCheckoutContext";
+import {
+  BookingsSheet,
+  buildTripBookingItems,
+} from "@/components/trips/BookingsSheet";
+import { useViatorContentEnabled } from "@/components/trips/ViatorContentPolicy";
 import { ShareButtons } from "@/components/ShareButtons";
+import { AffiliateTrackingProvider } from "@/components/affiliates/AffiliateTrackingContext";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
+import { buildTripEssentials } from "@/lib/affiliates/essentials";
+import { buildHotelPartnerLinks } from "@/lib/affiliates/hotels";
+import { buildFlightFallbackLinks } from "@/lib/affiliates/flights";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import { destinationImage } from "@/lib/trips/destination-image";
 import type { TripDay } from "@/lib/ai/types";
 
@@ -167,6 +196,13 @@ interface SharedTripViewProps {
   itinerary: SharedItinerary | null;
   shareToken: string;
   shareUrl: string;
+  essentials?: Record<string, AffiliateLinkResult>;
+  hotelPartnerLinks?: {
+    primary: AffiliateLinkResult | null;
+    alternatives: AffiliateLinkResult[];
+    liteapiLiveCheckoutEnabled?: boolean;
+  };
+  flightFallbackLinks?: AffiliateLinkResult[];
 }
 
 export function SharedTripView({
@@ -180,8 +216,14 @@ export function SharedTripView({
   itinerary,
   shareToken,
   shareUrl,
+  essentials: serverEssentials,
+  hotelPartnerLinks: serverHotelPartnerLinks,
+  flightFallbackLinks: serverFlightFallbackLinks,
 }: SharedTripViewProps) {
   const heroImageUrl = destinationImage(destination);
+  const viatorContentEnabled = useViatorContentEnabled();
+  const [bookingsSheetOpen, setBookingsSheetOpen] = useState(false);
+
   const cloneHref = useMemo(
     () =>
       buildCloneTripHref({
@@ -191,6 +233,99 @@ export function SharedTripView({
         vibes,
       }),
     [destination, travelers, budgetTier, vibes],
+  );
+
+  const resolvedEssentials = useMemo(() => {
+    const raw =
+      serverEssentials ??
+      buildTripEssentials({
+        destination,
+        startDate,
+        endDate,
+        trackingId: "shared_trip",
+      });
+    const filtered: Record<string, AffiliateLinkResult> = {};
+    for (const [key, entry] of Object.entries(raw)) {
+      if (entry?.url && isAllowedAffiliateUrl(entry.url)) {
+        filtered[key] = entry;
+      }
+    }
+    return filtered;
+  }, [serverEssentials, destination, startDate, endDate]);
+
+  const resolvedHotelPartnerLinks = useMemo(() => {
+    const raw =
+      serverHotelPartnerLinks ??
+      buildHotelPartnerLinks({
+        destination,
+        checkIn: startDate,
+        checkOut: endDate,
+        adults: travelers,
+        budgetTier,
+        campaign: "shared_trip",
+      });
+    return {
+      primary:
+        raw.primary?.url && isAllowedAffiliateUrl(raw.primary.url)
+          ? raw.primary
+          : null,
+      alternatives: (raw.alternatives ?? []).filter(
+        (item) => item?.url && isAllowedAffiliateUrl(item.url),
+      ),
+      liteapiLiveCheckoutEnabled: raw.liteapiLiveCheckoutEnabled,
+    };
+  }, [
+    serverHotelPartnerLinks,
+    destination,
+    startDate,
+    endDate,
+    travelers,
+    budgetTier,
+  ]);
+
+  const resolvedFlightFallbackLinks = useMemo(() => {
+    const firstTransport = itinerary?.days?.find((d) => d.transport)?.transport;
+    const raw =
+      serverFlightFallbackLinks ??
+      buildFlightFallbackLinks({
+        originAirport: firstTransport?.departure?.airport,
+        destinationAirport: firstTransport?.arrival?.airport,
+        destinationCity: destination,
+        departureDate: startDate,
+        returnDate: endDate > startDate ? endDate : undefined,
+        adults: travelers,
+        trackingId: "shared_trip",
+      });
+    return raw.filter((item) => item?.url && isAllowedAffiliateUrl(item.url));
+  }, [
+    serverFlightFallbackLinks,
+    itinerary?.days,
+    destination,
+    startDate,
+    endDate,
+    travelers,
+  ]);
+
+  const bookingItems = useMemo(
+    () =>
+      buildTripBookingItems({
+        days: itinerary?.days,
+        startDate,
+        endDate,
+        hotelPartnerLinks: resolvedHotelPartnerLinks,
+        flightFallbackLinks: resolvedFlightFallbackLinks,
+        essentials: resolvedEssentials,
+        viatorContentEnabled,
+      }),
+    [
+      itinerary?.days,
+      startDate,
+      endDate,
+      resolvedHotelPartnerLinks,
+      resolvedFlightFallbackLinks,
+      resolvedEssentials,
+      viatorContentEnabled,
+    ],
   );
 
   const [counts, setCounts] = useState<ReactionCounts>({});
@@ -374,7 +509,7 @@ export function SharedTripView({
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-[#FAF8F3]">
       <TripHeader
         destination={destination}
         startDate={startDate}
@@ -385,271 +520,454 @@ export function SharedTripView({
         showActions={false}
       />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Trip Meta + Quick Clone CTA */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          {(travelerType || budgetTier || (vibes && vibes.length > 0)) && (
-            <div className="flex flex-wrap gap-2">
-              {travelerType && (
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-700 font-semibold ring-1 ring-primary-200/50">
-                  {formatLabel(travelerType)}
-                </span>
-              )}
-              {budgetTier && (
-                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-slate-100 text-slate-700 font-semibold">
-                  {formatLabel(budgetTier)} tier
-                </span>
-              )}
-              {vibes?.map((vibe) => (
-                <span
-                  key={vibe}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-700 ring-1 ring-primary-200/50"
-                >
-                  {formatLabel(vibe)}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <Link
-            href={cloneHref}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm flex-shrink-0"
-          >
-            <Copy className="w-4 h-4" />
-            Clone &amp; customize this trip
-          </Link>
-        </div>
-
-        {/* Overview */}
-        {itinerary?.overview && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">
-              Trip Overview
-            </h2>
-            <p className="text-gray-600 leading-relaxed">
-              {itinerary.overview}
-            </p>
-          </div>
-        )}
-
-        {itinerary?.days?.length ? (
-          <p className="mb-4 text-sm text-gray-600">
-            Prices shown are planning estimates. Confirm current prices, party
-            size, taxes, fees and cancellation terms with each provider. No
-            booking is confirmed by this plan.
-          </p>
-        ) : null}
-
-        {/* Day-by-Day Itinerary */}
-        {itinerary?.days && itinerary.days.length > 0 && (
-          <div className="space-y-5">
-            <h2 className="text-xl font-bold text-gray-900">
-              Day-by-Day Itinerary
-            </h2>
-            {itinerary.days.map((day) => {
-              const votableStops = extractDayVotableStops(day);
-              return (
-                <div key={day.dayNumber} className="space-y-2.5">
-                  <ItineraryDay
-                    dayNumber={day.dayNumber}
-                    date={day.date}
-                    title={day.title}
-                    summary={day.summary}
-                    morning={day.morning}
-                    afternoon={day.afternoon}
-                    evening={day.evening}
-                    tips={day.tips}
-                    diningOptions={day.diningOptions}
-                    timingProposal={day.timingProposal}
-                    hotel={day.hotel}
-                    transport={day.transport}
-                    destination={destination}
-                    vibes={vibes}
-                    defaultExpanded={true}
-                  />
-
-                  {votableStops.length > 0 && (
-                    <section
-                      aria-label={`Vote on Day ${day.dayNumber} stops`}
-                      className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <p className="text-xs font-semibold text-slate-700">
-                          Vote on Day {day.dayNumber} stops
-                        </p>
-                        <span className="text-[11px] text-slate-500">
-                          Tap to save favorites for your group
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {votableStops.map((stop) => {
-                          const stopCounts = counts[stop.stopKey] || {
-                            thumbs_up: 0,
-                            heart: 0,
-                          };
-                          const votedUp = Boolean(
-                            userVotes[stop.stopKey]?.thumbs_up,
-                          );
-                          const votedHeart = Boolean(
-                            userVotes[stop.stopKey]?.heart,
-                          );
-                          return (
-                            <div
-                              key={stop.stopKey}
-                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white pl-3 pr-1.5 py-1 text-xs shadow-xs"
-                            >
-                              <span
-                                className="font-medium text-slate-800 max-w-[180px] truncate"
-                                title={stop.name}
-                              >
-                                {stop.name}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleToggleVote(stop.stopKey, "thumbs_up")
-                                }
-                                aria-pressed={votedUp}
-                                aria-label={`Thumbs up ${stop.name}`}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors ${
-                                  votedUp
-                                    ? "bg-slate-900 text-white"
-                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                }`}
-                              >
-                                <span aria-hidden="true">👍</span>
-                                {stopCounts.thumbs_up > 0 && (
-                                  <span>{stopCounts.thumbs_up}</span>
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleToggleVote(stop.stopKey, "heart")
-                                }
-                                aria-pressed={votedHeart}
-                                aria-label={`Love ${stop.name}`}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors ${
-                                  votedHeart
-                                    ? "bg-rose-600 text-white"
-                                    : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-                                }`}
-                              >
-                                <span aria-hidden="true">❤️</span>
-                                {stopCounts.heart > 0 && (
-                                  <span>{stopCounts.heart}</span>
-                                )}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
+      <AffiliateTrackingProvider
+        value={{
+          destination,
+          startDate,
+          endDate,
+          travelers,
+          source: "shared_trip",
+          hotelPartnerLinks: resolvedHotelPartnerLinks,
+          flightFallbackLinks: resolvedFlightFallbackLinks,
+          essentials: resolvedEssentials,
+        }}
+      >
+        <TripCheckout mode="shared" source="shared_trip" travelers={travelers}>
+          <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            {/* Trip Meta + Quick Customize & Book CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              {(travelerType || budgetTier || (vibes && vibes.length > 0)) && (
+                <div className="flex flex-wrap gap-2">
+                  {travelerType && (
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-800 font-semibold ring-1 ring-primary-200/50">
+                      {formatLabel(travelerType)}
+                    </span>
                   )}
+                  {budgetTier && (
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-slate-100 text-slate-700 font-semibold">
+                      {formatLabel(budgetTier)} tier
+                    </span>
+                  )}
+                  {vibes?.map((vibe) => (
+                    <span
+                      key={vibe}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-800 ring-1 ring-primary-200/50"
+                    >
+                      {formatLabel(vibe)}
+                    </span>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {/* General Tips */}
-        {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
-          <div className="mt-6 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 border border-primary-100/50">
-            <h3 className="font-bold text-primary-800 mb-3 flex items-center gap-2">
-              <span className="text-lg">💡</span> Travel Tips for {destination}
-            </h3>
-            <ul className="space-y-2">
-              {itinerary.generalTips.map((tip, i) => (
-                <li
-                  key={i}
-                  className="text-sm text-primary-700 flex items-start gap-2"
+              <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+                {bookingItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setBookingsSheetOpen(true)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border border-[#DCE5E3] bg-white text-[#143D46] hover:bg-[#EFF5F3] transition-colors shadow-sm"
+                  >
+                    <Ticket className="w-4 h-4 text-primary-700" />
+                    Book this trip ({bookingItems.length})
+                  </button>
+                )}
+                <Link
+                  href={cloneHref}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-primary-700 text-white hover:bg-primary-800 transition-colors shadow-sm"
                 >
-                  <span className="text-primary-400 mt-0.5">•</span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Packing List */}
-        {itinerary?.packingList && itinerary.packingList.length > 0 && (
-          <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-lg">🧳</span> Packing Suggestions
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {itinerary.packingList.map((item, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 font-medium"
-                >
-                  {item}
-                </span>
-              ))}
+                  <Copy className="w-4 h-4" />
+                  Customize &amp; book
+                </Link>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* Share Section */}
-        <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
-          <h3 className="font-bold text-gray-900 mb-2 text-lg">
-            📤 Share This Trip
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Know someone who&apos;d love this itinerary? Spread the word!
-          </p>
-          <ShareButtons
-            url={shareUrl}
-            title={`${destination} Trip Itinerary`}
-            description={`Check out this ${itinerary?.days?.length || ""}-day AI-generated itinerary to ${destination}! Created with Faroway.`}
-            hashtags={["Faroway", "Travel", destination.replace(/\s+/g, "")]}
-            className="justify-center"
-          />
-        </div>
+            {/* Overview */}
+            {itinerary?.overview && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-3">
+                  Trip Overview
+                </h2>
+                <p className="text-gray-600 leading-relaxed">
+                  {itinerary.overview}
+                </p>
+              </div>
+            )}
 
-        <div className="mt-6 text-center">
-          <Link
-            href={`/report?type=shared_trip&token=${encodeURIComponent(shareToken)}`}
-            className="text-sm font-semibold text-gray-500 underline-offset-4 hover:text-gray-800 hover:underline"
-          >
-            Report this itinerary
-          </Link>
-        </div>
+            {itinerary?.days?.length ? (
+              <p className="mb-4 text-sm text-gray-600">
+                Prices shown are planning estimates. Confirm current prices,
+                party size, taxes, fees and cancellation terms with each
+                provider. No booking is confirmed by this plan.
+              </p>
+            ) : null}
 
-        {/* CTA Banner */}
-        <div className="mt-8 bg-gradient-to-br from-primary to-primary-700 rounded-2xl p-8 sm:p-10 text-center text-white overflow-hidden relative">
-          {/* Decorative glow */}
-          <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
+            {/* Day-by-Day Itinerary */}
+            {itinerary?.days && itinerary.days.length > 0 && (
+              <div className="space-y-5">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Day-by-Day Itinerary
+                </h2>
+                {itinerary.days.map((day) => {
+                  const votableStops = extractDayVotableStops(day);
+                  return (
+                    <div key={day.dayNumber} className="space-y-2.5">
+                      <ItineraryDay
+                        dayNumber={day.dayNumber}
+                        date={day.date}
+                        title={day.title}
+                        summary={day.summary}
+                        morning={day.morning}
+                        afternoon={day.afternoon}
+                        evening={day.evening}
+                        tips={day.tips}
+                        diningOptions={day.diningOptions}
+                        timingProposal={day.timingProposal}
+                        hotel={day.hotel}
+                        transport={day.transport}
+                        destination={destination}
+                        vibes={vibes}
+                        defaultExpanded={true}
+                      />
 
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl mx-auto mb-5 shadow-lg overflow-hidden">
-              <Image
-                src="/icon.png"
-                alt="Faroway"
-                width={64}
-                height={64}
-                className="w-full h-full object-cover"
+                      {votableStops.length > 0 && (
+                        <section
+                          aria-label={`Vote on Day ${day.dayNumber} stops`}
+                          className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-xs font-semibold text-slate-700">
+                              Vote on Day {day.dayNumber} stops
+                            </p>
+                            <span className="text-[11px] text-slate-600">
+                              Tap to save favorites for your group
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {votableStops.map((stop) => {
+                              const stopCounts = counts[stop.stopKey] || {
+                                thumbs_up: 0,
+                                heart: 0,
+                              };
+                              const votedUp = Boolean(
+                                userVotes[stop.stopKey]?.thumbs_up,
+                              );
+                              const votedHeart = Boolean(
+                                userVotes[stop.stopKey]?.heart,
+                              );
+                              return (
+                                <div
+                                  key={stop.stopKey}
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white pl-3 pr-1.5 py-1 text-xs shadow-xs"
+                                >
+                                  <span
+                                    className="font-medium text-slate-800 max-w-[180px] truncate"
+                                    title={stop.name}
+                                  >
+                                    {stop.name}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleToggleVote(
+                                        stop.stopKey,
+                                        "thumbs_up",
+                                      )
+                                    }
+                                    aria-pressed={votedUp}
+                                    aria-label={`Thumbs up ${stop.name}`}
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors ${
+                                      votedUp
+                                        ? "bg-[#143D46] text-white"
+                                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                    }`}
+                                  >
+                                    <ThumbsUp
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden="true"
+                                    />
+                                    {stopCounts.thumbs_up > 0 && (
+                                      <span>{stopCounts.thumbs_up}</span>
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleToggleVote(stop.stopKey, "heart")
+                                    }
+                                    aria-pressed={votedHeart}
+                                    aria-label={`Love ${stop.name}`}
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors ${
+                                      votedHeart
+                                        ? "bg-primary-700 text-white"
+                                        : "bg-primary-50 text-primary-800 hover:bg-primary-100"
+                                    }`}
+                                  >
+                                    <Heart
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden="true"
+                                    />
+                                    {stopCounts.heart > 0 && (
+                                      <span>{stopCounts.heart}</span>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Stay, Flights & Trip Essentials */}
+            <SharedTripEssentialsStrip
+              destination={destination}
+              startDate={startDate}
+              endDate={endDate}
+              hotelPartnerLinks={resolvedHotelPartnerLinks}
+              flightFallbackLinks={resolvedFlightFallbackLinks}
+              essentials={resolvedEssentials}
+            />
+
+            {/* General Tips */}
+            {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
+              <div className="mt-6 bg-[#EFF5F3] rounded-2xl p-6 border border-[#DCE5E3]">
+                <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <Lightbulb
+                    className="h-5 w-5 text-primary-800"
+                    aria-hidden="true"
+                  />
+                  Travel Tips for {destination}
+                </h3>
+                <ul className="space-y-2">
+                  {itinerary.generalTips.map((tip, i) => (
+                    <li
+                      key={i}
+                      className="text-sm text-slate-800 flex items-start gap-2"
+                    >
+                      <span className="text-primary-700 mt-0.5">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Packing List */}
+            {itinerary?.packingList && itinerary.packingList.length > 0 && (
+              <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Luggage
+                    className="h-5 w-5 text-slate-700"
+                    aria-hidden="true"
+                  />
+                  Packing Suggestions
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {itinerary.packingList.map((item, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 font-medium"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Share Section */}
+            <div className="mt-8 bg-[#EFF5F3] rounded-2xl p-6 sm:p-8 text-center border border-[#DCE5E3]">
+              <h3 className="font-bold text-gray-900 mb-2 text-lg flex items-center justify-center gap-2">
+                <Share2 className="h-5 w-5 text-slate-800" aria-hidden="true" />
+                Share This Trip
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Know someone who&apos;d love this itinerary? Spread the word!
+              </p>
+              <ShareButtons
+                url={shareUrl}
+                title={`${destination} Trip Itinerary`}
+                description={`Check out this ${itinerary?.days?.length || ""}-day AI-generated itinerary to ${destination}! Created with Faroway.`}
+                hashtags={[
+                  "Faroway",
+                  "Travel",
+                  destination.replace(/\s+/g, ""),
+                ]}
+                className="justify-center"
               />
             </div>
-            <h3 className="text-2xl font-black mb-3">
-              Make This {destination} Trip Yours
-            </h3>
-            <p className="text-white/80 mb-6 max-w-md mx-auto leading-relaxed">
-              Start with this trip&apos;s destination, party size, budget, and
-              vibes — then tweak dates and stops in seconds.
-            </p>
-            <Link
-              href={cloneHref}
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-primary-700 rounded-full font-bold hover:bg-white/90 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
-            >
-              <Sparkles className="w-5 h-5" />
-              Clone &amp; customize this trip
-            </Link>
-          </div>
-        </div>
-      </main>
+
+            <div className="mt-6 text-center">
+              <Link
+                href={`/report?type=shared_trip&token=${encodeURIComponent(shareToken)}`}
+                className="text-sm font-semibold text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline"
+              >
+                Report this itinerary
+              </Link>
+            </div>
+
+            {/* CTA Banner */}
+            <div className="mt-8 bg-gradient-to-br from-[#143D46] to-[#0E2C33] rounded-2xl p-8 sm:p-10 text-center text-white overflow-hidden relative">
+              {/* Decorative glow */}
+              <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#F97066]/15 rounded-full blur-3xl" />
+              <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
+
+              <div className="relative">
+                <Logo
+                  size="lg"
+                  variant="light"
+                  asLink={false}
+                  showWordmark={false}
+                  className="mx-auto mb-5 justify-center"
+                />
+                <h3 className="font-editorial text-2xl sm:text-3xl font-bold mb-3">
+                  Make This {destination} Trip Yours
+                </h3>
+                <p className="text-[#EFF5F3]/90 mb-6 max-w-md mx-auto leading-relaxed">
+                  Start with this trip&apos;s destination, party size, budget,
+                  and vibes — then tweak dates and stops in seconds.
+                </p>
+                <Link
+                  href={cloneHref}
+                  className="inline-flex min-h-12 items-center gap-2 px-8 py-3.5 bg-white text-[#143D46] rounded-full font-bold hover:bg-[#EFF5F3] transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+                >
+                  <Sparkles className="w-5 h-5 text-primary-700" />
+                  Clone &amp; customize this trip
+                </Link>
+              </div>
+            </div>
+          </main>
+          <BookingsSheet
+            open={bookingsSheetOpen}
+            onClose={() => setBookingsSheetOpen(false)}
+            items={bookingItems}
+            source="shared_trip"
+            destination={destination}
+          />
+        </TripCheckout>
+      </AffiliateTrackingProvider>
     </div>
+  );
+}
+
+function SharedTripEssentialsStrip({
+  destination,
+  startDate,
+  endDate,
+  hotelPartnerLinks,
+  flightFallbackLinks,
+  essentials,
+}: {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  hotelPartnerLinks: {
+    primary: AffiliateLinkResult | null;
+    alternatives: AffiliateLinkResult[];
+  };
+  flightFallbackLinks: AffiliateLinkResult[];
+  essentials: Record<string, AffiliateLinkResult>;
+}) {
+  const checkout = useTripCheckout();
+  const dateLabel =
+    startDate && endDate ? `${startDate} – ${endDate}` : startDate;
+
+  const stayLinks = [
+    ...(hotelPartnerLinks.primary ? [hotelPartnerLinks.primary] : []),
+    ...hotelPartnerLinks.alternatives,
+  ]
+    .filter((l): l is AffiliateLinkResult & { url: string } =>
+      Boolean(l?.url && isAllowedAffiliateUrl(l.url)),
+    )
+    .slice(0, 2);
+
+  const flightLinks = flightFallbackLinks
+    .filter((l): l is AffiliateLinkResult & { url: string } =>
+      Boolean(l?.url && isAllowedAffiliateUrl(l.url)),
+    )
+    .slice(0, 2);
+
+  const essentialLinks = Object.entries(essentials)
+    .map(([key, entry]) => ({ key, entry }))
+    .filter(
+      (
+        row,
+      ): row is { key: string; entry: AffiliateLinkResult & { url: string } } =>
+        Boolean(row.entry?.url && isAllowedAffiliateUrl(row.entry.url)),
+    );
+
+  if (
+    stayLinks.length === 0 &&
+    flightLinks.length === 0 &&
+    essentialLinks.length === 0
+  ) {
+    return null;
+  }
+
+  return (
+    <section
+      aria-label="Stays, flights & trip essentials"
+      className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <h3 className="font-editorial text-xl text-slate-900">
+        Stays, flights &amp; trip essentials for {destination}
+      </h3>
+      <p className="mt-1 text-sm text-slate-600">
+        Compare trusted booking partners for these dates ({dateLabel}).
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        {[
+          ...stayLinks,
+          ...flightLinks,
+          ...essentialLinks.map((e) => e.entry),
+        ].map((link) => {
+          const partnerLabel = formatAffiliatePartnerName(link.partner);
+          const itemType = itemTypeForAffiliatePartner(link.partner);
+          return checkout ? (
+            <button
+              key={`${link.vertical}:${link.partner}:${link.label}`}
+              type="button"
+              onClick={(event) => {
+                event.currentTarget.focus();
+                checkout.review({
+                  id: `shared-strip-${link.vertical}-${link.partner}`,
+                  name: link.label,
+                  date: startDate,
+                  dateLabel,
+                  mode: "partner_click",
+                  itemType,
+                  partner: link.partner,
+                  partnerLabel,
+                  affiliateUrl: link.url,
+                  source: "shared_trip",
+                  placement: "shared_trip_essentials",
+                });
+              }}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#DCE5E3] bg-[#EFF5F3] px-4 py-2 text-xs font-semibold text-[#143D46] hover:bg-[#DCE5E3]/70 transition-colors"
+            >
+              <span>{link.label}</span>
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          ) : (
+            <TrackedAffiliateButton
+              key={`${link.vertical}:${link.partner}:${link.label}`}
+              variant="subtle"
+              label={link.label}
+              affiliateUrl={link.url}
+              partner={link.partner}
+              itemType={itemType}
+              itemId={`shared-strip-${link.vertical}-${link.partner}`}
+              itemName={link.label}
+              source="shared_trip"
+              placement="shared_trip_essentials"
+            />
+          );
+        })}
+      </div>
+      <AffiliateDisclosure className="mt-3 text-xs text-slate-600" />
+    </section>
   );
 }

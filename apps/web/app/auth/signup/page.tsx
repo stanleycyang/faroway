@@ -63,7 +63,7 @@ function SignupContent() {
             <div className="w-full border-t border-gray-200" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-white text-gray-500">
+            <span className="px-4 bg-white text-slate-600">
               or sign up with email
             </span>
           </div>
@@ -73,11 +73,11 @@ function SignupContent() {
         <EmailPasswordForm mode="signup" redirectTo={redirectTo} />
 
         {/* Sign In Link */}
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-slate-600">
           Already have an account?{" "}
           <Link
             href={`/auth/login${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
-            className="font-semibold text-primary hover:text-primary-dark transition-colors"
+            className="font-semibold text-primary-700 hover:text-primary-800 transition-colors"
           >
             Sign in
           </Link>

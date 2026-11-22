@@ -2,8 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Shield, ArrowRight } from "lucide-react";
-import { getContinents, getGuidesByContinent } from "@/lib/destination-guides";
+import {
+  getAllGuides,
+  getContinents,
+  getGuidesByContinent,
+} from "@/lib/destination-guides";
 import { getVisaSummary, visaStatusConfig } from "@/lib/tools/visa-data";
+import {
+  buildSafetyWingUrl,
+  buildVisaToolUrl,
+} from "@/lib/affiliates/essentials";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import { VisaCheckerClient } from "@/components/tools/visa/VisaCheckerClient";
 import { ToolCTA } from "@/components/tools/ToolCTA";
 import { RelatedTools } from "@/components/tools/RelatedTools";
@@ -23,6 +32,20 @@ export const metadata: Metadata = {
 
 export default function VisaCheckerPage() {
   const continents = getContinents().filter((c) => c !== "All");
+  const allGuides = getAllGuides();
+
+  const visaLinksByDest: Record<string, AffiliateLinkResult> = {};
+  const insuranceLinksByDest: Record<string, AffiliateLinkResult> = {};
+  for (const g of allGuides) {
+    visaLinksByDest[g.slug] = buildVisaToolUrl({
+      destinationCountry: g.country,
+      trackingId: `tool-visa-${g.slug}`,
+    });
+    insuranceLinksByDest[g.slug] = buildSafetyWingUrl({
+      destination: g.name,
+      trackingId: `tool-visa-${g.slug}`,
+    });
+  }
 
   const appSchema = {
     "@context": "https://schema.org",
@@ -44,11 +67,14 @@ export default function VisaCheckerPage() {
           __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
         }}
       />
-      <VisaCheckerClient />
+      <VisaCheckerClient
+        visaLinksByDest={visaLinksByDest}
+        insuranceLinksByDest={insuranceLinksByDest}
+      />
 
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-900 mb-3">
+          <h2 className="font-editorial text-3xl font-bold text-slate-900 mb-3">
             Visa Guides by Destination
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
@@ -63,7 +89,7 @@ export default function VisaCheckerPage() {
 
           return (
             <div key={continent} className="mb-12">
-              <h3 className="text-2xl font-bold text-slate-900 mb-6">
+              <h3 className="font-editorial text-2xl font-bold text-slate-900 mb-6">
                 {continent}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -81,7 +107,7 @@ export default function VisaCheckerPage() {
                       key={dest.slug}
                       href={`/tools/visa-checker/${dest.slug}`}
                       prefetch={false}
-                      className="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all"
+                      className="group overflow-hidden rounded-2xl border border-[#DCE5E3] bg-white shadow-sm hover:shadow-md transition-all"
                     >
                       <div className="relative h-40">
                         <Image
@@ -96,14 +122,17 @@ export default function VisaCheckerPage() {
                           <h4 className="text-lg font-bold text-white">
                             {dest.name}
                           </h4>
-                          <p className="text-sm text-white/80">
+                          <p className="text-sm text-white/90">
                             {dest.country}
                           </p>
                         </div>
                       </div>
                       <div className="p-4">
                         <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
-                          <Shield className="w-4 h-4 text-primary" />
+                          <Shield
+                            className="w-4 h-4 text-primary-700"
+                            aria-hidden="true"
+                          />
                           <span className="font-medium">{dominant}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -136,9 +165,9 @@ export default function VisaCheckerPage() {
                             </span>
                           )}
                         </div>
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary-700 group-hover:gap-2 transition-all">
                           View all requirements{" "}
-                          <ArrowRight className="w-3 h-3" />
+                          <ArrowRight className="w-3 h-3" aria-hidden="true" />
                         </span>
                       </div>
                     </Link>

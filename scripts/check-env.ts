@@ -48,9 +48,29 @@ const WEB: EnvVar[] = [
     description: "Public app URL",
   },
   {
+    name: "NEXT_PUBLIC_BASE_URL",
+    required: false,
+    description: "Canonical public web URL for OG tags and share links",
+  },
+  {
+    name: "NEXT_PUBLIC_SITE_URL",
+    required: false,
+    description: "Fallback public site URL",
+  },
+  {
+    name: "IP_HASH_SALT",
+    required: false,
+    description: "HMAC salt for rate-limit identifier hashing",
+  },
+  {
     name: "NEXT_PUBLIC_GA_MEASUREMENT_ID",
     required: false,
     description: "Google Analytics measurement ID",
+  },
+  {
+    name: "IMPACT_SITE_VERIFICATION",
+    required: false,
+    description: "Impact affiliate network site verification token",
   },
   {
     name: "GOOGLE_PLACES_API_KEY",
@@ -69,9 +89,29 @@ const WEB: EnvVar[] = [
     description: "Viator partner ID for affiliate tracking",
   },
   {
+    name: "VIATOR_MCID",
+    required: false,
+    description: "Viator campaign attribution MCID",
+  },
+  {
+    name: "VIATOR_CONTENT_ENABLED",
+    required: false,
+    description: "Viator commercial content display gate",
+  },
+  {
+    name: "VIATOR_CONTENT_APPROVAL_REF",
+    required: false,
+    description: "Viator commercial approval reference",
+  },
+  {
     name: "DUFFEL_API_TOKEN",
     required: false,
     description: "Duffel token for flight search and links",
+  },
+  {
+    name: "LITEAPI_API_KEY",
+    required: false,
+    description: "LiteAPI key for sandbox hotel/flight integration",
   },
   {
     name: "TRIPADVISOR_API_KEY",
@@ -93,6 +133,121 @@ const WEB: EnvVar[] = [
     required: false,
     description: "Tavily key for local non-affiliate enrichment",
   },
+  {
+    name: "TRAVELPAYOUTS_MARKER",
+    required: false,
+    description: "Travelpayouts affiliate marker ID",
+  },
+  {
+    name: "TRAVELPAYOUTS_TRS",
+    required: false,
+    description: "Travelpayouts campaign/TRS ID",
+  },
+  {
+    name: "STAY22_AID",
+    required: false,
+    description: "Stay22 affiliate ID for accommodation links",
+  },
+  {
+    name: "BOOKING_AFFILIATE_ID",
+    required: false,
+    description: "Booking.com affiliate aid",
+  },
+  {
+    name: "EXPEDIA_AFFCID",
+    required: false,
+    description: "Expedia affiliate affcid",
+  },
+  {
+    name: "EXPEDIA_CAMREF",
+    required: false,
+    description: "Expedia Partnerize camref",
+  },
+  {
+    name: "HOSTELWORLD_AFFILIATE_ID",
+    required: false,
+    description: "Hostelworld affiliate source ID",
+  },
+  {
+    name: "KLOOK_AFFILIATE_ID",
+    required: false,
+    description: "Klook affiliate aid",
+  },
+  {
+    name: "OPENTABLE_AFFILIATE_ID",
+    required: false,
+    description: "OpenTable affiliate aid",
+  },
+  {
+    name: "SKYSCANNER_ASSOCIATE_ID",
+    required: false,
+    description: "Skyscanner associate ID",
+  },
+  {
+    name: "SAFETYWING_REFERENCE_ID",
+    required: false,
+    description: "SafetyWing affiliate referenceID",
+  },
+  {
+    name: "AIRALO_AFFILIATE_ID",
+    required: false,
+    description: "Airalo affiliate ref ID",
+  },
+  {
+    name: "DISCOVERCARS_AFFILIATE_ID",
+    required: false,
+    description: "DiscoverCars affiliate a_aid",
+  },
+  {
+    name: "IVISA_AFFILIATE_ID",
+    required: false,
+    description: "iVisa affiliate affid",
+  },
+  {
+    name: "WISE_IR_CLICK_ID",
+    required: false,
+    description: "Wise Impact affiliate tracking ID",
+  },
+  {
+    name: "VIATOR_WEBHOOK_SECRET",
+    required: false,
+    description: "Viator conversion webhook HMAC secret",
+  },
+  {
+    name: "GYG_WEBHOOK_SECRET",
+    required: false,
+    description: "GetYourGuide conversion webhook HMAC secret",
+  },
+  {
+    name: "KLOOK_WEBHOOK_SECRET",
+    required: false,
+    description: "Klook conversion webhook HMAC secret",
+  },
+  {
+    name: "TRAVELPAYOUTS_WEBHOOK_SECRET",
+    required: false,
+    description: "Travelpayouts conversion webhook HMAC secret",
+  },
+  {
+    name: "STAY22_WEBHOOK_SECRET",
+    required: false,
+    description: "Stay22 conversion webhook HMAC secret",
+  },
+  {
+    name: "DUFFEL_WEBHOOK_SECRET",
+    required: false,
+    description: "Duffel conversion webhook HMAC secret",
+  },
+  {
+    name: "SAFETYWING_WEBHOOK_SECRET",
+    required: false,
+    description: "SafetyWing conversion webhook HMAC secret",
+  },
+  {
+    name: "AIRALO_WEBHOOK_SECRET",
+    required: false,
+    description: "Airalo conversion webhook HMAC secret",
+  },
 ];
 
 const MOBILE: EnvVar[] = [
@@ -110,6 +265,11 @@ const MOBILE: EnvVar[] = [
     name: "EXPO_PUBLIC_API_URL",
     required: false,
     description: "Backend API URL",
+  },
+  {
+    name: "EXPO_PUBLIC_WEB_URL",
+    required: false,
+    description: "Public web origin for shared links and legal views",
   },
   {
     name: "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY",

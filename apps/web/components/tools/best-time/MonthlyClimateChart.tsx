@@ -18,13 +18,13 @@ export function MonthlyClimateChart({ months }: MonthlyClimateChartProps) {
       {/* Legend */}
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-slate-900">Monthly Climate</h3>
-        <div className="flex items-center gap-4 text-xs text-slate-500">
+        <div className="flex items-center gap-4 text-xs text-slate-600">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-primary to-amber-400" />
+            <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-[#C03A31] to-[#143D46]" />
             Temperature
           </div>
           <div className="flex items-center gap-1.5">
-            <Droplets className="w-3 h-3 text-sky-400" />
+            <Droplets className="w-3 h-3 text-sky-700" aria-hidden="true" />
             Rainfall
           </div>
         </div>
@@ -38,13 +38,12 @@ export function MonthlyClimateChart({ months }: MonthlyClimateChartProps) {
           const rainNorm = m.rainfallMm / maxRainfall;
           const rainHeight = Math.round(rainNorm * (BAR_AREA_HEIGHT - 10) + 4);
 
-          // Color: blue for cold, coral-amber for warm
           const barColor =
             tempNorm > 0.65
-              ? "from-primary to-amber-400"
+              ? "from-[#C03A31] to-[#E04D43]"
               : tempNorm > 0.35
-                ? "from-amber-300 to-primary"
-                : "from-sky-300 to-blue-400";
+                ? "from-[#143D46] to-[#0F766E]"
+                : "from-sky-500 to-sky-700";
 
           return (
             <div
@@ -85,7 +84,7 @@ export function MonthlyClimateChart({ months }: MonthlyClimateChartProps) {
               </div>
 
               {/* Month label */}
-              <span className="text-[10px] sm:text-xs text-slate-500 font-medium">
+              <span className="text-[10px] sm:text-xs text-slate-600 font-medium">
                 {m.month}
               </span>
             </div>

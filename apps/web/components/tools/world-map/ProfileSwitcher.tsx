@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Globe2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 
 export function ProfileSwitcher() {
@@ -39,10 +39,14 @@ export function ProfileSwitcher() {
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-200 hover:ring-slate-300 text-slate-700 px-3 py-2 rounded-full text-sm font-semibold transition-all"
       >
-        <span className="text-lg leading-none">{active.emoji || "🌍"}</span>
+        <Globe2
+          className="w-4 h-4 text-[#143D46] shrink-0"
+          aria-hidden="true"
+        />
         <span className="max-w-[120px] truncate">{active.name}</span>
         <ChevronDown
           className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden="true"
         />
       </button>
 
@@ -51,7 +55,7 @@ export function ProfileSwitcher() {
           id="world-map-profile-menu"
           className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in"
         >
-          <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+          <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-slate-600 font-semibold">
             Profiles
           </div>
           {profiles.map((p) => {
@@ -61,14 +65,15 @@ export function ProfileSwitcher() {
               <div
                 key={p.id}
                 className={`flex items-center gap-2 px-3 py-2 ${
-                  isActive ? "bg-primary/5" : "hover:bg-slate-50"
+                  isActive ? "bg-primary-50" : "hover:bg-slate-50"
                 } transition-colors`}
               >
                 {isEditing ? (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-lg leading-none">
-                      {p.emoji || "🌍"}
-                    </span>
+                    <Globe2
+                      className="w-4 h-4 text-[#143D46] shrink-0"
+                      aria-hidden="true"
+                    />
                     <input
                       autoFocus
                       aria-label={`Rename ${p.name} profile`}
@@ -85,7 +90,7 @@ export function ProfileSwitcher() {
                         }
                         if (e.key === "Escape") setEditingId(null);
                       }}
-                      className="flex-1 min-w-0 text-sm bg-white ring-1 ring-primary/40 rounded px-2 py-0.5"
+                      className="flex-1 min-w-0 text-sm bg-white ring-1 ring-primary-700/40 rounded px-2 py-0.5"
                     />
                   </div>
                 ) : (
@@ -98,9 +103,10 @@ export function ProfileSwitcher() {
                     }}
                     className="flex items-center gap-2 flex-1 min-w-0 text-left"
                   >
-                    <span className="text-lg leading-none">
-                      {p.emoji || "🌍"}
-                    </span>
+                    <Globe2
+                      className="w-4 h-4 text-[#143D46] shrink-0"
+                      aria-hidden="true"
+                    />
                     <span
                       className={`text-sm font-semibold truncate ${
                         isActive ? "text-primary-700" : "text-slate-700"
@@ -121,9 +127,9 @@ export function ProfileSwitcher() {
                       setEditName(p.name);
                     }
                   }}
-                  className="w-7 h-7 rounded-lg hover:bg-slate-200/70 text-slate-400 hover:text-slate-700 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+                  className="w-7 h-7 rounded-lg hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
                 {profiles.length > 1 ? (
                   <button
@@ -139,9 +145,9 @@ export function ProfileSwitcher() {
                         deleteProfile(p.id);
                       }
                     }}
-                    className="w-7 h-7 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 flex items-center justify-center flex-shrink-0"
+                    className="w-7 h-7 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-700 flex items-center justify-center flex-shrink-0"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                   </button>
                 ) : null}
               </div>
@@ -157,9 +163,9 @@ export function ProfileSwitcher() {
                 setOpen(false);
               }
             }}
-            className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 text-sm font-semibold text-primary transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 text-sm font-semibold text-primary-700 transition-colors"
           >
-            <Plus className="w-4 h-4" /> New profile
+            <Plus className="w-4 h-4" aria-hidden="true" /> New profile
           </button>
         </div>
       )}

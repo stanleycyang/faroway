@@ -155,11 +155,30 @@ export function summarizeBudget(
           hotel.priceStatus,
         );
   }
+  const countedRoundTrips = new Set<string>();
   for (const day of days) {
     if (day.transport) {
-      if (flightQuoteIsCurrent(day.transport, now))
-        add("transport", day.transport.price, day.transport.currency);
-      else unknownItems++;
+      const tid =
+        "id" in day.transport && typeof day.transport.id === "string"
+          ? day.transport.id
+          : undefined;
+      const baseId = tid?.endsWith("__return") ? tid.slice(0, -8) : tid;
+      const idKey = baseId ? `id:${baseId}` : undefined;
+      const rtKey = day.transport.affiliateUrl
+        ? `rt:${day.transport.affiliatePartner ?? ""}:${day.transport.affiliateUrl}:${day.transport.price}:${day.transport.currency}`
+        : undefined;
+      const alreadyCounted = idKey
+        ? countedRoundTrips.has(idKey)
+        : rtKey
+          ? countedRoundTrips.has(rtKey)
+          : false;
+      if (!alreadyCounted) {
+        if (idKey) countedRoundTrips.add(idKey);
+        else if (rtKey) countedRoundTrips.add(rtKey);
+        if (flightQuoteIsCurrent(day.transport, now))
+          add("transport", day.transport.price, day.transport.currency);
+        else unknownItems++;
+      }
     }
     for (const slot of [day.morning, day.afternoon, day.evening]) {
       if (!slot) continue;

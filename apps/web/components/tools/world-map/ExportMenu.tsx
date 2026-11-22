@@ -174,9 +174,9 @@ function ExportSession({
         aria-expanded={open}
         aria-controls={open ? "world-map-export-menu" : undefined}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm"
+        className="inline-flex items-center gap-2 bg-[#143D46] text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#0E2C33] transition-colors shadow-sm"
       >
-        <Download className="w-4 h-4" />
+        <Download className="w-4 h-4" aria-hidden="true" />
         Share & Export
       </button>
 
@@ -199,21 +199,21 @@ function ExportSession({
             disabled={busy !== null || !profile}
             className="w-full flex items-start gap-3 text-left px-4 py-3 hover:bg-slate-50 transition-colors disabled:opacity-60"
           >
-            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-              <Link2 className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center flex-shrink-0">
+              <Link2 className="w-4 h-4" aria-hidden="true" />
             </div>
             <div>
               <div className="text-sm font-semibold text-slate-900">
                 Copy share link
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-600">
                 Read-only URL, no backend
               </div>
             </div>
           </button>
 
           <div className="border-t border-slate-100 px-4 pt-3 pb-2">
-            <div className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
+            <div className="text-[10px] font-bold tracking-wider uppercase text-slate-600">
               Download as poster
             </div>
           </div>

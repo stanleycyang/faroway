@@ -12,14 +12,14 @@ AI-powered travel planning monorepo — personalized day-by-day itineraries with
 
 ## Tech Stack
 
-| Layer            | Technology                                                          |
-| ---------------- | ------------------------------------------------------------------- |
-| Monorepo & Build | [Bun 1.4.4](https://bun.sh), [Turborepo](https://turbo.build)       |
-| Web & API        | [Next.js 16](https://nextjs.org), React 19, Tailwind CSS 4, Zod     |
+| Layer            | Technology                                                           |
+| ---------------- | -------------------------------------------------------------------- |
+| Monorepo & Build | [Bun 1.4.4](https://bun.sh), [Turborepo](https://turbo.build)        |
+| Web & API        | [Next.js 16](https://nextjs.org), React 19, Tailwind CSS 4, Zod      |
 | Mobile           | [Expo 54](https://expo.dev), React Native 0.81, Expo Router, Zustand |
 | Database & Auth  | [Supabase](https://supabase.com) (PostgreSQL 17, Auth, Storage, RLS) |
-| AI & Workflows   | Vercel AI SDK (Google Gemini via AI Gateway), Workflow runtime      |
-| Testing          | Vitest, Jest, Bun Test, Playwright, Python `unittest` + Docker PG   |
+| AI & Workflows   | Vercel AI SDK (Google Gemini via AI Gateway), Workflow runtime       |
+| Testing          | Vitest, Jest, Bun Test, Playwright, Python `unittest` + Docker PG    |
 
 ## Monorepo Structure
 
@@ -103,14 +103,14 @@ Optional travel integrations (Duffel, LiteAPI, Viator, GetYourGuide, TripAdvisor
 
 ### Mobile (`apps/mobile/.env.local`)
 
-| Variable                             | Required | Description                                      |
-| ------------------------------------ | -------- | ------------------------------------------------ |
-| `EXPO_PUBLIC_SUPABASE_URL`           | Yes      | Supabase project URL                             |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY`      | Yes      | Supabase anonymous/public key                    |
-| `EXPO_PUBLIC_API_URL`                | Dev/Prod | Web/API backend origin (e.g. `http://localhost:3000`) |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`   | Auth     | Google OAuth web client ID                       |
-| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`   | Auth     | Google OAuth iOS client ID                       |
-| `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`  | Auth     | Reversed Google iOS client ID URL scheme         |
+| Variable                            | Required | Description                                           |
+| ----------------------------------- | -------- | ----------------------------------------------------- |
+| `EXPO_PUBLIC_SUPABASE_URL`          | Yes      | Supabase project URL                                  |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY`     | Yes      | Supabase anonymous/public key                         |
+| `EXPO_PUBLIC_API_URL`               | Dev/Prod | Web/API backend origin (e.g. `http://localhost:3000`) |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`  | Auth     | Google OAuth web client ID                            |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`  | Auth     | Google OAuth iOS client ID                            |
+| `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME` | Auth     | Reversed Google iOS client ID URL scheme              |
 
 See [`apps/mobile/.env.example`](apps/mobile/.env.example) and [`docs/CREDENTIAL_SETUP.md`](docs/CREDENTIAL_SETUP.md) for the complete mobile & OAuth setup guide.
 
@@ -257,8 +257,10 @@ bun run deploy:mobile:submit  # Submit to App Store / Google Play
 bun run deploy:mobile:update  # Over-the-air JS update
 ```
 
-For production cutover, rollback, mobile QA, and testing runbooks, see:
+For production readiness, monetization/partner configuration, brand guidelines, cutover, rollback, mobile QA, and testing runbooks, see:
 
+- [Production Readiness, Monetization & Design Audit](PROD_AUDIT.md)
+- [Faroway Brand Guidelines](brand/BRAND.md)
 - [Production Acceptance & Cutover](docs/production-acceptance.md)
 - [Release Verification & Rollback](docs/release-verification.md)
 - [Credential Setup](docs/CREDENTIAL_SETUP.md)
@@ -276,4 +278,3 @@ For production cutover, rollback, mobile QA, and testing runbooks, see:
 - **Source code**: Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE). If you modify and run Faroway as a network service, you must make the corresponding source code of your modifications available under AGPL-3.0.
 - **Commercial licensing**: If you want to use, embed, or distribute Faroway (including in proprietary web services or mobile app store distributions) without AGPL-3.0 obligations, contact `support@faroway.ai` for a commercial license.
 - **Trademarks & brand assets**: The **Faroway** name, wordmark, logos, and assets under `brand/` are excluded from the AGPL-3.0 code license. See [TRADEMARKS.md](TRADEMARKS.md) for permitted and prohibited uses.
-

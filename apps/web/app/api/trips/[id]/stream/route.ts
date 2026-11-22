@@ -25,15 +25,18 @@ import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
  */
 
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { checkRateLimitAsync } from "@/lib/security/rate-limit";
+import {
+  activityInputSchema,
+  hotelInputSchema,
+} from "@/lib/search/result-schemas";
 import {
   buildSummaryBlocks,
   buildHotelBlocks,
   buildItineraryBlocks,
   buildBudgetBlocks,
-  type HotelInput,
-  type ActivityInput,
 } from "@/lib/json-render/build-spec";
 
 export const maxDuration = 300;
@@ -139,17 +142,54 @@ type TripStreamMeta = {
   travelers: number;
   budget?: string;
 };
-type SearchStreamRecord = {
-  status: string;
-  progress: Record<string, string> | null;
-  error_message: string | null;
-  intermediate_results?: Record<string, unknown> | null;
-  json_render_spec?: unknown;
-};
+const searchStreamRecordSchema = z
+  .object({
+    status: z.string(),
+    progress: z
+      .record(z.string(), z.string().nullish())
+      .nullish()
+      .transform((record) => {
+        if (!record) return null;
+        const normalized: Record<string, string> = {};
+        for (const [key, val] of Object.entries(record)) {
+          if (typeof val === "string") normalized[key] = val;
+        }
+        return normalized;
+      }),
+    error_message: z.string().nullable().optional().default(null),
+    intermediate_results: z
+      .record(z.string(), z.unknown())
+      .nullable()
+      .optional(),
+    json_render_spec: z.unknown().optional(),
+  })
+  .passthrough();
+
+type SearchStreamRecord = z.infer<typeof searchStreamRecordSchema>;
 type SearchQueryResult = {
   search: SearchStreamRecord | null;
   error: { code?: string; message?: string } | null;
 };
+
+const daySlotCountsSchema = z
+  .object({
+    activities: z.array(z.unknown()).optional(),
+    meals: z.array(z.unknown()).optional(),
+    meal: z.unknown().optional(),
+  })
+  .passthrough();
+
+const dayOneCountsSchema = z
+  .object({
+    morning: daySlotCountsSchema.optional(),
+    afternoon: daySlotCountsSchema.optional(),
+    evening: daySlotCountsSchema.optional(),
+  })
+  .passthrough();
+
+function isPlainObject(val: unknown): val is Record<string, unknown> {
+  return Boolean(val && typeof val === "object" && !Array.isArray(val));
+}
 
 // ─── POST: Observe generation state ───────────────────────────────────────────
 
@@ -458,7 +498,10 @@ async function pollAndStream(
       break;
     }
 
-    const sp = (search.progress || {}) as Record<string, string>;
+    const sp = z
+      .record(z.string(), z.string())
+      .catch({})
+      .parse(search.progress || {});
     const pj = JSON.stringify(sp);
     if (pj !== lastProgressJson) {
       lastProgressJson = pj;
@@ -477,14 +520,17 @@ async function pollAndStream(
       });
     }
 
-    const ir = filterViatorDisplay(search.intermediate_results || {});
+    const ir = z
+      .record(z.string(), z.unknown())
+      .catch({})
+      .parse(filterViatorDisplay(search.intermediate_results || {}));
 
     // Forward grounded per-stage discoveries emitted by plan-trip.ts
     const rawDiscoveries: Array<Record<string, unknown>> = [];
     if (Array.isArray(ir.discoveries)) {
       for (const item of ir.discoveries) {
-        if (item && typeof item === "object" && !Array.isArray(item)) {
-          rawDiscoveries.push(item as Record<string, unknown>);
+        if (isPlainObject(item)) {
+          rawDiscoveries.push(item);
         }
       }
     }
@@ -497,15 +543,15 @@ async function pollAndStream(
       "discovery_enrichment",
       "discovery_aggregator",
     ] as const) {
-      const val = (ir as Record<string, unknown>)[key];
+      const val = ir[key];
       if (Array.isArray(val)) {
         for (const item of val) {
-          if (item && typeof item === "object" && !Array.isArray(item)) {
-            rawDiscoveries.push(item as Record<string, unknown>);
+          if (isPlainObject(item)) {
+            rawDiscoveries.push(item);
           }
         }
-      } else if (val && typeof val === "object") {
-        rawDiscoveries.push(val as Record<string, unknown>);
+      } else if (isPlainObject(val)) {
+        rawDiscoveries.push(val);
       }
     }
     const newlyArrivedDiscoveries: Array<Record<string, unknown>> = [];
@@ -524,18 +570,13 @@ async function pollAndStream(
 
     if (ir.dayOne && typeof ir.dayOne === "object") {
       const normalizedDayOne = normalizeItineraryDays([ir.dayOne]);
-      const dayOne = normalizedDayOne?.[0] as
-        | Record<string, unknown>
-        | undefined;
-      const dayOneStops = dayOne
+      const dayOneCandidate = normalizedDayOne?.[0];
+      const parsedDayOne = dayOneCountsSchema.safeParse(dayOneCandidate);
+      const dayOneStops = parsedDayOne.success
         ? (["morning", "afternoon", "evening"] as const).reduce((sum, slot) => {
-            const block = dayOne[slot] as
-              | { activities?: unknown[]; meals?: unknown[]; meal?: unknown }
-              | undefined;
-            const acts = Array.isArray(block?.activities)
-              ? block.activities.length
-              : 0;
-            const meals = Array.isArray(block?.meals)
+            const block = parsedDayOne.data[slot];
+            const acts = block?.activities?.length ?? 0;
+            const meals = block?.meals
               ? block.meals.length
               : block?.meal
                 ? 1
@@ -543,26 +584,36 @@ async function pollAndStream(
             return sum + acts + meals;
           }, 0)
         : 0;
-      if (dayOne && dayOneStops > 0) {
-        const dayOneJson = JSON.stringify(dayOne);
+      if (parsedDayOne.success && dayOneStops > 0) {
+        const dayOneJson = JSON.stringify(dayOneCandidate);
         if (dayOneJson !== sentDayOneJson) {
           sentDayOneJson = dayOneJson;
           send("day_ready", {
-            day: dayOne,
-            discovery: (ir as Record<string, unknown>).discovery_aggregator,
+            day: dayOneCandidate,
+            discovery: ir.discovery_aggregator,
           });
         }
       }
     }
 
+    const parsedTopHotel = hotelInputSchema.safeParse(ir.topHotel);
+    const validTopHotel = parsedTopHotel.success
+      ? parsedTopHotel.data
+      : undefined;
+
     if (!sentHotels && ir.hotels) {
-      const hotels = ir.hotels as HotelInput[];
+      const hotels = Array.isArray(ir.hotels)
+        ? ir.hotels.flatMap((entry) => {
+            const parsedHotel = hotelInputSchema.safeParse(entry);
+            return parsedHotel.success ? [parsedHotel.data] : [];
+          })
+        : [];
       send("hotels", {
-        topHotel: ir.topHotel || hotels[0] || null,
+        topHotel: validTopHotel || hotels[0] || null,
         count: hotels.length,
       });
       const blocks = buildHotelBlocks({
-        topHotel: (ir.topHotel as HotelInput | undefined) || hotels[0],
+        topHotel: validTopHotel || hotels[0],
         otherHotels: hotels.slice(1),
       });
       if (blocks.length > 0) send("spec-block", { chapter: "hotels", blocks });
@@ -587,11 +638,19 @@ async function pollAndStream(
         terminalEventSent = true;
         break;
       }
+      let mappedDays: ReturnType<typeof mappedDaysToSpec>;
+      try {
+        mappedDays = mappedDaysToSpec(days);
+      } catch {
+        send("error", { message: "Malformed itinerary partial output" });
+        terminalEventSent = true;
+        break;
+      }
       const itineraryJson = JSON.stringify(days);
       if (itineraryJson !== lastItineraryJson) {
         lastItineraryJson = itineraryJson;
-        send("itinerary", { days, topHotel: ir.topHotel || null });
-        const itineraryBlocks = buildItineraryBlocks(mappedDaysToSpec(days));
+        send("itinerary", { days, topHotel: validTopHotel ?? null });
+        const itineraryBlocks = buildItineraryBlocks(mappedDays);
         if (itineraryBlocks.length > 0) {
           send("spec-block", { chapter: "itinerary", blocks: itineraryBlocks });
         }
@@ -601,9 +660,15 @@ async function pollAndStream(
               new Date(tripMeta.startDate).getTime()) /
               (1000 * 60 * 60 * 24),
           );
+          const activities = Array.isArray(ir.activities)
+            ? ir.activities.flatMap((entry) => {
+                const parsedActivity = activityInputSchema.safeParse(entry);
+                return parsedActivity.success ? [parsedActivity.data] : [];
+              })
+            : [];
           const budgetBlocks = buildBudgetBlocks({
-            topHotel: (ir.topHotel as HotelInput | undefined) || undefined,
-            activities: ((ir.activities as ActivityInput[]) || []).slice(0, 20),
+            topHotel: validTopHotel,
+            activities: activities.slice(0, 20),
             nights,
           });
           if (budgetBlocks.length > 0) {
@@ -671,7 +736,7 @@ function normalizeItineraryDays(value: unknown): unknown[] | null {
   if (typeof value !== "string") return null;
 
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed: unknown = JSON.parse(value);
     return Array.isArray(parsed) ? filterViatorDisplay(parsed) : null;
   } catch {
     return null;
@@ -701,9 +766,21 @@ async function loadSearchForStream(
       .single();
 
     if (!error) {
-      const search = data as unknown as SearchStreamRecord | null;
+      if (data == null) {
+        return { search: null, error: null };
+      }
+      const parsed = searchStreamRecordSchema.safeParse(data);
+      if (!parsed.success) {
+        return {
+          search: null,
+          error: {
+            code: "INVALID_SEARCH_RECORD",
+            message: "Invalid search stream record",
+          },
+        };
+      }
       return {
-        search: filterViatorDisplay(search) ?? null,
+        search: filterViatorDisplay(parsed.data) ?? null,
         error: null,
       };
     }

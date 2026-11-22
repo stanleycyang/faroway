@@ -82,7 +82,7 @@ export function TripWeather({
         type="button"
         disabled={busy}
         onClick={() => void load()}
-        className="text-sm font-semibold text-primary disabled:opacity-50"
+        className="text-sm font-semibold text-primary-700 hover:text-primary-800 disabled:opacity-50"
       >
         {busy ? "Checking forecast…" : "Check trip forecast"}
       </button>

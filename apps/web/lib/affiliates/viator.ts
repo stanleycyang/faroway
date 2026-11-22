@@ -22,29 +22,33 @@ import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
 import { request as httpsRequest } from "node:https";
 
-// Environment variables
-const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
-const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
-// Supplier search runs alongside model generation. The generic two-second
-// vendor deadline timed out supplier searches in deployed QA. A measured
-// duration-filtered sandbox search took 21.7s. Keep both attempts inside the
-// existing 60s parallel-specialist budget, including response-body reads.
-const VIATOR_TIMEOUT_MS = getEnvNumber("ITINERARY_VIATOR_TIMEOUT_MS", 30000, {
-  min: 1000,
-  max: 30000,
-});
-// VIATOR_SANDBOX=true in .env to use sandbox endpoint (for testing keys)
-const VIATOR_API_BASE =
-  process.env.VIATOR_SANDBOX === "true"
+function getViatorApiKey(): string | undefined {
+  return process.env.VIATOR_API_KEY?.trim() || undefined;
+}
+
+function getViatorPartnerId(): string | undefined {
+  return process.env.VIATOR_PARTNER_ID?.trim() || undefined;
+}
+
+function getViatorTimeoutMs(): number {
+  return getEnvNumber("ITINERARY_VIATOR_TIMEOUT_MS", 30000, {
+    min: 1000,
+    max: 30000,
+  });
+}
+
+function getViatorApiBase(): string {
+  return process.env.VIATOR_SANDBOX === "true"
     ? "https://api.sandbox.viator.com/partner"
     : "https://api.viator.com/partner";
+}
 
 // Headers for v2 endpoints (GET — no Content-Type needed)
 function getV2ReadHeaders(): Record<string, string> {
   return {
     Accept: "application/json;version=2.0",
     "Accept-Language": "en-US",
-    "exp-api-key": VIATOR_API_KEY!,
+    "exp-api-key": getViatorApiKey() ?? "",
   };
 }
 
@@ -54,7 +58,7 @@ function getV2WriteHeaders(): Record<string, string> {
     Accept: "application/json;version=2.0",
     "Content-Type": "application/json",
     "Accept-Language": "en-US",
-    "exp-api-key": VIATOR_API_KEY!,
+    "exp-api-key": getViatorApiKey() ?? "",
   };
 }
 
@@ -326,7 +330,9 @@ export interface ViatorAvailability {
  * Check if Viator API is configured
  */
 export function isViatorConfigured(): boolean {
-  return isViatorContentEnabled() && !!(VIATOR_API_KEY && VIATOR_PARTNER_ID);
+  return (
+    isViatorContentEnabled() && !!(getViatorApiKey() && getViatorPartnerId())
+  );
 }
 
 /**
@@ -335,7 +341,7 @@ export function isViatorConfigured(): boolean {
  * Strategy:
  * 1. Look up numeric destination ID from static map
  * 2. POST /products/search with the destination ID
- * 3. If lookup fails, return empty (activities agent falls back to AI-generated)
+ * 3. For unmapped destinations, resolve via POST /search/freetext (DESTINATIONS -> PRODUCTS fallback)
  */
 export async function searchViatorProducts(
   params: ViatorSearchParams,
@@ -350,52 +356,140 @@ export async function searchViatorProducts(
     const destId = getViatorDestinationId(params.destination);
 
     if (destId) {
-      console.log(
-        `[Viator] Found destination ID ${destId} for "${params.destination}" (${VIATOR_API_BASE})`,
-      );
-      let products: ViatorProduct[];
-      try {
-        products = await searchByDestinationId(destId, params);
-      } catch (error) {
-        if (params.signal?.aborted) throw error;
-        if (!isAbortError(error) || (!params.startDate && !params.endDate))
-          throw error;
-        // A dated-query timeout is not evidence of sold-out inventory. One
-        // smaller catalog lookup can still provide real products, but must not
-        // be mistaken for date availability. Never relax a successful empty
-        // result or retry auth/rate-limit/provider errors.
-        console.warn(
-          "[Viator] Date-filtered search timed out; checking a small catalog shortlist with unverified availability",
-        );
-        const catalog = await searchByDestinationId(
-          destId,
-          {
-            ...params,
-            startDate: undefined,
-            endDate: undefined,
-            limit: Math.min(params.limit || 15, 3),
-          },
-          25000,
-        );
-        products = recoverSupplierSearch(
-          { status: "timeout", dated: true },
-          { status: "products", products: catalog },
-        ).products;
-      }
-      if (products.length > 0) return products;
-      console.log(
-        `[Viator] No products found for destId=${destId}, search returned empty`,
-      );
-    } else {
-      console.log(
-        `[Viator] No destination ID for "${params.destination}", skipping Viator search`,
-      );
+      return await runDestinationSearchWithRecovery(destId, params);
     }
 
-    return [];
+    console.log(
+      `[Viator] No static destination ID for "${params.destination}", trying freetext fallback`,
+    );
+    return await searchViatorFreetext(params);
   } catch (error) {
     if (options.throwOnFailure) throw error;
     console.error("[Viator] Search error:", error);
+    return [];
+  }
+}
+
+async function runDestinationSearchWithRecovery(
+  destId: number,
+  params: ViatorSearchParams,
+): Promise<ViatorProduct[]> {
+  console.log(
+    `[Viator] Found destination ID ${destId} for "${params.destination}" (${getViatorApiBase()})`,
+  );
+  let products: ViatorProduct[];
+  try {
+    products = await searchByDestinationId(destId, params);
+  } catch (error) {
+    if (params.signal?.aborted) throw error;
+    if (!isAbortError(error) || (!params.startDate && !params.endDate))
+      throw error;
+    // A dated-query timeout is not evidence of sold-out inventory. One
+    // smaller catalog lookup can still provide real products, but must not
+    // be mistaken for date availability. Never relax a successful empty
+    // result or retry auth/rate-limit/provider errors.
+    console.warn(
+      "[Viator] Date-filtered search timed out; checking a small catalog shortlist with unverified availability",
+    );
+    const catalog = await searchByDestinationId(
+      destId,
+      {
+        ...params,
+        startDate: undefined,
+        endDate: undefined,
+        limit: Math.min(params.limit || 15, 3),
+      },
+      25000,
+    );
+    products = recoverSupplierSearch(
+      { status: "timeout", dated: true },
+      { status: "products", products: catalog },
+    ).products;
+  }
+  if (products.length > 0) return products;
+  console.log(
+    `[Viator] No products found for destId=${destId}, search returned empty`,
+  );
+  return [];
+}
+
+async function searchViatorFreetext(
+  params: ViatorSearchParams,
+): Promise<ViatorProduct[]> {
+  const apiBase = getViatorApiBase();
+  const timeoutMs = getViatorTimeoutMs();
+  try {
+    const destResp = await fetchWithTimeout(
+      `${apiBase}/search/freetext`,
+      {
+        method: "POST",
+        headers: getV2WriteHeaders(),
+        body: JSON.stringify({
+          searchTerm: params.destination,
+          searchTypes: [
+            {
+              searchType: "DESTINATIONS",
+              pagination: { start: 1, count: 5 },
+            },
+          ],
+          currency: "USD",
+        }),
+        signal: params.signal,
+      },
+      timeoutMs,
+    );
+
+    if (destResp.ok) {
+      const destData = await destResp.json();
+      const firstDest = destData?.destinations?.results?.[0];
+      const resolvedId = Number(firstDest?.id);
+      if (Number.isInteger(resolvedId) && resolvedId > 0) {
+        return await runDestinationSearchWithRecovery(resolvedId, params);
+      }
+    } else {
+      await destResp.text();
+    }
+
+    if (params.signal?.aborted) return [];
+
+    const prodResp = await fetchWithTimeout(
+      `${apiBase}/search/freetext`,
+      {
+        method: "POST",
+        headers: getV2WriteHeaders(),
+        body: JSON.stringify({
+          searchTerm: params.destination,
+          searchTypes: [
+            {
+              searchType: "PRODUCTS",
+              pagination: { start: 1, count: params.limit || 15 },
+            },
+          ],
+          currency: "USD",
+        }),
+        signal: params.signal,
+      },
+      timeoutMs,
+    );
+
+    if (!prodResp.ok) {
+      await prodResp.text();
+      return [];
+    }
+
+    const prodData = await prodResp.json();
+    const rawProducts = prodData?.products?.results ?? [];
+    const products: ViatorProduct[] = rawProducts.map(normalizeViatorProduct);
+    if (params.startDate || params.endDate) {
+      return products.map((product) => ({
+        ...product,
+        catalogOnly: true as const,
+      }));
+    }
+    return products;
+  } catch (error) {
+    if (params.signal?.aborted) throw error;
+    console.warn("[Viator] Freetext fallback error:", error);
     return [];
   }
 }
@@ -406,7 +500,7 @@ export async function searchViatorProducts(
 async function searchByDestinationId(
   destId: number,
   params: ViatorSearchParams,
-  timeoutMs = VIATOR_TIMEOUT_MS,
+  timeoutMs = getViatorTimeoutMs(),
   transport: "fetch" | "https" = "fetch",
 ): Promise<ViatorProduct[]> {
   const body: Record<string, unknown> = {
@@ -437,7 +531,7 @@ async function searchByDestinationId(
   const response = await (
     transport === "https" ? fetchViatorHttps : fetchWithTimeout
   )(
-    `${VIATOR_API_BASE}/products/search`,
+    `${getViatorApiBase()}/products/search`,
     {
       method: "POST",
       headers: getV2WriteHeaders(),
@@ -541,7 +635,7 @@ async function fetchViatorHttps(
   timeoutMs = 30000,
 ): Promise<Response> {
   const url = new URL(String(input));
-  if (url.origin !== new URL(VIATOR_API_BASE).origin)
+  if (url.origin !== new URL(getViatorApiBase()).origin)
     throw new Error("Unexpected supplier origin");
   return new Promise((resolve, reject) => {
     const request = httpsRequest(
@@ -589,11 +683,11 @@ export async function getViatorProduct(
 
   try {
     const response = await fetchWithTimeout(
-      `${VIATOR_API_BASE}/products/${encodeURIComponent(productCode)}${campaign ? `?campaign-value=${encodeURIComponent(campaign)}` : ""}`,
+      `${getViatorApiBase()}/products/${encodeURIComponent(productCode)}${campaign ? `?campaign-value=${encodeURIComponent(campaign)}` : ""}`,
       {
         headers: getV2ReadHeaders(),
       },
-      VIATOR_TIMEOUT_MS,
+      getViatorTimeoutMs(),
     );
 
     if (!response.ok) {
@@ -623,7 +717,7 @@ export async function checkViatorAvailability(
 
   try {
     const response = await fetchWithTimeout(
-      `${VIATOR_API_BASE}/availability/check`,
+      `${getViatorApiBase()}/availability/check`,
       {
         method: "POST",
         headers: getV2WriteHeaders(),
@@ -635,7 +729,7 @@ export async function checkViatorAvailability(
           currency: "USD",
         }),
       },
-      VIATOR_TIMEOUT_MS,
+      getViatorTimeoutMs(),
     );
 
     if (!response.ok) {
@@ -666,10 +760,10 @@ export function generateViatorAffiliateUrl(
   // Product paths and MCIDs are provider-owned. Never invent either. Dates and
   // traveler details are confirmed on Viator; unsupported URL prefill is avoided.
   void productCode;
+  const partnerId = getViatorPartnerId();
   const campaign = trackingId.replace(/[^a-zA-Z0-9-]/g, "-").slice(0, 100);
-  return options?.productUrl && VIATOR_PARTNER_ID
-    ? buildViatorHandoffUrl(options.productUrl, campaign, VIATOR_PARTNER_ID) ||
-        ""
+  return options?.productUrl && partnerId
+    ? buildViatorHandoffUrl(options.productUrl, campaign, partnerId) || ""
     : "";
 }
 

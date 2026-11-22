@@ -8,15 +8,9 @@ import {
 
 import React from "react";
 import { TripCoverImage } from "./TripCoverImage";
+import { Logo } from "@/components/Logo";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Calendar,
-  Users,
-  Share2,
-  DollarSign,
-  Compass,
-} from "lucide-react";
+import { ArrowLeft, Calendar, Users, Share2, DollarSign } from "lucide-react";
 
 interface TripHeaderProps {
   destination: string;
@@ -85,14 +79,7 @@ export function TripHeader({
             <ArrowLeft className="h-4 w-4" />
             {backUrl === "/" ? "Home" : "My trips"}
           </Link>
-          <Link
-            href="/"
-            aria-label="Faroway home"
-            className="flex items-center gap-2 text-lg font-bold"
-          >
-            <Compass className="h-6 w-6" />
-            <span className="hidden sm:inline">faroway.</span>
-          </Link>
+          <Logo size="sm" variant="light" href="/" hideWordmarkOnMobile />
           {showActions ? (
             <button
               type="button"

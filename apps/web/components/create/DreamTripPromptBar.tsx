@@ -14,6 +14,16 @@ import {
   Plane,
   Calendar,
 } from "lucide-react";
+import {
+  BUDGET_LABELS,
+  BUDGET_TIERS,
+  normalizeBudgetTier,
+  normalizeVibeId,
+  normalizeVibeList,
+  travelVibes,
+  type BudgetTierId,
+  type TravelVibeId,
+} from "@faroway/constants";
 import type {
   AccessibilityOptionId,
   BudgetTier,
@@ -23,19 +33,29 @@ import type {
 } from "@/lib/trips/prompt-parser";
 import type { DestinationSuggestion } from "@/lib/trips/destination-suggester";
 
-const VALID_BUDGETS: readonly BudgetTier[] = ["budget", "moderate", "luxury"];
-const VALID_VIBES: readonly VibeId[] = [
-  "adventure",
-  "relaxation",
-  "cultural",
-  "foodie",
-  "nightlife",
-  "romantic",
-  "nature",
-  "shopping",
-  "wellness",
-  "photography",
-];
+const MEMORY_VIBE_TO_PARSER: Partial<Record<TravelVibeId, VibeId>> = {
+  adventure: "adventure",
+  relaxation: "relaxation",
+  culture: "cultural",
+  foodie: "foodie",
+  nightlife: "nightlife",
+  romantic: "romantic",
+  nature: "nature",
+  shopping: "shopping",
+  wellness: "wellness",
+  photography: "photography",
+};
+
+const MEMORY_SUPPORTED_VIBES = travelVibes.filter((v) =>
+  Boolean(MEMORY_VIBE_TO_PARSER[v.id as TravelVibeId]),
+);
+
+function getVibeLabel(raw: string): string {
+  const canonical = normalizeVibeId(raw);
+  if (!canonical) return raw;
+  return travelVibes.find((v) => v.id === canonical)?.label ?? raw;
+}
+
 const VALID_DIETARY: readonly DietaryOption[] = [
   "Vegetarian",
   "Vegan",
@@ -52,11 +72,58 @@ const VALID_ACCESSIBILITY: readonly AccessibilityOptionId[] = [
 ];
 import {
   hasTravelerMemoryValues,
-  summarizeTravelerMemory,
   type LearnedPreferenceSuggestion,
   type TravelerMemory,
   type TravelerPace,
 } from "@/lib/trips/traveler-memory";
+
+function formatTravelerMemoryChips(memory: TravelerMemory): string[] {
+  const chips: string[] = [];
+  if (memory.homeAirport) chips.push(`Home: ${memory.homeAirport}`);
+  if (memory.defaultBudget) {
+    const budgetId = normalizeBudgetTier(memory.defaultBudget) ?? "moderate";
+    chips.push(BUDGET_LABELS[budgetId]);
+  }
+  if (memory.defaultPace) {
+    chips.push(
+      `${memory.defaultPace[0].toUpperCase()}${memory.defaultPace.slice(1)} pace`,
+    );
+  }
+  if (memory.avoidEarlyStarts) chips.push("No early starts");
+  if (memory.defaultVibes.length > 0) {
+    chips.push(memory.defaultVibes.map((v) => getVibeLabel(v)).join(", "));
+  }
+  if (memory.dietaryPreferences.length > 0) {
+    chips.push(memory.dietaryPreferences.join(", "));
+  }
+  if (memory.allergies.length > 0) {
+    chips.push(`Allergies: ${memory.allergies.join(", ")}`);
+  }
+  if (memory.accessibility.length > 0) {
+    chips.push(
+      `${memory.accessibility.length} accessibility ${memory.accessibility.length === 1 ? "need" : "needs"}`,
+    );
+  }
+  return chips;
+}
+
+function formatLearnedSuggestionLabel(
+  suggestion: LearnedPreferenceSuggestion,
+): string {
+  if (suggestion.patch.defaultBudget || suggestion.id.startsWith("budget:")) {
+    const budgetId = normalizeBudgetTier(
+      suggestion.patch.defaultBudget ?? suggestion.id.slice("budget:".length),
+    );
+    if (budgetId) {
+      return `Default to ${BUDGET_LABELS[budgetId]}`;
+    }
+  }
+  if (suggestion.id.startsWith("vibe:")) {
+    const rawVibe = suggestion.id.slice("vibe:".length);
+    return `Add ${getVibeLabel(rawVibe)} as a default vibe`;
+  }
+  return suggestion.label;
+}
 
 const EXAMPLE_PROMPTS = [
   "5 days in Lisbon in October, foodie & cultural, relaxed mornings",
@@ -86,29 +153,10 @@ const MONTH_OPTIONS = [
   "December",
 ] as const;
 
-const BUDGET_LABELS: Record<BudgetTier, string> = {
-  budget: "Budget",
-  moderate: "Comfort",
-  luxury: "Luxury",
-};
-
 const PACE_LABELS: Record<TravelerPace, string> = {
   relaxed: "Relaxed",
   balanced: "Balanced",
   packed: "Packed",
-};
-
-const VIBE_LABELS: Record<VibeId, string> = {
-  adventure: "Adventure",
-  relaxation: "Relaxation",
-  cultural: "Cultural",
-  foodie: "Foodie",
-  nightlife: "Nightlife",
-  romantic: "Romantic",
-  nature: "Nature",
-  shopping: "Shopping",
-  wellness: "Wellness",
-  photography: "Photography",
 };
 
 const ACCESSIBILITY_LABELS: Record<AccessibilityOptionId, string> = {
@@ -198,8 +246,8 @@ export function DreamTripPromptBar({
   const [draftAvoidEarly, setDraftAvoidEarly] = useState(
     travelerMemory.avoidEarlyStarts,
   );
-  const [draftVibes, setDraftVibes] = useState<VibeId[]>(
-    travelerMemory.defaultVibes,
+  const [draftVibes, setDraftVibes] = useState<TravelVibeId[]>(() =>
+    normalizeVibeList(travelerMemory.defaultVibes, 5),
   );
   const [draftDietary, setDraftDietary] = useState<DietaryOption[]>(
     travelerMemory.dietaryPreferences,
@@ -219,7 +267,7 @@ export function DreamTripPromptBar({
     setDraftBudget(memory.defaultBudget);
     setDraftPace(memory.defaultPace);
     setDraftAvoidEarly(memory.avoidEarlyStarts);
-    setDraftVibes(memory.defaultVibes);
+    setDraftVibes(normalizeVibeList(memory.defaultVibes, 5));
     setDraftDietary(memory.dietaryPreferences);
     setDraftAllergies(memory.allergies.join(", "));
     setDraftAccessibility(memory.accessibility);
@@ -346,19 +394,22 @@ export function DreamTripPromptBar({
   };
 
   const memoryHasValues = hasTravelerMemoryValues(travelerMemory);
-  const memoryChips = summarizeTravelerMemory(travelerMemory);
+  const memoryChips = formatTravelerMemoryChips(travelerMemory);
 
   const handleSaveMemoryDraft = () => {
     const parsedAllergies = draftAllergies
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+    const memoryVibes = draftVibes
+      .map((v) => MEMORY_VIBE_TO_PARSER[v])
+      .filter((v): v is VibeId => Boolean(v));
     onSaveMemory({
       homeAirport: draftHomeAirport.trim(),
       defaultBudget: draftBudget,
       defaultPace: draftPace,
       avoidEarlyStarts: draftAvoidEarly,
-      defaultVibes: draftVibes,
+      defaultVibes: memoryVibes,
       dietaryPreferences: draftDietary,
       allergies: parsedAllergies,
       accessibility: draftAccessibility,
@@ -393,7 +444,7 @@ export function DreamTripPromptBar({
             <h2 className="text-sm font-bold text-slate-900 sm:text-base">
               Describe your dream trip
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600">
               Type naturally and we’ll fill the planner below for you to review.
             </p>
           </div>
@@ -452,7 +503,7 @@ export function DreamTripPromptBar({
             }
           }}
           placeholder="e.g., 5 days in Kyoto in October for our anniversary, foodie, vegetarian, relaxed mornings"
-          className="min-h-11 flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="min-h-11 flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
         />
         <button
           type="button"
@@ -476,7 +527,7 @@ export function DreamTripPromptBar({
               setPromptText(example);
               void runPromptParse(example);
             }}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-left text-xs text-slate-600 transition-colors hover:border-primary/50 hover:text-slate-900"
+            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-left text-xs text-slate-600 transition-colors hover:border-primary-700/50 hover:text-slate-900"
           >
             {example}
           </button>
@@ -538,7 +589,7 @@ export function DreamTripPromptBar({
               <h3 className="text-sm font-bold text-slate-900">
                 Not sure where to go?
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600">
                 Share the vibe, climate, or flight time you want — we’ll pitch 3
                 tailored destinations.
               </p>
@@ -547,7 +598,7 @@ export function DreamTripPromptBar({
               type="button"
               aria-label="Close destination suggester"
               onClick={() => setShowDecide(false)}
-              className="rounded-full p-1 text-slate-400 hover:bg-gray-100 hover:text-slate-700"
+              className="rounded-full p-1 text-slate-600 hover:bg-gray-100 hover:text-slate-900"
             >
               <X className="h-4 w-4" />
             </button>
@@ -575,7 +626,7 @@ export function DreamTripPromptBar({
                     }
                   }}
                   placeholder="e.g., Warm coastal town with great food, walkable, under 8h from NYC"
-                  className="min-h-10 flex-1 rounded-xl border border-gray-200 bg-slate-50/50 px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
+                  className="min-h-10 flex-1 rounded-xl border border-gray-200 bg-slate-50/50 px-3.5 py-2 text-sm text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:bg-white focus:ring-2 focus:ring-primary-700/20"
                 />
                 <button
                   type="button"
@@ -603,7 +654,7 @@ export function DreamTripPromptBar({
                 value={decideOrigin}
                 onChange={(e) => setDecideOrigin(e.target.value)}
                 placeholder="e.g., SFO, NYC, London"
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-primary"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700"
               />
             </div>
 
@@ -618,7 +669,7 @@ export function DreamTripPromptBar({
                 id="decide-month"
                 value={decideMonth}
                 onChange={(e) => setDecideMonth(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary-700"
               >
                 <option value="">Any month</option>
                 {MONTH_OPTIONS.filter(Boolean).map((m) => (
@@ -634,7 +685,7 @@ export function DreamTripPromptBar({
                 htmlFor="decide-budget"
                 className="mb-1 block text-[11px] font-medium text-slate-600"
               >
-                Comfort (optional)
+                Budget tier (optional)
               </label>
               <select
                 id="decide-budget"
@@ -642,12 +693,12 @@ export function DreamTripPromptBar({
                 onChange={(e) =>
                   setDecideBudget(e.target.value as BudgetTier | "")
                 }
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary-700"
               >
-                <option value="">Any comfort tier</option>
-                {VALID_BUDGETS.map((tier) => (
-                  <option key={tier} value={tier}>
-                    {BUDGET_LABELS[tier]}
+                <option value="">Any budget tier</option>
+                {BUDGET_TIERS.map((tier) => (
+                  <option key={tier.id} value={tier.id}>
+                    {tier.label}
                   </option>
                 ))}
               </select>
@@ -664,7 +715,7 @@ export function DreamTripPromptBar({
                   setDecideQuery(idea);
                   void runDestinationSuggest(idea);
                 }}
-                className="rounded-full border border-gray-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:border-primary/50 hover:text-slate-900"
+                className="rounded-full border border-gray-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:border-primary-700/50 hover:text-slate-900"
               >
                 {idea}
               </button>
@@ -710,7 +761,7 @@ export function DreamTripPromptBar({
                     <p className="text-xs leading-5 text-slate-700">
                       {item.whyItFits}
                     </p>
-                    <p className="mt-2 flex items-start gap-1 text-[11px] leading-4 text-slate-500">
+                    <p className="mt-2 flex items-start gap-1 text-[11px] leading-4 text-slate-600">
                       <Calendar
                         className="mt-0.5 h-3 w-3 shrink-0"
                         aria-hidden="true"
@@ -732,11 +783,16 @@ export function DreamTripPromptBar({
                           key={vibe}
                           className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700"
                         >
-                          {VIBE_LABELS[vibe]}
+                          {getVibeLabel(vibe)}
                         </span>
                       ))}
-                      <span className="rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-700">
-                        {BUDGET_LABELS[item.suggestedBudget]}
+                      <span className="rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-800">
+                        {
+                          BUDGET_LABELS[
+                            (normalizeBudgetTier(item.suggestedBudget) ??
+                              "moderate") as BudgetTierId
+                          ]
+                        }
                       </span>
                     </div>
                     <button
@@ -782,7 +838,7 @@ export function DreamTripPromptBar({
                   </span>
                 ))}
                 {memoryChips.length > 3 && (
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-slate-600">
                     +{memoryChips.length - 3} more
                   </span>
                 )}
@@ -832,7 +888,7 @@ export function DreamTripPromptBar({
                 type="button"
                 disabled={disabled}
                 onClick={handleClearMemoryClick}
-                className="text-xs font-medium text-slate-500 hover:text-red-700"
+                className="text-xs font-medium text-slate-600 hover:text-red-700"
               >
                 Clear
               </button>
@@ -852,37 +908,40 @@ export function DreamTripPromptBar({
         {/* Learned from your trips suggestion chips */}
         {learnedSuggestions.length > 0 && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-500">
+            <span className="text-[11px] font-semibold text-slate-600">
               Learned from your trips:
             </span>
-            {learnedSuggestions.map((suggestion) => (
-              <div
-                key={suggestion.id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary-50/70 px-2.5 py-1 text-[11px] text-primary-900"
-              >
-                <span title={suggestion.reason}>{suggestion.label}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAcceptLearnedSuggestion(suggestion);
-                    setMemorySavedNotice(
-                      `Added "${suggestion.label}" to your defaults.`,
-                    );
-                  }}
-                  className="rounded-full bg-primary-700 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-primary-800"
+            {learnedSuggestions.map((suggestion) => {
+              const suggestionLabel = formatLearnedSuggestionLabel(suggestion);
+              return (
+                <div
+                  key={suggestion.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary-700/30 bg-primary-50/70 px-2.5 py-1 text-[11px] text-primary-900"
                 >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Dismiss ${suggestion.label}`}
-                  onClick={() => onDismissLearnedSuggestion(suggestion.id)}
-                  className="text-primary-700 hover:text-primary-950"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
+                  <span title={suggestion.reason}>{suggestionLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAcceptLearnedSuggestion(suggestion);
+                      setMemorySavedNotice(
+                        `Added "${suggestionLabel}" to your defaults.`,
+                      );
+                    }}
+                    className="rounded-full bg-primary-700 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-primary-800"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Dismiss ${suggestionLabel}`}
+                    onClick={() => onDismissLearnedSuggestion(suggestion.id)}
+                    className="text-primary-700 hover:text-primary-950"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -894,7 +953,7 @@ export function DreamTripPromptBar({
                 <h3 className="text-sm font-bold text-slate-900">
                   Always apply to my trips
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-slate-600">
                   {isAuthenticated
                     ? "Saved locally on this device for your account. Never overrides explicit links or drafts, and always clearable in one click."
                     : "Saved in this browser. Sign in to keep separate defaults for your account; always clearable in one click."}
@@ -917,7 +976,7 @@ export function DreamTripPromptBar({
                   value={draftHomeAirport}
                   onChange={(e) => setDraftHomeAirport(e.target.value)}
                   placeholder="e.g., SFO, JFK, LHR"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700"
                 />
               </div>
 
@@ -926,7 +985,7 @@ export function DreamTripPromptBar({
                   htmlFor="memory-default-budget"
                   className="mb-1 block font-medium text-slate-700"
                 >
-                  Default comfort
+                  Default budget
                 </label>
                 <select
                   id="memory-default-budget"
@@ -936,12 +995,12 @@ export function DreamTripPromptBar({
                       e.target.value ? (e.target.value as BudgetTier) : null,
                     )
                   }
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary-700"
                 >
                   <option value="">No default</option>
-                  {VALID_BUDGETS.map((tier) => (
-                    <option key={tier} value={tier}>
-                      {BUDGET_LABELS[tier]}
+                  {BUDGET_TIERS.map((tier) => (
+                    <option key={tier.id} value={tier.id}>
+                      {tier.label}
                     </option>
                   ))}
                 </select>
@@ -962,7 +1021,7 @@ export function DreamTripPromptBar({
                       e.target.value ? (e.target.value as TravelerPace) : null,
                     )
                   }
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary-700"
                 >
                   <option value="">No default</option>
                   {(["relaxed", "balanced", "packed"] as const).map((pace) => (
@@ -989,30 +1048,31 @@ export function DreamTripPromptBar({
                 Default travel vibes (up to 5)
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {VALID_VIBES.map((vibe) => {
-                  const active = draftVibes.includes(vibe);
+                {MEMORY_SUPPORTED_VIBES.map((vibe) => {
+                  const vibeId = vibe.id as TravelVibeId;
+                  const active = draftVibes.includes(vibeId);
                   return (
                     <button
-                      key={vibe}
+                      key={vibeId}
                       type="button"
                       aria-pressed={active}
                       disabled={!active && draftVibes.length >= 5}
                       onClick={() =>
                         setDraftVibes((prev) =>
-                          prev.includes(vibe)
-                            ? prev.filter((item) => item !== vibe)
+                          prev.includes(vibeId)
+                            ? prev.filter((item) => item !== vibeId)
                             : prev.length < 5
-                              ? [...prev, vibe]
+                              ? [...prev, vibeId]
                               : prev,
                         )
                       }
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                         active
-                          ? "border-primary bg-primary-50 text-primary-700"
+                          ? "border-primary-700 bg-primary-50 text-primary-800"
                           : "border-gray-200 bg-white text-slate-600 disabled:opacity-40"
                       }`}
                     >
-                      {VIBE_LABELS[vibe]}
+                      {vibe.label}
                     </button>
                   );
                 })}
@@ -1040,7 +1100,7 @@ export function DreamTripPromptBar({
                       }
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                         active
-                          ? "border-primary bg-primary-50 text-primary-700"
+                          ? "border-primary-700 bg-primary-50 text-primary-800"
                           : "border-gray-200 bg-white text-slate-600"
                       }`}
                     >
@@ -1066,7 +1126,7 @@ export function DreamTripPromptBar({
                   value={draftAllergies}
                   onChange={(e) => setDraftAllergies(e.target.value)}
                   placeholder="e.g., peanuts, shellfish"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700"
                 />
               </div>
               <div>
@@ -1083,7 +1143,7 @@ export function DreamTripPromptBar({
                   value={draftMobilityNotes}
                   onChange={(e) => setDraftMobilityNotes(e.target.value)}
                   placeholder="e.g., Stroller-friendly routes, midday rest"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-slate-900 outline-none focus:border-primary"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700"
                 />
               </div>
             </div>
@@ -1109,7 +1169,7 @@ export function DreamTripPromptBar({
                       }
                       className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                         active
-                          ? "border-primary bg-primary-50 text-primary-700"
+                          ? "border-primary-700 bg-primary-50 text-primary-800"
                           : "border-gray-200 bg-white text-slate-600"
                       }`}
                     >

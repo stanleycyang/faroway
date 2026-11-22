@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { AFFILIATE_DISCLOSURE_FULL } from "@faroway/constants";
 import { Logo } from "./Logo";
 import { AppStoreButtons } from "./AppStoreButtons";
 
@@ -160,32 +161,37 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <p className="text-surface-400 text-sm">
-            © {new Date().getFullYear()} Faroway. All rights reserved.
+        <div className="border-t border-white/[0.06] pt-8 flex flex-col gap-4">
+          <p className="text-surface-300 text-xs leading-relaxed">
+            {AFFILIATE_DISCLOSURE_FULL}
           </p>
-          <div className="flex gap-6 text-sm text-surface-400">
-            <Link
-              href="/support"
-              prefetch={false}
-              className="hover:text-primary-400 transition-colors"
-            >
-              Support
-            </Link>
-            <Link
-              href="/privacy"
-              prefetch={false}
-              className="hover:text-primary-400 transition-colors"
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/terms"
-              prefetch={false}
-              className="hover:text-primary-400 transition-colors"
-            >
-              Terms
-            </Link>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <p className="text-surface-400 text-sm">
+              © {new Date().getFullYear()} Faroway. All rights reserved.
+            </p>
+            <div className="flex gap-6 text-sm text-surface-400">
+              <Link
+                href="/support"
+                prefetch={false}
+                className="hover:text-primary-400 transition-colors"
+              >
+                Support
+              </Link>
+              <Link
+                href="/privacy"
+                prefetch={false}
+                className="hover:text-primary-400 transition-colors"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                prefetch={false}
+                className="hover:text-primary-400 transition-colors"
+              >
+                Terms
+              </Link>
+            </div>
           </div>
         </div>
       </div>

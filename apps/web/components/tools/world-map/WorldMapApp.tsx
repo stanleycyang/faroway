@@ -23,6 +23,7 @@ import { ProfileSwitcher } from "./ProfileSwitcher";
 import { BackupBanner } from "./BackupBanner";
 import { CountrySearch } from "./CountrySearch";
 import { MilestoneToast } from "./MilestoneToast";
+import type { WorldMapAffiliateBundle } from "./world-map-affiliates";
 
 const CountryDetailDrawer = dynamic(
   () =>
@@ -66,6 +67,11 @@ function writeSeenMilestones(seen: Set<number>) {
   }
 }
 
+export interface WorldMapAppProps {
+  bundlesByCountryKey?: Record<string, WorldMapAffiliateBundle>;
+  defaultLinks?: WorldMapAffiliateBundle;
+}
+
 function hasVisitDetails(visit: CountryVisit | undefined): boolean {
   if (!visit) return false;
   return Boolean(
@@ -81,7 +87,10 @@ function hasVisitDetails(visit: CountryVisit | undefined): boolean {
 
 const UNDO_TOAST_MS = 6_000;
 
-export function WorldMapApp() {
+export function WorldMapApp({
+  bundlesByCountryKey,
+  defaultLinks,
+}: WorldMapAppProps = {}) {
   const hasHydrated = useWorldMapStore((s) => s.hasHydrated);
   const profiles = useWorldMapStore((s) => s.profiles);
   const persistError = useWorldMapStore((s) => s.persistError);
@@ -239,7 +248,7 @@ export function WorldMapApp() {
   if (!hasHydrated || !profile) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-slate-400 text-sm">Loading your map…</div>
+        <div className="text-slate-600 text-sm">Loading your map…</div>
       </div>
     );
   }
@@ -253,7 +262,7 @@ export function WorldMapApp() {
             <h1 className="font-editorial text-2xl sm:text-3xl tracking-tight text-slate-900">
               World Map
             </h1>
-            <span className="hidden md:inline-block text-[11px] text-slate-500 font-semibold uppercase tracking-[0.2em] border-l border-ink/15 pl-3">
+            <span className="hidden md:inline-block text-[11px] text-slate-600 font-semibold uppercase tracking-[0.2em] border-l border-ink/15 pl-3">
               Travel Tracker
             </span>
           </div>
@@ -317,9 +326,9 @@ export function WorldMapApp() {
         </div>
 
         {/* Editor hint — tiny, sits below the map */}
-        <p className="text-center text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+        <p className="text-center text-[11px] font-bold uppercase tracking-[0.22em] text-slate-600">
           Click any country to pin · right-click for details ·{" "}
-          <span className="font-mono normal-case tracking-normal text-[12px] text-slate-500">
+          <span className="font-mono normal-case tracking-normal text-[12px] text-slate-700">
             /
           </span>{" "}
           to search
@@ -349,7 +358,7 @@ export function WorldMapApp() {
         )}
 
         {/* Footer mark */}
-        <div className="flex items-center justify-between pt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+        <div className="flex items-center justify-between pt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-600">
           <span className="inline-flex items-center gap-2">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-clay" />
             faroway.ai · world map
@@ -364,6 +373,8 @@ export function WorldMapApp() {
           iso={selected.iso}
           name={selected.name}
           onClose={closeCountryDrawer}
+          bundlesByCountryKey={bundlesByCountryKey}
+          defaultLinks={defaultLinks}
         />
       )}
 

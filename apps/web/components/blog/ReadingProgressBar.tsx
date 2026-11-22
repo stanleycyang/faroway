@@ -35,7 +35,7 @@ export function ReadingProgressBar() {
       className="fixed top-0 left-0 right-0 z-[100] h-1 bg-gray-100"
     >
       <div
-        className="h-full origin-left bg-gradient-to-r from-primary via-amber-500 to-amber-400 transition-transform duration-150"
+        className="h-full origin-left bg-gradient-to-r from-[#C03A31] via-[#E04D43] to-[#143D46] transition-transform duration-150"
         style={{ transform: `scaleX(${progress / 100})` }}
       />
     </div>

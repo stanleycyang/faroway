@@ -554,7 +554,7 @@ function buildSummary(result: Omit<ParsedTripPrompt, 'summary' | 'source'>): str
   }
   if (result.budget) {
     parts.push(
-      result.budget === 'moderate' ? 'Comfort' : result.budget === 'luxury' ? 'Luxury' : 'Budget'
+      result.budget === 'moderate' ? 'Moderate' : result.budget === 'luxury' ? 'Luxury' : 'Budget'
     );
   }
   if (result.vibes.length > 0) {

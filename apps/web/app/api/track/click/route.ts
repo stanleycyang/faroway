@@ -3,59 +3,31 @@
  * POST /api/track/click - Track when user clicks an affiliate link
  */
 
-import { randomUUID } from "node:crypto";
+import crypto from "node:crypto";
 import { affiliateClickInsert } from "@/lib/affiliates/click-record";
-import { readPrice } from "@faroway/constants";
+import {
+  injectAffiliateSubId,
+  isAllowedAffiliateUrl,
+  normalizeAffiliatePartner,
+  readPrice,
+  resolveAffiliatePartnerByUrl,
+} from "@faroway/constants";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
 import { optionalAuth } from "@/lib/auth";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
-// Allowed affiliate domains — prevents SSRF via user-supplied URLs
-const ALLOWED_AFFILIATE_DOMAINS = [
-  "viator.com",
-  "www.viator.com",
-  "getyourguide.com",
-  "www.getyourguide.com",
-  "tripadvisor.com",
-  "www.tripadvisor.com",
-  "discovercars.com",
-  "www.discovercars.com",
-  "hostelworld.com",
-  "www.hostelworld.com",
-  "duffel.com",
-  "www.duffel.com",
-  "book.duffel.com",
-  "links.duffel.com",
-  "opentable.com",
-  "www.opentable.com",
-];
-
-function isAllowedAffiliateUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) {
-      return false;
-    }
-    return ALLOWED_AFFILIATE_DOMAINS.some(
-      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`),
-    );
-  } catch {
-    return false;
-  }
-}
-
 const ClickTrackingSchema = z.object({
-  clickId: z.string().max(200).optional(),
+  clickId: z.string().trim().min(1).max(200).optional(),
 
   // What was clicked
   itemType: z.enum(["hotel", "activity", "restaurant", "flight", "transport"]),
-  itemId: z.string().max(500),
-  itemName: z.string().max(500),
+  itemId: z.string().trim().min(1).max(500),
+  itemName: z.string().trim().min(1).max(500),
 
   // Affiliate info
-  affiliatePartner: z.string().max(50),
+  affiliatePartner: z.string().trim().min(1).max(50),
   affiliateUrl: z.string().url().max(2000),
 
   // Context
@@ -63,13 +35,26 @@ const ClickTrackingSchema = z.object({
   tripId: z.string().uuid().optional(),
 
   // Pricing
-  price: z.number().nonnegative().optional(),
+  price: z.number().finite().nonnegative().optional(),
   currency: z.string().max(10).optional(),
 
-  // Source
+  // Source & attribution metadata
   source: z
-    .enum(["search_results", "trip_view", "itinerary", "email"])
+    .enum([
+      "search_results",
+      "trip_view",
+      "itinerary",
+      "email",
+      "shared_trip",
+      "blog",
+      "destination_guide",
+      "tool",
+      "booking_checklist",
+      "on_trip",
+    ])
     .optional(),
+  placement: z.string().max(100).optional(),
+  campaign: z.string().max(200).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -108,13 +93,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Reserved click ID" }, { status: 400 });
     }
 
-    // Validate affiliate URL domain to prevent SSRF
+    // Validate affiliate URL domain to prevent SSRF, credentials, non-HTTPS, and ports
     if (!isAllowedAffiliateUrl(data.affiliateUrl)) {
       return NextResponse.json(
         { error: "Invalid affiliate URL" },
         { status: 400 },
       );
     }
+
+    const urlPartner = resolveAffiliatePartnerByUrl(data.affiliateUrl);
+    const normalizedInputPartner = normalizeAffiliatePartner(
+      data.affiliatePartner,
+    );
+    if (!urlPartner || !normalizedInputPartner) {
+      return NextResponse.json(
+        { error: "Invalid affiliate partner" },
+        { status: 400 },
+      );
+    }
+
+    // Host partner takes canonical precedence (e.g. Travelpayouts-wrapped links)
+    const partner = urlPartner;
 
     const user = await optionalAuth(request);
     const db = getSupabase();
@@ -148,7 +147,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a unique click ID for conversion tracking
-    const clickId = data.clickId || `click_${randomUUID()}`;
+    const clickId = data.clickId || crypto.randomUUID();
+
+    // Inject partner-native subID without clobbering preserved partner params
+    const trackingUrl = injectAffiliateSubId(
+      data.affiliateUrl,
+      partner,
+      clickId,
+      { itemType: data.itemType },
+    );
+    if (!trackingUrl) {
+      return NextResponse.json(
+        { error: "Invalid affiliate URL" },
+        { status: 400 },
+      );
+    }
 
     // Store only a complete price/currency pair.
     const price = readPrice(data.price, data.currency);
@@ -160,7 +173,7 @@ export async function POST(request: NextRequest) {
         itemType: data.itemType,
         itemId: data.itemId,
         itemName: data.itemName,
-        affiliatePartner: data.affiliatePartner,
+        affiliatePartner: partner,
         affiliateUrl: data.affiliateUrl,
         searchId: verifiedSearchId,
         tripId: verifiedTripId,
@@ -176,16 +189,11 @@ export async function POST(request: NextRequest) {
       // Don't fail the request, just log it
     }
 
-    // Return the click ID and redirect URL with tracking params
-    const trackingUrl = new URL(data.affiliateUrl);
-    trackingUrl.searchParams.set("utm_source", "faroway");
-    trackingUrl.searchParams.set("utm_medium", "affiliate");
-    trackingUrl.searchParams.set("utm_campaign", data.itemType);
-    trackingUrl.searchParams.set("click_id", clickId);
-
     return NextResponse.json({
       clickId,
-      redirectUrl: trackingUrl.toString(),
+      partner,
+      trackingUrl,
+      redirectUrl: trackingUrl,
     });
   } catch (error) {
     console.error("[Click Tracking] Error:", error);

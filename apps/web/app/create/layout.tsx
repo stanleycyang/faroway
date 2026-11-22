@@ -3,12 +3,12 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Plan Your Trip — AI Trip Planner",
   description:
-    "Create a personalized day-by-day travel itinerary. Choose your destination, dates, and vibes, then sign in with a free account to generate and save your plan.",
+    "Create a personalized day-by-day travel itinerary tailored to your destination, dates, pace, and travel style.",
   alternates: { canonical: "/create" },
   openGraph: {
     title: "Plan Your Trip | Faroway",
     description:
-      "AI-powered trip planner that creates personalized itineraries. A free account keeps your trip secure and synced.",
+      "AI-powered trip planner that builds a personalized day-by-day itinerary around your destination, dates, and travel style.",
     type: "website",
     url: "/create",
   },

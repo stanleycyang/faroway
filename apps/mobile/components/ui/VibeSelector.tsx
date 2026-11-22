@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { colors, borderRadius } from '../../constants/theme';
-import { travelVibes } from '@faroway/constants';
+import { normalizeVibeList, travelVibes } from '@faroway/constants';
 import { hapticFeedback } from '../../utils/haptics';
 
 // Bundled icons keep these controls independent of the OS emoji font.
@@ -34,14 +34,19 @@ export function VibeSelector({
   maxSelections = 5,
   disabled = false,
 }: VibeSelectorProps) {
+  const normalizedSelected: string[] = useMemo(
+    () => normalizeVibeList(selected, maxSelections),
+    [selected, maxSelections]
+  );
+
   const toggleVibe = (vibeId: string) => {
     if (disabled) return;
-    if (selected.includes(vibeId)) {
+    if (normalizedSelected.includes(vibeId)) {
       hapticFeedback.light();
-      onSelect(selected.filter((id) => id !== vibeId));
-    } else if (selected.length < maxSelections) {
+      onSelect(normalizedSelected.filter((id) => id !== vibeId));
+    } else if (normalizedSelected.length < maxSelections) {
       hapticFeedback.medium();
-      onSelect([...selected, vibeId]);
+      onSelect([...normalizedSelected, vibeId]);
     } else {
       hapticFeedback.error();
     }
@@ -52,12 +57,12 @@ export function VibeSelector({
       <View style={styles.header}>
         <Text style={styles.title}>What's your travel vibe?</Text>
         <Text style={styles.subtitle}>
-          Select up to {maxSelections} ({selected.length}/{maxSelections})
+          Select up to {maxSelections} ({normalizedSelected.length}/{maxSelections})
         </Text>
       </View>
       <View style={styles.grid}>
         {travelVibes.map((vibe) => {
-          const isSelected = selected.includes(vibe.id);
+          const isSelected = normalizedSelected.includes(vibe.id);
           return (
             <TouchableOpacity
               key={vibe.id}
@@ -67,13 +72,15 @@ export function VibeSelector({
               accessibilityRole="checkbox"
               accessibilityLabel={`${vibe.label} travel vibe`}
               aria-checked={isSelected}
-              aria-disabled={disabled || (!isSelected && selected.length >= maxSelections)}
-              disabled={disabled || (!isSelected && selected.length >= maxSelections)}
+              aria-disabled={
+                disabled || (!isSelected && normalizedSelected.length >= maxSelections)
+              }
+              disabled={disabled || (!isSelected && normalizedSelected.length >= maxSelections)}
             >
               <Ionicons
                 name={vibeIcons[vibe.id] ?? 'compass-outline'}
                 size={18}
-                color={isSelected ? colors.primary[600] : colors.surface[600]}
+                color={isSelected ? colors.action.primary : colors.surface[600]}
                 style={styles.vibeIcon}
                 accessible={false}
               />
@@ -93,7 +100,8 @@ interface VibeChipsProps {
 }
 
 export function VibeChips({ vibes }: VibeChipsProps) {
-  const selectedVibes = travelVibes.filter((v) => vibes.includes(v.id));
+  const normalizedVibes: string[] = normalizeVibeList(vibes, vibes.length || 14);
+  const selectedVibes = travelVibes.filter((v) => normalizedVibes.includes(v.id));
 
   return (
     <ScrollView
@@ -106,7 +114,7 @@ export function VibeChips({ vibes }: VibeChipsProps) {
           <Ionicons
             name={vibeIcons[vibe.id] ?? 'compass-outline'}
             size={14}
-            color={colors.primary[600]}
+            color={colors.action.primary}
             style={styles.chipIcon}
             accessible={false}
           />
@@ -172,7 +180,7 @@ const styles = StyleSheet.create({
     color: colors.surface[600],
   },
   vibeLabelSelected: {
-    color: colors.primary[600],
+    color: colors.primary[800],
   },
   chipsContainer: {
     flexDirection: 'row',
@@ -194,6 +202,6 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.primary[600],
+    color: colors.primary[800],
   },
 });

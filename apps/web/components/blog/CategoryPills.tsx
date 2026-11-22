@@ -18,8 +18,8 @@ export function CategoryPills({
         href="/blog"
         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
           allActive
-            ? "bg-slate-900 text-white"
-            : "bg-gray-50 text-slate-600 hover:bg-gray-100 hover:text-slate-900 border border-gray-200"
+            ? "bg-[#143D46] text-white"
+            : "bg-white text-slate-700 hover:bg-[#EFF5F3] hover:text-[#143D46] border border-[#DCE5E3]"
         }`}
       >
         All
@@ -33,8 +33,8 @@ export function CategoryPills({
             href={`/blog/category/${slug}`}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
               active
-                ? "bg-slate-900 text-white"
-                : "bg-gray-50 text-slate-600 hover:bg-gray-100 hover:text-slate-900 border border-gray-200"
+                ? "bg-[#143D46] text-white"
+                : "bg-white text-slate-700 hover:bg-[#EFF5F3] hover:text-[#143D46] border border-[#DCE5E3]"
             }`}
           >
             {cat}

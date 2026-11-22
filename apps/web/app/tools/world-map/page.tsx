@@ -1,4 +1,12 @@
 import type { Metadata } from "next";
+import { getAllGuides } from "@/lib/destination-guides";
+import { buildHotelPartnerLinks } from "@/lib/affiliates/hotels";
+import { buildFlightFallbackLinks } from "@/lib/affiliates/flights";
+import {
+  buildAiraloUrl,
+  buildSafetyWingUrl,
+} from "@/lib/affiliates/essentials";
+import type { WorldMapAffiliateBundle } from "@/components/tools/world-map/world-map-affiliates";
 import { WorldMapClient } from "./WorldMapClient";
 
 export const metadata: Metadata = {
@@ -15,6 +23,48 @@ export const metadata: Metadata = {
 };
 
 export default function WorldMapPage() {
+  const guides = getAllGuides();
+  const bundlesByCountryKey: Record<string, WorldMapAffiliateBundle> = {};
+
+  for (const guide of guides) {
+    const trackingId = `tool-world-map-${guide.slug}`;
+    const hotels = buildHotelPartnerLinks({
+      destination: `${guide.name}, ${guide.country}`,
+      campaign: trackingId,
+    });
+    const flights = buildFlightFallbackLinks({
+      destinationCity: guide.name,
+      departureDate: "",
+      trackingId,
+    });
+    const bundle: WorldMapAffiliateBundle = {
+      stay: hotels.primary,
+      flight: flights[0] ?? null,
+      esim: buildAiraloUrl({
+        countryOrDestination: guide.country,
+        trackingId,
+      }),
+      insurance: buildSafetyWingUrl({ destination: guide.name, trackingId }),
+    };
+    bundlesByCountryKey[guide.country.toLowerCase()] = bundle;
+    bundlesByCountryKey[guide.name.toLowerCase()] = bundle;
+  }
+
+  const defaultHotels = buildHotelPartnerLinks({
+    destination: "world travel",
+    campaign: "tool-world-map",
+  });
+  const defaultFlights = buildFlightFallbackLinks({
+    departureDate: "",
+    trackingId: "tool-world-map",
+  });
+  const defaultLinks: WorldMapAffiliateBundle = {
+    stay: defaultHotels.primary,
+    flight: defaultFlights[0] ?? null,
+    esim: buildAiraloUrl({ trackingId: "tool-world-map" }),
+    insurance: buildSafetyWingUrl({ trackingId: "tool-world-map" }),
+  };
+
   const appSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -36,7 +86,10 @@ export default function WorldMapPage() {
         }}
       />
       <main className="min-h-screen bg-paper pt-20 lg:pt-24 pb-16">
-        <WorldMapClient />
+        <WorldMapClient
+          bundlesByCountryKey={bundlesByCountryKey}
+          defaultLinks={defaultLinks}
+        />
       </main>
     </>
   );

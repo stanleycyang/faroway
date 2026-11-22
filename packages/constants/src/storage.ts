@@ -3,9 +3,9 @@
  * Pure string builder — no Supabase client dependency.
  */
 export function getImageUrl(path: string): string {
+  const env =
+    typeof process !== "undefined" && process?.env ? process.env : undefined;
   const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.EXPO_PUBLIC_SUPABASE_URL ||
-    '';
+    env?.NEXT_PUBLIC_SUPABASE_URL || env?.EXPO_PUBLIC_SUPABASE_URL || "";
   return `${supabaseUrl}/storage/v1/object/public/images/${path}`;
 }

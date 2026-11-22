@@ -294,7 +294,8 @@ export async function runAggregatorAgent(
       vibeScore: d.vibeScore,
     }));
 
-  const transportSummary = transport.slice(0, 5).map((t) => ({
+  const outboundTransport = transport.filter((t) => !t.id.endsWith("__return"));
+  const transportSummary = outboundTransport.slice(0, 5).map((t) => ({
     id: t.id,
     type: t.type,
     provider: t.provider,
@@ -618,14 +619,16 @@ export function mapAggregatorResult(
     const afternoonMeal = resolveMeal(day.afternoon.mealId, "lunch");
     const eveningMeal = resolveMeal(day.evening.mealId, "dinner");
 
-    // Current provider results contain alternative outbound offers, never a
-    // separate return leg. A repeated/misdated Day 1 must not assign one again.
+    // Current provider results expose outbound alternatives; paired __return
+    // legs are attached to the final day after Day 1 selects an outbound flight.
     const dayTransport =
       index === 0 &&
       day.dayNumber === 1 &&
       day.date === startDate &&
       day.transportId
-        ? transport.find((t) => t.id === day.transportId)
+        ? transport.find(
+            (t) => !t.id.endsWith("__return") && t.id === day.transportId,
+          )
         : undefined;
 
     // Missing or unknown day choices retain the existing top-hotel fallback.
@@ -664,6 +667,19 @@ export function mapAggregatorResult(
         : day.tips,
     };
   });
+
+  const day1Selected = days[0]?.transport;
+  if (day1Selected && days.length > 1) {
+    const pairedReturn = transport.find(
+      (t) => t.id === `${day1Selected.id}__return`,
+    );
+    if (pairedReturn) {
+      days[days.length - 1] = {
+        ...days[days.length - 1],
+        transport: pairedReturn,
+      };
+    }
+  }
 
   return { days, topHotel };
 }

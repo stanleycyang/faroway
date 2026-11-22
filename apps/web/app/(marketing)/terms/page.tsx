@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AFFILIATE_DISCLOSURE_FULL } from "@faroway/constants";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
@@ -19,9 +20,9 @@ export default function TermsOfServicePage() {
 
       <main className="flex-1 pt-24">
         <div className="max-w-4xl mx-auto px-6 py-12">
-          <article className="prose prose-lg prose-gray prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary hover:prose-a:text-primary-600 prose-a:underline-offset-2">
+          <article className="prose prose-lg prose-gray prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary-700 hover:prose-a:text-primary-800 prose-a:underline-offset-2">
             <h1>Terms of Service</h1>
-            <p className="text-gray-500">Effective: February 18, 2026</p>
+            <p className="text-slate-600">Effective: February 18, 2026</p>
 
             <h2>1. Acceptance of Terms</h2>
             <p>
@@ -44,10 +45,11 @@ export default function TermsOfServicePage() {
             <h3>2.1 Affiliate Disclosure</h3>
             <p>
               <strong>
-                Faroway earns revenue through affiliate commissions. When you
-                click links to third-party services (such as hotels, activities,
-                tours, or restaurants) within your itinerary and make a purchase
-                or booking, we may earn a referral commission from the provider.
+                {AFFILIATE_DISCLOSURE_FULL} When you click links to third-party
+                services (such as stays, tours, activities, flights, car
+                rentals, dining, or travel essentials) within your itinerary or
+                travel guides and make a purchase or booking, we may earn a
+                referral commission from the provider.
               </strong>
             </p>
             <p>
@@ -59,7 +61,10 @@ export default function TermsOfServicePage() {
             </p>
             <ul>
               <li>
-                Links to third-party booking providers (such as Viator and other
+                Links to third-party booking providers (including Viator,
+                GetYourGuide, Klook, Tripadvisor, Stay22, Booking.com, Expedia,
+                Hostelworld, Duffel, Skyscanner, Travelpayouts, DiscoverCars,
+                OpenTable, SafetyWing, Airalo, iVisa, Wise, and other
                 participating partners) are affiliate links.
               </li>
               <li>
@@ -202,8 +207,9 @@ export default function TermsOfServicePage() {
                   Your contract is with the provider, not with us.
                 </strong>{" "}
                 All bookings, purchases, and transactions are between you and
-                the third-party provider (e.g., Viator or other participating
-                providers).
+                the third-party provider (e.g., Viator, GetYourGuide, Stay22,
+                Booking.com, Duffel, Travelpayouts, SafetyWing, Airalo, or other
+                participating providers).
               </li>
               <li>
                 All bookings are subject to the respective provider&apos;s own
@@ -234,6 +240,37 @@ export default function TermsOfServicePage() {
                 context.
               </li>
             </ul>
+
+            <h3>6.1 Google Maps &amp; Places</h3>
+            <p>
+              Faroway integrates Google Maps Platform and Google Places APIs to
+              power destination autocomplete and live venue details. By using
+              those features within the Service, you agree to be bound by the{" "}
+              <a
+                href="https://maps.google.com/help/terms_maps/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google Maps / Google Earth Additional Terms of Service
+              </a>{" "}
+              and acknowledge the{" "}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google Privacy Policy
+              </a>
+              . Itinerary map previews may also display map tiles attributed to{" "}
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OpenStreetMap
+              </a>{" "}
+              contributors.
+            </p>
 
             <h2>7. Intellectual Property</h2>
             <p>

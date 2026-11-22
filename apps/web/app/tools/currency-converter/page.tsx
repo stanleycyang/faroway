@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { currencies } from "@/lib/tools/currency-data";
+import { buildWiseUrl } from "@/lib/affiliates/essentials";
+import type { AffiliateLinkResult } from "@/lib/affiliates/types";
 import { CurrencyConverterClient } from "@/components/tools/currency/CurrencyConverterClient";
 
 export const metadata: Metadata = {
@@ -15,6 +18,17 @@ export const metadata: Metadata = {
 };
 
 export default function CurrencyConverterPage() {
+  const wiseBaseLink = buildWiseUrl({});
+  const wisePairLinks: Record<string, AffiliateLinkResult> = {};
+  for (const from of currencies) {
+    for (const to of currencies) {
+      wisePairLinks[`${from.code}-${to.code}`] = buildWiseUrl({
+        sourceCurrency: from.code,
+        targetCurrency: to.code,
+      });
+    }
+  }
+
   const appSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -35,7 +49,10 @@ export default function CurrencyConverterPage() {
           __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
         }}
       />
-      <CurrencyConverterClient />
+      <CurrencyConverterClient
+        wisePairLinks={wisePairLinks}
+        wiseBaseLink={wiseBaseLink}
+      />
     </>
   );
 }

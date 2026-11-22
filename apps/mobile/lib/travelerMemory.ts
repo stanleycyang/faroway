@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { travelVibes } from '@faroway/constants';
+import { BUDGET_LABELS, normalizeBudgetTier, normalizeVibeList } from '@faroway/constants';
 import type { TravelerRequirements } from '@faroway/types';
 import type { TripInput } from './tripTypes';
 import { travelerRequirementsSchema } from './travelerRequirements';
@@ -18,8 +18,6 @@ export interface TravelerMemoryDefaults {
 }
 
 const STORAGE_PREFIX = '@faroway/traveler_memory:v1:';
-const VALID_VIBES = new Set(travelVibes.map((v) => v.id));
-const VALID_BUDGETS = new Set(['budget', 'moderate', 'luxury']);
 const VALID_PACES = new Set(['relaxed', 'balanced', 'packed']);
 const VALID_TYPES = new Set(['solo', 'couple', 'family', 'friends', 'business']);
 
@@ -62,10 +60,7 @@ export function normalizeTravelerMemory(value: unknown): TravelerMemoryDefaults 
       ? raw.homeAirport.trim().toUpperCase().slice(0, 10)
       : undefined;
 
-  const defaultBudget =
-    typeof raw.defaultBudget === 'string' && VALID_BUDGETS.has(raw.defaultBudget)
-      ? (raw.defaultBudget as TravelerMemoryDefaults['defaultBudget'])
-      : undefined;
+  const defaultBudget = normalizeBudgetTier(raw.defaultBudget);
 
   const defaultPace =
     typeof raw.defaultPace === 'string' && VALID_PACES.has(raw.defaultPace)
@@ -78,11 +73,10 @@ export function normalizeTravelerMemory(value: unknown): TravelerMemoryDefaults 
       : undefined;
 
   const defaultVibes = Array.isArray(raw.defaultVibes)
-    ? Array.from(
-        new Set(
-          raw.defaultVibes.filter((v): v is string => typeof v === 'string' && VALID_VIBES.has(v))
-        )
-      ).slice(0, 5)
+    ? normalizeVibeList(
+        raw.defaultVibes.filter((v): v is string => typeof v === 'string'),
+        5
+      )
     : [];
 
   const requirements = normalizeRequirements(raw.requirements);
@@ -183,13 +177,7 @@ export function summarizeTravelerMemory(memory: TravelerMemoryDefaults | null): 
     items.push(`Home airport: ${memory.homeAirport}`);
   }
   if (memory.defaultBudget) {
-    const label =
-      memory.defaultBudget === 'moderate'
-        ? 'Comfort'
-        : memory.defaultBudget === 'luxury'
-          ? 'Luxury'
-          : 'Budget';
-    items.push(`Comfort: ${label}`);
+    items.push(`Budget: ${BUDGET_LABELS[memory.defaultBudget]}`);
   }
   if (memory.defaultTravelerType) {
     items.push(

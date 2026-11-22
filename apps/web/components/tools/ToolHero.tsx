@@ -16,12 +16,12 @@ export function ToolHero({
   return (
     <section className="pt-28 lg:pt-32 pb-12 lg:pb-16">
       <div className="max-w-7xl mx-auto px-6 text-center">
-        <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6">
+        <span className="inline-block px-4 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-primary-800 text-sm font-semibold mb-6">
           {badge}
         </span>
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6">
+        <h1 className="font-editorial text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 mb-6">
           {parts[0]}
-          <span className="text-gradient">{gradientWord}</span>
+          <span className="text-[#C03A31]">{gradientWord}</span>
           {parts[1] || ""}
         </h1>
         <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">

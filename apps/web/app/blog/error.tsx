@@ -22,10 +22,10 @@ export default function BlogError({
   return (
     <main
       aria-labelledby="blog-recovery-title"
-      className="min-h-[70vh] bg-[#f7f8fa] px-6 pt-32 pb-16"
+      className="min-h-[70vh] bg-[#FAF8F3] px-6 pt-32 pb-16"
     >
       <div className="mx-auto max-w-lg text-center">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
           Travel stories
         </p>
         <h1
@@ -46,7 +46,7 @@ export default function BlogError({
             onClick={retry}
             disabled={retrying}
             aria-busy={retrying}
-            className="min-h-12 rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-900 disabled:opacity-60"
+            className="min-h-12 rounded-xl bg-[#143D46] px-6 py-3 font-semibold text-white hover:bg-[#0E2C33] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#143D46] disabled:opacity-60"
           >
             {retrying ? "Trying again…" : "Try again"}
           </button>

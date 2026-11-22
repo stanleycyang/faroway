@@ -17,8 +17,8 @@ export function ShareButtons({
 }: ShareButtonsProps) {
   const isDark = variant === "dark";
   const btnClass = isDark
-    ? "p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
-    : "p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-slate-500";
+    ? "p-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white transition-colors"
+    : "p-2 rounded-full bg-gray-100 hover:bg-gray-200 hover:text-slate-900 transition-colors text-slate-600";
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const encoded = encodeURIComponent(url);
@@ -42,7 +42,7 @@ export function ShareButtons({
   return (
     <div className="flex items-center gap-3">
       <span
-        className={`text-sm font-medium ${isDark ? "text-white/50" : "text-slate-500"}`}
+        className={`text-sm font-medium ${isDark ? "text-white/80" : "text-slate-600"}`}
       >
         Share:
       </span>
@@ -53,7 +53,7 @@ export function ShareButtons({
         className={
           isDark
             ? btnClass
-            : "p-2 rounded-full bg-gray-100 hover:bg-blue-500/20 hover:text-blue-400 transition-colors text-slate-500"
+            : "p-2 rounded-full bg-gray-100 hover:bg-slate-200 hover:text-slate-900 transition-colors text-slate-600"
         }
         aria-label="Share on Twitter"
       >
@@ -68,7 +68,7 @@ export function ShareButtons({
         className={
           isDark
             ? btnClass
-            : "p-2 rounded-full bg-gray-100 hover:bg-blue-500/20 hover:text-blue-600 transition-colors text-slate-500"
+            : "p-2 rounded-full bg-gray-100 hover:bg-slate-200 hover:text-slate-900 transition-colors text-slate-600"
         }
         aria-label="Share on Facebook"
       >
@@ -83,7 +83,7 @@ export function ShareButtons({
         className={
           isDark
             ? btnClass
-            : "p-2 rounded-full bg-gray-100 hover:bg-blue-500/20 hover:text-blue-500 transition-colors text-slate-500"
+            : "p-2 rounded-full bg-gray-100 hover:bg-slate-200 hover:text-slate-900 transition-colors text-slate-600"
         }
         aria-label="Share on LinkedIn"
       >
@@ -97,13 +97,13 @@ export function ShareButtons({
         className={
           isDark
             ? btnClass
-            : "p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-slate-500"
+            : "p-2 rounded-full bg-gray-100 hover:bg-gray-200 hover:text-slate-900 transition-colors text-slate-600"
         }
         aria-label="Copy link"
       >
         {copied ? (
           <svg
-            className="w-4 h-4 text-green-400"
+            className={`w-4 h-4 ${isDark ? "text-emerald-300" : "text-[#0F766E]"}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

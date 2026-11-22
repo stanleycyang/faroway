@@ -1,3 +1,5 @@
+import { BarChart3, Calendar, Plane, CheckCircle2 } from "lucide-react";
+
 interface TripStatsProps {
   totalTrips: number;
   upcomingTrips: number;
@@ -15,30 +17,30 @@ export function TripStats({
     {
       label: "Total Trips",
       value: totalTrips,
-      icon: "📊",
-      color: "text-primary",
+      Icon: BarChart3,
+      color: "text-primary-700",
       bgColor: "bg-primary-50",
     },
     {
       label: "Upcoming",
       value: upcomingTrips,
-      icon: "🗓️",
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      Icon: Calendar,
+      color: "text-accent-700",
+      bgColor: "bg-teal-50",
     },
     {
       label: "In Progress",
       value: inProgressTrips,
-      icon: "✈️",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      Icon: Plane,
+      color: "text-[#143D46]",
+      bgColor: "bg-[#EFF5F3]",
     },
     {
       label: "Past",
       value: pastTrips,
-      icon: "✅",
-      color: "text-gray-600",
-      bgColor: "bg-gray-100",
+      Icon: CheckCircle2,
+      color: "text-slate-700",
+      bgColor: "bg-slate-100",
     },
   ];
 
@@ -52,9 +54,9 @@ export function TripStats({
           <div
             className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${stat.bgColor} mb-3`}
           >
-            <span className="text-xl">{stat.icon}</span>
+            <stat.Icon className={`h-5 w-5 ${stat.color}`} aria-hidden="true" />
           </div>
-          <h3 className="text-sm font-medium text-gray-500 mb-1">
+          <h3 className="text-sm font-medium text-slate-600 mb-1">
             {stat.label}
           </h3>
           <p className={`text-2xl sm:text-3xl font-bold ${stat.color}`}>

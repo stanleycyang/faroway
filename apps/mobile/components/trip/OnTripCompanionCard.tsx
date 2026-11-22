@@ -13,7 +13,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import { borderRadius } from '../../constants/theme';
+import { AFFILIATE_DISCLOSURE_SHORT } from '@faroway/constants';
+import { borderRadius, colors } from '../../constants/theme';
+import {
+  TRIP_ESSENTIALS,
+  confirmAndOpenAffiliateLink,
+  itemTypeForAffiliateActivityType,
+  resolveAffiliatePartnerForItem,
+} from '../../lib/affiliateCheckout';
+import { isAllowedAffiliateUrl } from '../../services/api';
 import {
   buildStopDirectionsUrl,
   computeBookingReadiness,
@@ -96,6 +104,45 @@ export function OnTripCompanionCard({
     hapticFeedback.light();
     const url = buildStopDirectionsUrl(upNext.nextStop, trip.destination, trip.country, platform);
     void openExternalMapsUrl(url);
+  };
+
+  const openPartnerBrowser = (url: string) =>
+    WebBrowser.openBrowserAsync(url, {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle?.AUTOMATIC,
+      controlsColor: colors.action.primary,
+    });
+
+  const handleOpenFlaggedStop = (item: BookingReadinessSummary['flaggedStops'][number]) => {
+    if (!item.bookingUrl || !isAllowedAffiliateUrl(item.bookingUrl)) return;
+    const partner = resolveAffiliatePartnerForItem(item.bookingUrl, item.affiliatePartner);
+    confirmAndOpenAffiliateLink(
+      {
+        itemType: itemTypeForAffiliateActivityType(item.activityType || 'activity'),
+        itemId: item.id || `${item.dayNumber}-${item.title}`,
+        itemName: item.title,
+        affiliatePartner: partner,
+        affiliateUrl: item.bookingUrl,
+        tripId: trip.id,
+        priceLabel: item.price,
+        source: 'itinerary',
+      },
+      openPartnerBrowser
+    );
+  };
+
+  const handleOpenEssential = (essential: (typeof TRIP_ESSENTIALS)[number]) => {
+    confirmAndOpenAffiliateLink(
+      {
+        itemType: 'activity',
+        itemId: essential.id,
+        itemName: essential.title,
+        affiliatePartner: essential.partner,
+        affiliateUrl: essential.url,
+        tripId: trip.id,
+        source: 'itinerary',
+      },
+      openPartnerBrowser
+    );
   };
 
   const urgencyColors =
@@ -270,19 +317,60 @@ export function OnTripCompanionCard({
 
           {showChecklist && readiness.flaggedStops.length > 0 ? (
             <View style={styles.checklistBox}>
-              {readiness.flaggedStops.map((item) => (
-                <View key={`${item.dayNumber}-${item.title}`} style={styles.checklistRow}>
-                  <Text style={styles.checklistDay}>Day {item.dayNumber}</Text>
-                  <View style={styles.checklistBody}>
-                    <Text style={styles.checklistStop}>{item.title}</Text>
-                    <Text style={styles.checklistReason}>{item.reason}</Text>
+              {readiness.flaggedStops.map((item) => {
+                const canBookDirect = Boolean(
+                  item.bookingUrl && isAllowedAffiliateUrl(item.bookingUrl)
+                );
+                return (
+                  <View key={`${item.dayNumber}-${item.title}`} style={styles.checklistRow}>
+                    <Text style={styles.checklistDay}>Day {item.dayNumber}</Text>
+                    <View style={styles.checklistBody}>
+                      <Text style={styles.checklistStop}>{item.title}</Text>
+                      <Text style={styles.checklistReason}>{item.reason}</Text>
+                    </View>
+                    {canBookDirect ? (
+                      <TouchableOpacity
+                        style={styles.checklistActionBtn}
+                        onPress={() => handleOpenFlaggedStop(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Check options for ${item.title}`}
+                      >
+                        <Text style={styles.checklistActionText}>Book</Text>
+                        <Ionicons name="open-outline" size={12} color="#ffffff" />
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
-                </View>
-              ))}
+                );
+              })}
+              <Text style={styles.companionDisclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
             </View>
           ) : null}
         </View>
       ) : null}
+
+      {/* Trip Essentials Strip (eSIM & Travel Insurance) */}
+      <View style={styles.essentialsCard}>
+        <Text style={styles.essentialsTitle}>Trip essentials</Text>
+        <View style={styles.essentialsRow}>
+          {TRIP_ESSENTIALS.map((essential) => (
+            <TouchableOpacity
+              key={essential.id}
+              style={styles.essentialChip}
+              onPress={() => handleOpenEssential(essential)}
+              accessibilityRole="button"
+              accessibilityLabel={`${essential.title} via ${essential.partnerLabel}`}
+            >
+              <Ionicons name={essential.icon} size={16} color="#143D46" />
+              <View style={styles.essentialTextWrap}>
+                <Text style={styles.essentialLabel}>{essential.title}</Text>
+                <Text style={styles.essentialPartner}>{essential.partnerLabel}</Text>
+              </View>
+              <Ionicons name="open-outline" size={14} color="#C03A31" />
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.companionDisclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
+      </View>
 
       {/* Full-Screen High-Contrast "Show Taxi Driver" Modal */}
       {showTaxiModal && taxiCard ? (
@@ -562,6 +650,72 @@ const styles = StyleSheet.create({
   checklistReason: {
     fontSize: 12,
     lineHeight: 17,
+    color: '#475569',
+  },
+  checklistActionBtn: {
+    minHeight: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.action.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'center',
+  },
+  checklistActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  essentialsCard: {
+    backgroundColor: '#FAF8F3',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#DCE5E3',
+    padding: 14,
+    gap: 8,
+  },
+  essentialsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#143D46',
+  },
+  essentialsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  essentialChip: {
+    flex: 1,
+    minWidth: 140,
+    minHeight: 48,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DCE5E3',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  essentialTextWrap: {
+    flex: 1,
+  },
+  essentialLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  essentialPartner: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  companionDisclosure: {
+    fontSize: 11,
+    lineHeight: 15,
     color: '#475569',
   },
   taxiModalContainer: {

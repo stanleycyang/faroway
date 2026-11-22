@@ -5,7 +5,7 @@ export default function SharedTripNotFound() {
   return (
     <main
       aria-labelledby="shared-link-unavailable-title"
-      className="flex min-h-screen items-center justify-center bg-[#f7f8fa] px-5 py-12"
+      className="flex min-h-screen items-center justify-center bg-[#FAF8F3] px-5 py-12"
     >
       <section className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">

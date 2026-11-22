@@ -112,11 +112,21 @@ test("resumes a lost creation response after reload without a duplicate trip", a
     }),
   );
   await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await page
+    .getByRole("dialog", { name: "Share trip details with AI planner?" })
+    .getByRole("button", { name: "Share & start planning" })
+    .click();
   await expect(
-    page.getByRole("alert").filter({ hasText: /fetch/i }),
+    page
+      .getByRole("alert")
+      .filter({ hasText: /We couldn’t reach Faroway|fetch/i }),
   ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await page
+    .getByRole("dialog", { name: "Share trip details with AI planner?" })
+    .getByRole("button", { name: "Share & start planning" })
+    .click();
   await expect(page).toHaveURL(new RegExp(`/trips/${id}$`));
   expect(
     (await (await request.get("http://127.0.0.1:4401/fixture/state")).json())
@@ -160,7 +170,10 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
     .getByRole("button", { name: "Create public link", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Share sheet canceled" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Share sheet canceled" })
+      .first(),
   ).toBeVisible();
   const shared = (
     await (await request.get("http://127.0.0.1:4401/fixture/state")).json()
@@ -186,7 +199,10 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
     .getByRole("button", { name: "Create public link", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Share sheet canceled" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Share sheet canceled" })
+      .first(),
   ).toBeVisible();
   const reshared = (
     await (await request.get("http://127.0.0.1:4401/fixture/state")).json()
@@ -213,6 +229,10 @@ test("keeps the last usable itinerary when refreshing after retry fails", async 
     }),
   );
   await page.getByRole("button", { name: "Try Again" }).click();
+  await page
+    .getByRole("dialog", { name: "Share trip details with AI planner?" })
+    .getByRole("button", { name: "Share & start planning" })
+    .click();
   await expect(
     page.getByRole("alert").filter({ hasText: "Your last loaded trip" }),
   ).toContainText("Your last loaded trip is still shown");
@@ -756,9 +776,12 @@ test("retains traveler booking reports after interruption, edits and regeneratio
     exact: true,
   });
   await expect(
-    checklist.getByText("Provider verification is not connected.", {
-      exact: false,
-    }),
+    checklist.getByText(
+      "opening a link or marking an item booked doesn’t automatically sync with providers.",
+      {
+        exact: false,
+      },
+    ),
   ).toBeVisible();
   let dropReply = true;
   await page.route("**/api/trips/*/bookings", async (route) => {
@@ -946,17 +969,26 @@ test("AI sharing decline makes no trip or planning request; a deliberate retry s
     });
   });
   await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await page
+    .getByRole("dialog", { name: "Share trip details with AI planner?" })
+    .getByRole("button", { name: "Not now" })
+    .click();
   await expect(
-    page.getByRole("alert").filter({ hasText: /sharing declined/i }),
-  ).toBeVisible();
+    page.getByRole("dialog", { name: "Share trip details with AI planner?" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Resume saved trip" }),
+  ).toBeEnabled();
   expect(generations).toBe(0);
   expect(
     (await (await request.get("http://127.0.0.1:4401/fixture/state")).json())
       .inserts,
   ).toBe(0);
-  page.removeAllListeners("dialog");
-  page.on("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await page
+    .getByRole("dialog", { name: "Share trip details with AI planner?" })
+    .getByRole("button", { name: "Share & start planning" })
+    .click();
   await expect(page).toHaveURL(new RegExp(`/trips/${id}$`));
   expect(generations).toBe(1);
 });
@@ -1003,6 +1035,10 @@ test("a stalled creation releases the UI and keeps the same request for retry", 
     return undefined;
   });
   await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await page
+    .getByRole("dialog", { name: "Share trip details with AI planner?" })
+    .getByRole("button", { name: "Share & start planning" })
+    .click();
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Resume saved trip" }),

@@ -143,7 +143,7 @@ export function PlacesExplorer({
       <button
         type="button"
         aria-expanded={open}
-        className="text-sm font-semibold text-primary"
+        className="text-sm font-semibold text-primary-700 hover:text-primary-800"
         onClick={() => {
           if (open) {
             clearDisplay();
@@ -189,7 +189,7 @@ export function PlacesExplorer({
               <button
                 type="submit"
                 disabled={busy || query.trim().length < 2}
-                className="rounded-lg bg-primary px-3 py-2 text-sm text-white disabled:opacity-50"
+                className="rounded-lg bg-primary-700 hover:bg-primary-800 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Search places
               </button>
@@ -231,7 +231,7 @@ export function PlacesExplorer({
               <button
                 type="button"
                 onClick={() => void lookup({ placeId: place.placeId })}
-                className="mt-2 text-sm font-medium text-primary"
+                className="mt-2 text-sm font-medium text-primary-700 hover:text-primary-800"
               >
                 View details for {place.name}
               </button>
@@ -282,7 +282,7 @@ export function PlacesExplorer({
                   </p>
                 </div>
               )}
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-slate-600">
                 Price and availability not verified. Check current hours and
                 booking terms before visiting.
               </p>
@@ -291,7 +291,7 @@ export function PlacesExplorer({
                   href={detail.mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-block text-sm font-medium text-primary underline"
+                  className="mt-2 inline-block text-sm font-medium text-primary-700 hover:text-primary-800 underline"
                 >
                   Open on Google Maps
                 </a>

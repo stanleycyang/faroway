@@ -69,7 +69,7 @@ function ResetPasswordContent() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] px-4 py-12">
+    <main className="min-h-screen bg-paper px-4 py-12">
       <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-8 flex justify-center">
           <Logo size="lg" variant="dark" />
@@ -99,7 +99,7 @@ function ResetPasswordContent() {
           </div>
         ) : (
           <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
-            <KeyRound className="mb-4 h-9 w-9 text-primary" />
+            <KeyRound className="mb-4 h-9 w-9 text-primary-700" />
             <h1 className="font-editorial text-3xl text-slate-900">
               Choose a new password
             </h1>

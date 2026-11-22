@@ -16,7 +16,10 @@ jest.mock('../../../lib/supabase', () => ({
     },
   },
 }));
-jest.mock('../../../constants/api', () => ({ API_BASE_URL: 'https://staging.faroway.ai' }));
+jest.mock('../../../constants/api', () => ({
+  API_BASE_URL: 'https://staging.faroway.ai',
+  WEB_BASE_URL: 'https://staging.faroway.ai',
+}));
 jest.mock('../../../lib/offline/network', () => ({
   networkMonitor: {
     isOnline: () => true,

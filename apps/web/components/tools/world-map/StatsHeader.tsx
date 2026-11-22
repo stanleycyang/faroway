@@ -1,3 +1,4 @@
+import { Globe2 } from "lucide-react";
 import type { Stats } from "@/lib/tools/world-map/stats";
 import { toRoman, toWords } from "@/lib/tools/world-map/typography";
 
@@ -16,7 +17,6 @@ interface HeroProps {
 // "Plate {roman}" so each profile gets its own plate number.
 export function StatsHeader({
   profileName,
-  profileEmoji,
   stats,
   plateNumber = 1,
   readOnly,
@@ -33,16 +33,21 @@ export function StatsHeader({
   return (
     <div className="flex flex-col">
       {/* eyebrow: name · plate · year */}
-      <div className="flex items-baseline gap-3 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-500">
-        <span className="text-base leading-none not-italic">
-          {profileEmoji || "🌍"}
-        </span>
+      <div className="flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-600">
+        <Globe2
+          className="w-3.5 h-3.5 text-[#143D46] shrink-0"
+          aria-hidden="true"
+        />
         <span className="truncate">
           {readOnly ? `${profileName}'s Atlas` : `${profileName}'s Atlas`}
         </span>
-        <span className="text-slate-300">·</span>
+        <span className="text-slate-600" aria-hidden="true">
+          ·
+        </span>
         <span>Plate {toRoman(plateNumber) || "I"}</span>
-        <span className="text-slate-300">·</span>
+        <span className="text-slate-600" aria-hidden="true">
+          ·
+        </span>
         <span>{year}</span>
       </div>
 
@@ -68,7 +73,7 @@ export function StatsHeader({
             {heroLabel}
           </h1>
         )}
-        <div className="font-sans font-semibold text-slate-400 text-2xl sm:text-3xl">
+        <div className="font-sans font-semibold text-slate-600 text-2xl sm:text-3xl">
           / {stats.totalCountries}
         </div>
       </div>
@@ -76,7 +81,9 @@ export function StatsHeader({
       {/* tagline */}
       <div className="mt-2 flex items-center gap-2 text-base font-semibold text-slate-600">
         <span>{stats.totalVisited === 1 ? "country" : "countries"}</span>
-        <span className="text-slate-300">·</span>
+        <span className="text-slate-600" aria-hidden="true">
+          ·
+        </span>
         <span>
           {stats.continentsVisited}/{stats.continentsTotal} continents
         </span>

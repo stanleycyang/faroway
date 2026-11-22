@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { validateHotelSearchDetails } from "@faroway/constants";
+import { ExternalLink } from "lucide-react";
+import {
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  resolveAffiliatePartnerByUrl,
+  validateHotelSearchDetails,
+} from "@faroway/constants";
 import { useUser } from "@/hooks/useUser";
 import { createClient } from "@/lib/supabase/client";
 import { withAuthRequestDeadline } from "@/lib/auth/request-deadline";
@@ -11,6 +17,54 @@ import {
 } from "@/lib/trips/hotel-quotes";
 import type { HotelQuoteResult } from "@faroway/types";
 import type { Trip } from "@/lib/trips/load-trip";
+import { useTripCheckout } from "./TripCheckoutContext";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
+import { useAffiliateTracking } from "@/components/affiliates/AffiliateTrackingContext";
+
+function buildHotelSpecificPartnerUrl(
+  baseUrl: string | null | undefined,
+  hotelName: string,
+  destination: string,
+  checkIn?: string,
+  checkOut?: string,
+  adults?: number,
+): { url: string; partner: string } | null {
+  if (baseUrl && isAllowedAffiliateUrl(baseUrl)) {
+    try {
+      const parsed = new URL(baseUrl);
+      const query = `${hotelName}, ${destination}`.trim();
+      if (parsed.hostname.includes("stay22.com")) {
+        parsed.searchParams.set("address", query);
+      } else if (parsed.hostname.includes("booking.com")) {
+        parsed.searchParams.set("ss", `${hotelName} ${destination}`.trim());
+      } else if (parsed.hostname.includes("expedia.com")) {
+        parsed.searchParams.set("destination", query);
+      }
+      const adjusted = parsed.toString();
+      if (isAllowedAffiliateUrl(adjusted)) {
+        return {
+          url: adjusted,
+          partner: resolveAffiliatePartnerByUrl(adjusted) ?? "stay22",
+        };
+      }
+    } catch {
+      // Fall through to Booking search link
+    }
+  }
+
+  const fallback = new URL("https://www.booking.com/searchresults.html");
+  fallback.searchParams.set("ss", `${hotelName} ${destination}`.trim());
+  if (checkIn) fallback.searchParams.set("checkin", checkIn);
+  if (checkOut) fallback.searchParams.set("checkout", checkOut);
+  if (adults && adults > 0) {
+    fallback.searchParams.set("group_adults", String(adults));
+  }
+  const fallbackStr = fallback.toString();
+  return isAllowedAffiliateUrl(fallbackStr)
+    ? { url: fallbackStr, partner: "booking" }
+    : null;
+}
 
 export function HotelQuotePanel({ trip }: { trip: Trip }) {
   return hotelSearchEnabled() ? <HotelQuoteActor trip={trip} /> : null;
@@ -36,6 +90,8 @@ function HotelQuoteSession({
   trip: Trip;
   authenticated: boolean;
 }) {
+  const checkout = useTripCheckout();
+  const affiliateCtx = useAffiliateTracking();
   const [quotes, setQuotes] = useState<HotelQuoteResult | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -139,6 +195,9 @@ function HotelQuoteSession({
       if (active.current) setLoading(false);
     }
   }
+
+  const primaryPartnerBaseUrl = affiliateCtx?.hotelPartnerLinks?.primary?.url;
+
   return (
     <section
       aria-label="Hotel options"
@@ -156,7 +215,7 @@ function HotelQuoteSession({
         type="button"
         disabled={!ready || loading}
         onClick={search}
-        className="mt-4 min-h-12 rounded-full bg-slate-900 px-5 py-3 font-semibold text-white disabled:opacity-50"
+        className="mt-4 min-h-12 rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
       >
         {loading ? "Searching hotels…" : "Search hotel options"}
       </button>
@@ -177,35 +236,103 @@ function HotelQuoteSession({
                 your saved room details.
               </p>
             )}
-            {quotes.hotels.map((hotel) => (
-              <article
-                key={hotel.id}
-                className="mt-4 border-t border-gray-100 pt-4"
-              >
-                <h4 className="font-semibold text-slate-900">{hotel.name}</h4>
-                {hotel.offers.map((offer) => (
-                  <div
-                    key={offer.id}
-                    className="mt-2 space-y-1 text-sm text-slate-600"
-                  >
-                    <p className="font-semibold text-slate-900">
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: offer.currency,
-                      }).format(offer.stayAmount)}{" "}
-                      for the stay · {offer.roomCount} room(s)
-                    </p>
-                    {offer.additionalTaxes.map((tax, i) => (
-                      <p key={i}>
-                        Additional {tax.description}: {tax.amount}{" "}
-                        {tax.currency}
-                      </p>
-                    ))}
-                    <p>{offer.cancellationNote}</p>
+            {quotes.hotels.map((hotel) => {
+              const target = buildHotelSpecificPartnerUrl(
+                primaryPartnerBaseUrl,
+                hotel.name,
+                trip.destination,
+                trip.start_date,
+                trip.end_date,
+                trip.travelers,
+              );
+              const partnerLabel = target
+                ? formatAffiliatePartnerName(target.partner)
+                : "Partner";
+              const firstOffer = hotel.offers[0];
+              return (
+                <article
+                  key={hotel.id}
+                  className="mt-4 border-t border-gray-100 pt-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <h4 className="font-semibold text-slate-900">
+                      {hotel.name}
+                    </h4>
+                    {target && (
+                      <div className="flex flex-col items-start sm:items-end gap-1">
+                        {checkout ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.currentTarget.focus();
+                              checkout.review({
+                                id: hotel.id,
+                                name: hotel.name,
+                                date: trip.start_date,
+                                dateLabel: `${trip.start_date} – ${trip.end_date}`,
+                                mode: "partner_click",
+                                itemType: "hotel",
+                                partner: target.partner,
+                                partnerLabel,
+                                affiliateUrl: target.url,
+                                price: firstOffer?.stayAmount,
+                                currency: firstOffer?.currency,
+                                source: affiliateCtx?.source ?? "itinerary",
+                                placement: "hotel_quote_panel",
+                              });
+                            }}
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-800 transition-colors"
+                          >
+                            <span>Check live rates on {partnerLabel}</span>
+                            <ExternalLink
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        ) : (
+                          <TrackedAffiliateButton
+                            variant="secondary"
+                            label={`Check live rates on ${partnerLabel}`}
+                            affiliateUrl={target.url}
+                            partner={target.partner}
+                            itemType="hotel"
+                            itemId={hotel.id}
+                            itemName={hotel.name}
+                            tripId={trip.id}
+                            price={firstOffer?.stayAmount}
+                            currency={firstOffer?.currency}
+                            source={affiliateCtx?.source ?? "itinerary"}
+                            placement="hotel_quote_panel"
+                          />
+                        )}
+                        <AffiliateDisclosure className="text-[11px] text-slate-600" />
+                      </div>
+                    )}
                   </div>
-                ))}
-              </article>
-            ))}
+                  {hotel.offers.map((offer) => (
+                    <div
+                      key={offer.id}
+                      className="mt-2 space-y-1 text-sm text-slate-600"
+                    >
+                      <p className="font-semibold text-slate-900">
+                        {new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: offer.currency,
+                        }).format(offer.stayAmount)}{" "}
+                        for the stay · {offer.roomCount} room(s)
+                      </p>
+                      {offer.additionalTaxes.map((tax, i) => (
+                        <p key={i}>
+                          Additional {tax.description}: {tax.amount}{" "}
+                          {tax.currency}
+                        </p>
+                      ))}
+                      <p>{offer.cancellationNote}</p>
+                    </div>
+                  ))}
+                </article>
+              );
+            })}
           </>
         )}
       </div>

@@ -159,6 +159,7 @@ export async function sendItineraryReadyPush(
     userId,
     tripId,
     itineraryId,
+    destination,
   }: {
     userId: string;
     tripId: string;
@@ -202,16 +203,24 @@ export async function sendItineraryReadyPush(
     ),
   );
 
+  const cleanDestination =
+    typeof destination === "string" ? destination.trim() : "";
+  const body = cleanDestination
+    ? `Your ${cleanDestination} itinerary is ready to review and book.`
+    : "Your saved itinerary is ready to review.";
+
   const result = await sendExpoPushNotifications(
     tokens.map((token) => ({
       to: token,
       sound: "default",
       title: "Your itinerary is ready",
-      body: "Your saved itinerary is ready to review.",
+      body,
       data: {
         type: "trip_generation_complete",
         tripId,
         itineraryId,
+        ...(cleanDestination ? { destination: cleanDestination } : {}),
+        url: `/trips/${tripId}`,
       },
     })),
   );

@@ -694,8 +694,8 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
                     setFlightConsent(false);
                   }}
                 >
-                  <option value="liteapi">LiteAPI</option>
                   <option value="duffel">Duffel</option>
+                  <option value="liteapi">LiteAPI</option>
                 </select>
               </label>
               <label className="flex items-center gap-2 text-sm">

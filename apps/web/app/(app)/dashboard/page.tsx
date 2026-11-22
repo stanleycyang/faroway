@@ -1,7 +1,8 @@
-import { Compass, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { type Trip } from "@/components/dashboard/TripCard";
 import { DashboardTripList } from "@/components/dashboard/DashboardTripList";
 import { DashboardRetryButton } from "@/components/dashboard/DashboardRetryButton";
@@ -50,15 +51,12 @@ export default async function DashboardPage({
   const serverDay = new Date().toISOString().split("T")[0];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-paper">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <Compass className="h-6 w-6 text-slate-900" />
-              <span className="text-xl font-bold text-gray-900">faroway.</span>
-            </Link>
+            <Logo size="md" variant="dark" />
 
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600 hidden sm:block">
