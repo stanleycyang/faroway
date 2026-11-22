@@ -932,10 +932,30 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
     });
     expect(page.url()).toMatch(/viator\.com/);
     await page.goto(`${BASE_URL}/trips/${tripId}`);
+    await expect(
+      page.getByRole("heading", { name: /Tokyo, Japan/i, level: 1 }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Create public share link/i }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("region", { name: /Saved booking steps/i }),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: /Booking checklist/i })
+        .getByText(/Provider opened · reported by you/i)
+        .first(),
+    ).toBeVisible();
+    await page.waitForLoadState("networkidle");
 
     // Text export & ICS export MUST include https:// partner booking URLs
+    const txtBtn = page.getByRole("button", { name: /Download text/i });
+    await expect(txtBtn).toBeVisible();
+    await expect(txtBtn).toBeEnabled();
+    await txtBtn.scrollIntoViewIfNeeded();
     const txtDownloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: /Download text/i }).click();
+    await txtBtn.click();
     const txtDownload = await txtDownloadPromise;
     const txtStream = await txtDownload.createReadStream();
     const txtChunks: Buffer[] = [];
@@ -943,8 +963,12 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
     const txtContent = Buffer.concat(txtChunks).toString("utf8");
     expect(txtContent).toMatch(/https:\/\/[^\s]+/);
 
+    const icsBtn = page.getByRole("button", { name: /Download calendar/i });
+    await expect(icsBtn).toBeVisible();
+    await expect(icsBtn).toBeEnabled();
+    await icsBtn.scrollIntoViewIfNeeded();
     const icsDownloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: /Download calendar/i }).click();
+    await icsBtn.click();
     const icsDownload = await icsDownloadPromise;
     const icsStream = await icsDownload.createReadStream();
     const icsChunks: Buffer[] = [];
