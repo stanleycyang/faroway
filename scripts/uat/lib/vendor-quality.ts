@@ -270,17 +270,21 @@ function validateTravelpayoutsUrl(
         reason: "Travelpayouts target u hostname is invalid",
       };
     }
-    if (!isAllowedAffiliateUrl(rawTarget)) {
-      return {
-        ok: false,
-        reason: "Travelpayouts target u host is not allowlisted",
-      };
-    }
-    if (resolveAffiliatePartnerByUrl(rawTarget) === "travelpayouts") {
+    const targetHost = targetParsed.hostname.toLowerCase();
+    const isTargetTravelpayouts = AFFILIATE_PARTNERS.travelpayouts.allowedHosts.some(
+      (domain) => targetHost === domain || targetHost.endsWith(`.${domain}`),
+    );
+    if (isTargetTravelpayouts) {
       return {
         ok: false,
         reason:
           "Travelpayouts target u URL must not wrap another Travelpayouts redirect",
+      };
+    }
+    if (!isAllowedAffiliateUrl(rawTarget)) {
+      return {
+        ok: false,
+        reason: "Travelpayouts target u host is not allowlisted",
       };
     }
     if (
@@ -366,9 +370,13 @@ export function validatePartnerHandoffUrl(
     return { ok: true, dedupeKey: normPath };
   }
 
+  const outerHost = parsed.hostname.toLowerCase();
+  const isTravelpayoutsOuterHost = AFFILIATE_PARTNERS.travelpayouts.allowedHosts.some(
+    (domain) => outerHost === domain || outerHost.endsWith(`.${domain}`),
+  );
   const resolved = resolveAffiliatePartnerByUrl(rawUrl);
   if (
-    resolved === "travelpayouts" &&
+    isTravelpayoutsOuterHost &&
     options?.allowTravelpayoutsWrapper &&
     partner !== "travelpayouts" &&
     AFFILIATE_PARTNERS[partner].verticals.some((vertical) =>
@@ -379,6 +387,9 @@ export function validatePartnerHandoffUrl(
       ...options,
       wrappedPartner: partner,
     });
+  }
+  if (isTravelpayoutsOuterHost && partner === "travelpayouts") {
+    return validateTravelpayoutsUrl(parsed, normPath, options);
   }
 
   if (resolved !== partner) {

@@ -316,4 +316,31 @@ describe("trip export helpers", () => {
     expect(text).not.toContain("Estimated total:");
     expect(text).not.toContain("Day estimate:");
   });
+
+  it("formats ISO UTC timestamps without timezone day shift", () => {
+    const isoTrip: TripExportTrip = {
+      ...trip,
+      start_date: "2026-04-01T00:00:00Z",
+      end_date: "2026-04-07T00:00:00Z",
+    };
+    const text = buildTripExportText(
+      isoTrip,
+      {
+        days: [
+          {
+            dayNumber: 1,
+            date: "2026-04-01T00:00:00Z",
+            title: "Arrival",
+            morning: { activities: [], meals: [] },
+            afternoon: { activities: [], meals: [] },
+            evening: { activities: [], meals: [] },
+          } as unknown as TripDay,
+        ],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+
+    expect(text).toContain("Dates: Apr 1, 2026 to Apr 7, 2026");
+    expect(text).toContain("Date: Apr 1, 2026");
+  });
 });

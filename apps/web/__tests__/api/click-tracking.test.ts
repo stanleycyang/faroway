@@ -352,6 +352,12 @@ describe("POST /api/track/click", () => {
     "https://www.viator.com:8443/tours/Tokyo",
     "https://evil.example.com/tours/Tokyo",
     "https://viator.com.evil.com/tours/Tokyo",
+    "https://tp.media/r?marker=12345&p=4110&u=https%3A%2F%2Fevil.com%2Fphish",
+    "https://tp.media/r?marker=12345&p=4110&u=javascript%3Aalert(1)",
+    "https://tp.media/r?marker=12345&p=4110&u=http%3A%2F%2F169.254.169.254%2Flatest%2Fmeta-data",
+    "https://tp.st/r?marker=12345&u=https%3A%2F%2Fevil.com%2Fphish",
+    "https://tp.media/r?marker=12345&u=https%3A%2F%2Ftp.media%2Fr%3Fu%3Dhttps%253A%252F%252Fevil.com",
+    "https://tp.media/r?marker=12345&u=https%3A%2F%2Fwww.klook.com&u=https%3A%2F%2Fevil.com",
   ])("rejects unsafe or disallowed URL: %s", async (badUrl) => {
     const response = await POST(
       makeRequest({

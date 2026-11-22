@@ -304,6 +304,18 @@ export const ALLOWED_AFFILIATE_DOMAINS: readonly string[] = Array.from(
   ),
 );
 
+const TRAVELPAYOUTS_WRAPPER_HOSTS: readonly string[] = [
+  "tp.media",
+  "tp.st",
+  "travelpayouts.com",
+];
+
+const TRAVELPAYOUTS_WRAPPED_SUBPARTNER_HOSTS: readonly string[] = [
+  "tiqets.com",
+  "hotellook.com",
+  "joinsherpa.com",
+];
+
 const PARTNER_ALIAS_MAP: Record<string, AffiliatePartnerId> = {
   viator: "viator",
   getyourguide: "getyourguide",
@@ -361,6 +373,12 @@ function hasAsciiControlChars(value: string): boolean {
   return false;
 }
 
+function isHostInList(host: string, allowlist: readonly string[]): boolean {
+  return allowlist.some(
+    (domain) => host === domain || host.endsWith(`.${domain}`),
+  );
+}
+
 function parseSafeHttpsUrl(rawUrl: string): URL | null {
   if (typeof rawUrl !== "string" || hasAsciiControlChars(rawUrl)) {
     return null;
@@ -369,7 +387,8 @@ function parseSafeHttpsUrl(rawUrl: string): URL | null {
     const parsed = new URL(rawUrl);
     if (parsed.protocol !== "https:") return null;
     if (parsed.username || parsed.password || parsed.port) return null;
-    const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+    if (!parsed.hostname || parsed.hostname.endsWith(".")) return null;
+    const host = parsed.hostname.toLowerCase();
     if (!host) return null;
     return parsed;
   } catch {
@@ -377,26 +396,51 @@ function parseSafeHttpsUrl(rawUrl: string): URL | null {
   }
 }
 
+function isValidTravelpayoutsTarget(rawTarget: string): boolean {
+  if (!rawTarget.trim()) return false;
+  const targetParsed = parseSafeHttpsUrl(rawTarget);
+  if (!targetParsed) return false;
+  const targetHost = targetParsed.hostname.toLowerCase();
+  if (isHostInList(targetHost, TRAVELPAYOUTS_WRAPPER_HOSTS)) {
+    return false;
+  }
+  if (isHostInList(targetHost, TRAVELPAYOUTS_WRAPPED_SUBPARTNER_HOSTS)) {
+    return true;
+  }
+  return isAllowedAffiliateUrl(rawTarget);
+}
+
+function isValidAffiliateParsedUrl(parsed: URL): boolean {
+  const host = parsed.hostname.toLowerCase();
+  if (!isHostInList(host, ALLOWED_AFFILIATE_DOMAINS)) {
+    return false;
+  }
+  if (
+    isHostInList(host, TRAVELPAYOUTS_WRAPPER_HOSTS) &&
+    parsed.searchParams.has("u")
+  ) {
+    const targets = parsed.searchParams.getAll("u");
+    if (targets.length === 0) return false;
+    return targets.every((target) => isValidTravelpayoutsTarget(target));
+  }
+  return true;
+}
+
 export function isAllowedAffiliateUrl(url: string): boolean {
   const parsed = parseSafeHttpsUrl(url);
   if (!parsed) return false;
-  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
-  return ALLOWED_AFFILIATE_DOMAINS.some(
-    (domain) => host === domain || host.endsWith(`.${domain}`),
-  );
+  return isValidAffiliateParsedUrl(parsed);
 }
 
 export function resolveAffiliatePartnerByUrl(
   url: string,
 ): AffiliatePartnerId | undefined {
   const parsed = parseSafeHttpsUrl(url);
-  if (!parsed) return undefined;
-  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+  if (!parsed || !isValidAffiliateParsedUrl(parsed)) return undefined;
+  const host = parsed.hostname.toLowerCase();
   for (const id of AFFILIATE_PARTNER_IDS) {
     const hosts = AFFILIATE_PARTNERS[id].allowedHosts;
-    if (
-      hosts.some((domain) => host === domain || host.endsWith(`.${domain}`))
-    ) {
+    if (isHostInList(host, hosts)) {
       return id;
     }
   }
@@ -413,12 +457,7 @@ export function injectAffiliateSubId(
   const cleanClickId = clickId.trim();
 
   const parsed = parseSafeHttpsUrl(url);
-  if (!parsed) return null;
-  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
-  const isAllowed = ALLOWED_AFFILIATE_DOMAINS.some(
-    (domain) => host === domain || host.endsWith(`.${domain}`),
-  );
-  if (!isAllowed) return null;
+  if (!parsed || !isValidAffiliateParsedUrl(parsed)) return null;
 
   const urlPartner = resolveAffiliatePartnerByUrl(url);
   const targetId: AffiliatePartnerId | undefined =

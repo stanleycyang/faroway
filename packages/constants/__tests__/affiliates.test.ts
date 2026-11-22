@@ -132,6 +132,49 @@ describe("isAllowedAffiliateUrl and resolveAffiliatePartnerByUrl", () => {
       expect(injectAffiliateSubId(url, "booking", "clk-ctrl")).toBeNull();
     }
   });
+
+  it("rejects Travelpayouts u= open-redirects, unsafe schemes, HPP multi-u bypasses, and nested wrappers while allowing valid wrapped targets", () => {
+    const maliciousTpUrls = [
+      "https://tp.media/r?marker=12345&p=4110&u=https%3A%2F%2Fevil.com%2Fphish",
+      "https://tp.st/r?marker=12345&u=https%3A%2F%2Fevil.com%2Fphish",
+      "https://tp.media/r?marker=12345&p=4110&u=javascript%3Aalert(1)",
+      "https://tp.media/r?marker=12345&p=4110&u=http%3A%2F%2F169.254.169.254%2Flatest%2Fmeta-data",
+      "https://tp.media/r?marker=12345&u=http%3A%2F%2Fwww.klook.com%2F",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fuser%3Apass%40www.klook.com%2F",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fwww.klook.com%3A8443%2F",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fwww.klook.com.%2F",
+      "https://tp.media/r?marker=12345&u=",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fwww.klook.com%2F&u=https%3A%2F%2Fevil.com%2Fphish",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Ftp.media%2Fr%3Fu%3Dhttps%253A%252F%252Fevil.com",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Ftp.st%2Fr%3Fu%3Dhttps%253A%252F%252Fwww.klook.com",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fwww.travelpayouts.com%2F%3Fmarker%3D999",
+    ];
+
+    for (const badTpUrl of maliciousTpUrls) {
+      expect(isAllowedAffiliateUrl(badTpUrl), badTpUrl).toBe(false);
+      expect(resolveAffiliatePartnerByUrl(badTpUrl), badTpUrl).toBeUndefined();
+      expect(injectAffiliateSubId(badTpUrl, "travelpayouts", "clk-tp")).toBeNull();
+    }
+
+    const validTpUrls = [
+      "https://tp.media/r?marker=12345&p=4110&u=https%3A%2F%2Fwww.klook.com%2Fsearch%2F%3Fquery%3DTokyo",
+      "https://tp.media/r?marker=12345&p=4114&u=https%3A%2F%2Fwww.aviasales.com%2Fsearch%2FSFO0107NRT10072",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fwww.tiqets.com%2Fen%2Fsearch%3Fq%3DRome",
+      "https://tp.media/r?marker=12345&p=4115&u=https%3A%2F%2Fsearch.hotellook.com%2F%3Fdestination%3DParis",
+      "https://tp.media/r?marker=12345&u=https%3A%2F%2Fapply.joinsherpa.com%2Ftravel-restrictions",
+      "https://tp.st/abc123",
+    ];
+
+    for (const goodTpUrl of validTpUrls) {
+      expect(isAllowedAffiliateUrl(goodTpUrl), goodTpUrl).toBe(true);
+      expect(resolveAffiliatePartnerByUrl(goodTpUrl), goodTpUrl).toBe(
+        "travelpayouts",
+      );
+      expect(injectAffiliateSubId(goodTpUrl, "travelpayouts", "clk-ok")).toContain(
+        "sub_id=clk-ok",
+      );
+    }
+  });
 });
 
 describe("injectAffiliateSubId", () => {

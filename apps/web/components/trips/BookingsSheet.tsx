@@ -73,6 +73,7 @@ export interface BuildTripBookingItemsParams {
   flightFallbackLinks?: AffiliateLinkResult[];
   essentials?: Record<string, AffiliateLinkResult>;
   viatorContentEnabled?: boolean;
+  allowViatorHostedWithoutUrl?: boolean;
 }
 
 export function buildTripBookingItems({
@@ -84,6 +85,7 @@ export function buildTripBookingItems({
   flightFallbackLinks,
   essentials,
   viatorContentEnabled = false,
+  allowViatorHostedWithoutUrl = false,
 }: BuildTripBookingItemsParams): BookingsSheetItem[] {
   const items: BookingsSheetItem[] = [];
   const seenKeys = new Set<string>();
@@ -260,7 +262,9 @@ export function buildTripBookingItems({
           /^activity_v_[a-zA-Z0-9]+$/.test(act.id);
         const allowedUrl =
           bookingUrl && isAllowedAffiliateUrl(bookingUrl) ? bookingUrl : null;
-        if (!allowedUrl && !isViatorHosted) continue;
+        if (!allowedUrl && !(isViatorHosted && allowViatorHostedWithoutUrl)) {
+          continue;
+        }
 
         const partner = allowedUrl
           ? (resolveAffiliatePartnerByUrl(allowedUrl) ??
@@ -396,6 +400,14 @@ export function BookingsSheet({
 
   if (!open) return null;
 
+  const isItemActionable = (item: BookingsSheetItem) =>
+    (Boolean(item.isViatorHosted) &&
+      checkout?.mode === "owner" &&
+      checkout.enabled) ||
+    isAllowedAffiliateUrl(item.affiliateUrl);
+
+  const actionableItems = items.filter(isItemActionable);
+
   const handleItemClick = async (item: BookingsSheetItem) => {
     const canUseViatorHosted =
       Boolean(item.isViatorHosted) &&
@@ -495,14 +507,14 @@ export function BookingsSheet({
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-6 sm:p-6">
-          {items.length === 0 ? (
+          {actionableItems.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
               No direct booking links are ready for this itinerary yet. Review
               individual stops in your day-by-day plan for venue details.
             </div>
           ) : (
             SECTION_META.map((section) => {
-              const sectionItems = items.filter(
+              const sectionItems = actionableItems.filter(
                 (item) => item.category === section.key,
               );
               if (sectionItems.length === 0) return null;
@@ -520,11 +532,6 @@ export function BookingsSheet({
                   </div>
                   <ul className="space-y-2.5">
                     {sectionItems.map((item) => {
-                      const canAct =
-                        (Boolean(item.isViatorHosted) &&
-                          checkout?.mode === "owner" &&
-                          checkout.enabled) ||
-                        isAllowedAffiliateUrl(item.affiliateUrl);
                       return (
                         <li
                           key={`${item.category}:${item.id}:${item.partner}`}
@@ -554,25 +561,23 @@ export function BookingsSheet({
                               )}
                             </div>
                           </div>
-                          {canAct && (
-                            <button
-                              type="button"
-                              disabled={busyId === item.id}
-                              onClick={() => void handleItemClick(item)}
-                              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-800 transition-colors disabled:opacity-60"
-                            >
-                              <span>
-                                {busyId === item.id
-                                  ? "Opening…"
-                                  : item.ctaLabel ||
-                                    `Book on ${item.partnerLabel}`}
-                              </span>
-                              <ExternalLink
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            disabled={busyId === item.id}
+                            onClick={() => void handleItemClick(item)}
+                            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-800 transition-colors disabled:opacity-60"
+                          >
+                            <span>
+                              {busyId === item.id
+                                ? "Opening…"
+                                : item.ctaLabel ||
+                                  `Book on ${item.partnerLabel}`}
+                            </span>
+                            <ExternalLink
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          </button>
                         </li>
                       );
                     })}

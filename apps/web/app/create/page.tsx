@@ -940,6 +940,12 @@ function CreateTripPlanner({
         consentVersion: FLIGHT_SEARCH_CONSENT_VERSION,
       }
     : null;
+  const originCityTrimmed = originCity.trim();
+  const originAirportTrimmed = originAirport.trim().toUpperCase();
+  const hasInvalidOriginAirport =
+    originAirportTrimmed.length > 0 && !/^[A-Z]{3}$/.test(originAirportTrimmed);
+  const flightOriginMissing =
+    flightConsent && !originCityTrimmed && !originAirportTrimmed;
   const isFlightDetailsValid =
     !flightConsent ||
     (resolvedAdults >= 1 &&
@@ -963,7 +969,9 @@ function CreateTripPlanner({
     validDates &&
     (hotelSearch === null ||
       validateHotelSearchDetails(hotelSearch, travelers)) &&
-    isFlightDetailsValid;
+    isFlightDetailsValid &&
+    !hasInvalidOriginAirport &&
+    !flightOriginMissing;
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
     setUndoSnapshot(null);
@@ -1613,9 +1621,13 @@ function CreateTripPlanner({
         ? "Choose a start date from today onward"
         : hotelDetailsInvalid
           ? "Complete your hotel room details or turn off hotel searches"
-          : !isFlightDetailsValid
-            ? "Complete children's ages (0–17) or turn off live flight search"
-            : "Your trip is ready to plan";
+          : hasInvalidOriginAirport
+            ? "Enter a 3-letter IATA airport code (e.g., SFO)"
+            : flightOriginMissing
+              ? "Add a departure city or airport code, or turn off live flight search"
+              : !isFlightDetailsValid
+                ? "Complete children's ages (0–17) or turn off live flight search"
+                : "Your trip is ready to plan";
 
   return (
     <div
@@ -1994,21 +2006,19 @@ function CreateTripPlanner({
                       type="text"
                       maxLength={10}
                       value={originAirport}
+                      aria-invalid={hasInvalidOriginAirport || undefined}
                       onChange={(e) =>
                         setOriginAirport(e.target.value.toUpperCase())
                       }
                       placeholder="e.g., SFO"
                       className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm uppercase text-slate-900 placeholder-slate-500 outline-none focus:border-primary-700 focus:ring-2 focus:ring-primary-700/20"
                     />
-                    {originAirport.trim().length > 0 &&
-                      !/^[A-Z]{3}$/.test(
-                        originAirport.trim().toUpperCase(),
-                      ) && (
-                        <p className="mt-1.5 text-xs text-slate-600">
-                          Enter a 3-letter IATA airport code (e.g., SFO, JFK,
-                          LHR) for exact flight routes.
-                        </p>
-                      )}
+                    {hasInvalidOriginAirport && (
+                      <p className="mt-1.5 text-xs text-slate-600">
+                        Enter a 3-letter IATA airport code (e.g., SFO, JFK, LHR)
+                        for exact flight routes.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -2031,6 +2041,15 @@ function CreateTripPlanner({
                   <p className="mt-1.5 pl-7 text-xs leading-5 text-slate-600">
                     {FLIGHT_SEARCH_DISCLOSURE}
                   </p>
+                  {flightOriginMissing && (
+                    <p
+                      role="status"
+                      className="mt-1.5 pl-7 text-xs font-medium text-amber-800"
+                    >
+                      Add a departure city or 3-letter airport code to include
+                      live flight options.
+                    </p>
+                  )}
 
                   {flightConsent && hotelSearch === null && travelers > 1 && (
                     <div className="mt-4 grid gap-4 rounded-xl border border-gray-200 bg-[#FAF8F3] p-4 sm:grid-cols-2">

@@ -242,7 +242,8 @@ export async function POST(request: NextRequest) {
     // callers cannot probe payload structure or trigger validation work.
     const rawPartner = (parsedJson as Record<string, unknown>).partner;
     const isKnownSecretPartner =
-      typeof rawPartner === "string" && rawPartner in WEBHOOK_SECRET_ENV_KEYS;
+      typeof rawPartner === "string" &&
+      Object.hasOwn(WEBHOOK_SECRET_ENV_KEYS, rawPartner);
 
     const signatureValid = isKnownSecretPartner
       ? verifyWebhookSignature(
@@ -268,10 +269,13 @@ export async function POST(request: NextRequest) {
 
     const parseResult = conversionWebhookSchema.safeParse(schemaInput);
 
-    if (!parseResult.success) {
+    if (
+      !parseResult.success ||
+      !Object.hasOwn(WEBHOOK_SECRET_ENV_KEYS, parseResult.data.partner)
+    ) {
       console.error(
         "[Conversion Webhook] Validation error:",
-        parseResult.error,
+        parseResult.success ? "Unsupported webhook partner" : parseResult.error,
       );
       return NextResponse.json(
         { error: "Invalid webhook payload" },

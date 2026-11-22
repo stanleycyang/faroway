@@ -773,4 +773,79 @@ describe("/create conversion & origin/flight consent", () => {
       });
     }
   });
+
+  test("enforces flightConsent + origin and 3-letter IATA airport code parity with mobile", async () => {
+    stubPlannerGlobals("", {
+      selectedPlace: { name: "Tokyo", source: "catalog", placeId: "tokyo" },
+      startDate: "2099-08-01",
+      endDate: "2099-08-06",
+      travelers: 2,
+      travelerType: "couple",
+      selectedVibes: ["culture"],
+      budget: "moderate",
+    });
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      const getGenerateBtn = () =>
+        renderer.root
+          .findAllByType("button")
+          .find((b) =>
+            b.children.some(
+              (c) => typeof c === "string" && c.includes("Generate itinerary"),
+            ),
+          )!;
+
+      // Initially enabled without flight consent or airport
+      expect(getGenerateBtn().props.disabled).toBe(false);
+
+      // Invalid 2-letter IATA code disables Generate even with flightConsent unchecked
+      await act(async () => {
+        renderer.root
+          .findByProps({ id: "create-origin-airport" })
+          .props.onChange({ target: { value: "sf" } });
+      });
+      expect(getGenerateBtn().props.disabled).toBe(true);
+      expect(
+        renderer.root.findByProps({ id: "create-origin-airport" }).props[
+          "aria-invalid"
+        ],
+      ).toBe(true);
+
+      // Clearing invalid IATA restores Generate
+      await act(async () => {
+        renderer.root
+          .findByProps({ id: "create-origin-airport" })
+          .props.onChange({ target: { value: "" } });
+      });
+      expect(getGenerateBtn().props.disabled).toBe(false);
+
+      // Checking flightConsent without origin city or airport disables Generate
+      await act(async () => {
+        renderer.root
+          .findByProps({ id: "create-flight-consent" })
+          .props.onChange({ target: { checked: true } });
+      });
+      expect(getGenerateBtn().props.disabled).toBe(true);
+      expect(JSON.stringify(renderer.toJSON())).toContain(
+        "Add a departure city or 3-letter airport code to include live flight options.",
+      );
+
+      // Entering valid 3-letter IATA code enables Generate
+      await act(async () => {
+        renderer.root
+          .findByProps({ id: "create-origin-airport" })
+          .props.onChange({ target: { value: "sfo" } });
+      });
+      expect(getGenerateBtn().props.disabled).toBe(false);
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+    }
+  });
 });

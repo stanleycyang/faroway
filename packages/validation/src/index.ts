@@ -308,8 +308,19 @@ export const isoDateSchema = z.string().refine(isValidIsoDateString, {
   message: 'Invalid ISO date',
 });
 
+export const conversionWebhookPartnerIdSchema = z.enum([
+  'viator',
+  'getyourguide',
+  'klook',
+  'travelpayouts',
+  'stay22',
+  'duffel',
+  'safetywing',
+  'airalo',
+]);
+
 export const conversionWebhookSchema = z.object({
-  partner: affiliatePartnerIdSchema,
+  partner: conversionWebhookPartnerIdSchema,
   clickId: z.string().min(1).max(200),
   externalTransactionId: z.string().min(1).max(200),
   status: z.enum(['pending', 'confirmed', 'canceled', 'refunded']).default('confirmed'),
@@ -336,4 +347,5 @@ export type SearchInputValidated = z.infer<typeof searchInputSchema>;
 export type TrackClickInput = z.infer<typeof trackClickSchema>;
 export type TravelVibeIdInput = z.infer<typeof travelVibeIdSchema>;
 export type AffiliatePartnerIdInput = z.infer<typeof affiliatePartnerIdSchema>;
+export type ConversionWebhookPartnerIdInput = z.infer<typeof conversionWebhookPartnerIdSchema>;
 export type ConversionWebhookInput = z.infer<typeof conversionWebhookSchema>;

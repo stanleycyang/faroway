@@ -31,6 +31,25 @@ type ExportItinerary =
   | null;
 
 function formatExportDate(dateStr: string) {
+  const calendarMatch = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(dateStr.trim());
+  if (calendarMatch) {
+    const year = Number(calendarMatch[1]);
+    const month = Number(calendarMatch[2]);
+    const day = Number(calendarMatch[3]);
+    const utcDate = new Date(Date.UTC(year, month - 1, day));
+    if (
+      utcDate.getUTCFullYear() === year &&
+      utcDate.getUTCMonth() === month - 1 &&
+      utcDate.getUTCDate() === day
+    ) {
+      return utcDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    }
+  }
   const date = parseTripDate(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString("en-US", {

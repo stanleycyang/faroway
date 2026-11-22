@@ -899,6 +899,7 @@ export function TripDetailClient({
         flightFallbackLinks: resolvedFlightFallbackLinks,
         essentials: resolvedEssentials,
         viatorContentEnabled,
+        allowViatorHostedWithoutUrl: !trip?.preferences?.planNeedsRefresh,
       }),
     [
       itinerary?.days,
@@ -906,6 +907,7 @@ export function TripDetailClient({
       displayTopHotel,
       trip?.start_date,
       trip?.end_date,
+      trip?.preferences?.planNeedsRefresh,
       resolvedHotelPartnerLinks,
       resolvedFlightFallbackLinks,
       resolvedEssentials,

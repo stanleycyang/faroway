@@ -214,7 +214,7 @@ test("in-browser @faroway/constants contract: all 17 partner subIDs, preservedPa
       getyourguide:
         "https://www.getyourguide.com/paris-l16/louvre-t12345/?partner_id=FAROWAY&date=2099-06-01",
       travelpayouts:
-        "https://tp.media/r?marker=12345&trs=99&p=4114&shmarker=sh1&u=https%3A%2F%2Fexample.com&campaign_id=100",
+        "https://tp.media/r?marker=12345&trs=99&p=4114&shmarker=sh1&u=https%3A%2F%2Fwww.aviasales.com&campaign_id=100",
       stay22:
         "https://www.stay22.com/allez/roam?aid=faroway&address=Tokyo&lat=35.68&lng=139.76&checkin=2099-07-10&checkout=2099-07-13&adults=2&children=1&rooms=1",
       booking:

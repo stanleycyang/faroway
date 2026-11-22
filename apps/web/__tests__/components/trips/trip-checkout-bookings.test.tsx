@@ -1216,4 +1216,133 @@ describe("BookingsSheet & BookingChecklist", () => {
       await act(async () => edgeRenderer?.unmount());
     }
   });
+
+  it("omits URL-less isViatorHosted items in shared/disabled BookingsSheet so zero 0-button dead-end rows render", async () => {
+    const viatorHostedActivity: TripDay["morning"]["activities"][number] & {
+      viatorContentVersion: number;
+    } = {
+      id: "activity_v_999",
+      name: "Viator Hosted No URL",
+      description: "Hosted tour",
+      duration: 90,
+      estimatedCost: { amount: 50, currency: "USD" },
+      category: "cultural",
+      timeOfDay: "morning",
+      location: { name: "Center" },
+      vibeMatch: { matchedVibes: ["culture"], reasoning: "Top tour" },
+      viatorContentVersion: 1,
+      bookingInfo: {
+        requiresReservation: true,
+        affiliateId: "viator",
+      },
+    };
+    const daysWithUrlLessViator: TripDay[] = [
+      {
+        dayNumber: 1,
+        date: "2099-12-10",
+        title: "Day 1",
+        summary: "Explore",
+        morning: {
+          activities: [
+            viatorHostedActivity,
+            {
+              id: "activity_gyg_88",
+              name: "GYG Actionable Tour",
+              description: "Direct URL tour",
+              duration: 90,
+              estimatedCost: { amount: 45, currency: "USD" },
+              category: "cultural",
+              timeOfDay: "morning",
+              location: { name: "Center" },
+              vibeMatch: { matchedVibes: ["culture"], reasoning: "Top tour" },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl: "https://www.getyourguide.com/tokyo-l193/tour-t88/",
+                affiliateId: "getyourguide",
+              },
+            },
+          ],
+          meals: [],
+        },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        tips: [],
+      },
+    ];
+
+    // 1. Default / shared buildTripBookingItems omits URL-less isViatorHosted items
+    const sharedItems = buildTripBookingItems({
+      days: daysWithUrlLessViator,
+      viatorContentEnabled: true,
+    });
+    expect(sharedItems.map((i) => i.id)).toEqual(["activity_gyg_88"]);
+
+    // 2. Owner buildTripBookingItems includes it when allowViatorHostedWithoutUrl is true
+    const ownerItems = buildTripBookingItems({
+      days: daysWithUrlLessViator,
+      viatorContentEnabled: true,
+      allowViatorHostedWithoutUrl: true,
+    });
+    expect(ownerItems.map((i) => i.id)).toEqual([
+      "activity_v_999",
+      "activity_gyg_88",
+    ]);
+
+    // 3. Even if ownerItems are passed to BookingsSheet in shared mode or disabled owner mode,
+    // BookingsSheet never renders a 0-button dead-end <li> row.
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ enabled: false, attempts: [] }), {
+            status: 200,
+          }),
+      ),
+    );
+    vi.stubGlobal("window", {
+      open: vi.fn(),
+      location: { assign: vi.fn() },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+
+    for (const mode of ["shared", "owner"] as const) {
+      let sheetRenderer!: ReturnType<typeof create>;
+      try {
+        await act(async () => {
+          sheetRenderer = create(
+            <TripCheckout
+              mode={mode}
+              tripId={
+                mode === "owner"
+                  ? "11111111-1111-4111-8111-111111111111"
+                  : undefined
+              }
+              travelers={2}
+            >
+              <BookingsSheet
+                open={true}
+                onClose={vi.fn()}
+                items={ownerItems}
+                destination="Tokyo"
+                source={mode === "shared" ? "shared_trip" : "itinerary"}
+              />
+            </TripCheckout>,
+          );
+        });
+
+        const rows = sheetRenderer.root.findAllByType("li");
+        expect(rows).toHaveLength(1);
+        expect(textOf(rows[0])).toContain("GYG Actionable Tour");
+        expect(textOf(rows[0])).not.toContain("Viator Hosted No URL");
+        expect(rows[0].findAllByType("button")).toHaveLength(1);
+        expect(
+          textOf(sheetRenderer.root.findByProps({ role: "dialog" })),
+        ).toContain("Experiences (1)");
+      } finally {
+        await act(async () => sheetRenderer?.unmount());
+      }
+    }
+  });
 });

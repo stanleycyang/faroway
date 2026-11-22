@@ -522,4 +522,47 @@ describe("affiliatePartnerIdSchema & conversionWebhookSchema", () => {
       ).toBe(false);
     }
   });
+
+  it("restricts conversionWebhookSchema.partner to the 8 webhook-supported partners", () => {
+    const supported = [
+      "viator",
+      "getyourguide",
+      "klook",
+      "travelpayouts",
+      "stay22",
+      "duffel",
+      "safetywing",
+      "airalo",
+    ];
+    for (const partner of supported) {
+      expect(
+        conversionWebhookSchema.safeParse({
+          partner,
+          clickId: "clk-1",
+          externalTransactionId: "tx-1",
+        }).success,
+      ).toBe(true);
+    }
+
+    const nonWebhook = [
+      "booking",
+      "expedia",
+      "discovercars",
+      "hostelworld",
+      "tripadvisor",
+      "opentable",
+      "skyscanner",
+      "ivisa",
+      "wise",
+    ];
+    for (const partner of nonWebhook) {
+      expect(
+        conversionWebhookSchema.safeParse({
+          partner,
+          clickId: "clk-1",
+          externalTransactionId: "tx-1",
+        }).success,
+      ).toBe(false);
+    }
+  });
 });

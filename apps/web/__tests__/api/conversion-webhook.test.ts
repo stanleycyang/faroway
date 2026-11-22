@@ -201,6 +201,53 @@ describe("POST /api/track/conversion (expanded M2 webhooks)", () => {
     expect(mocks.upsertSpy).not.toHaveBeenCalled();
   });
 
+  it("rejects cross-partner HMAC signing for non-webhook partners and mismatched webhook partners without persisting", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-cross-sec");
+    vi.stubEnv("GYG_WEBHOOK_SECRET", "gyg-cross-sec");
+
+    for (const nonWebhookPartner of [
+      "booking",
+      "expedia",
+      "discovercars",
+      "hostelworld",
+      "tripadvisor",
+      "opentable",
+      "skyscanner",
+      "ivisa",
+      "wise",
+    ]) {
+      const payload = JSON.stringify({
+        partner: nonWebhookPartner,
+        clickId: "click-1",
+        externalTransactionId: `tx-forged-${nonWebhookPartner}`,
+        status: "confirmed",
+        bookingAmount: 999,
+        commissionAmount: 99,
+        currency: "USD",
+      });
+      const res = await POST(
+        makeWebhookReq(payload, sign(payload, "viator-cross-sec")),
+      );
+      expect(res.status).toBe(400);
+    }
+
+    const crossPartnerPayload = JSON.stringify({
+      partner: "getyourguide",
+      clickId: "click-1",
+      externalTransactionId: "tx-forged-gyg",
+      status: "confirmed",
+    });
+    const crossRes = await POST(
+      makeWebhookReq(
+        crossPartnerPayload,
+        sign(crossPartnerPayload, "viator-cross-sec"),
+      ),
+    );
+    expect(crossRes.status).toBe(401);
+    expect(mocks.upsertSpy).not.toHaveBeenCalled();
+    expect(mocks.updateSpy).not.toHaveBeenCalled();
+  });
+
   it.each(["canceled", "refunded"])(
     "maps %s status to DB 'cancelled' and clears click conversion state",
     async (status) => {
