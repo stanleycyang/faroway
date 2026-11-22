@@ -577,10 +577,13 @@ test("SharedTripView interactive monetization: Book on Viator, Book this trip sh
   await expect.poll(() => clickPosts.length).toBe(2);
 
   expect(clickPosts[1]).toMatchObject({
+    affiliatePartner: "viator",
+    itemId: "activity_v_TOKYO1",
     source: "shared_trip",
     placement: "bookings_sheet",
   });
   expect(checkoutRequests).toHaveLength(0);
+  await expect(page).toHaveURL(/viator\.com.*campaign=e2e-clk-2/);
 
   // 3. Return to shared trip and trigger a SharedTripEssentialsStrip CTA
   await page.goto(fixtureUrl);
