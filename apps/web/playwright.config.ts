@@ -29,8 +29,8 @@ export default defineConfig({
     },
   ],
 
-  // Start Next.js dev server only in local mode; in CI the server is already running
-  ...(process.env.CI
+  // Start Next.js dev server only in local mode when no external E2E_BASE_URL is provided
+  ...(process.env.CI || process.env.E2E_BASE_URL
     ? {}
     : {
         webServer: {

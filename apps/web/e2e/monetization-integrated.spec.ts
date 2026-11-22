@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { createHmac } from "node:crypto";
 
 test.skip(
@@ -7,6 +7,102 @@ test.skip(
 );
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
+
+function resolveSupabaseAuthCookieName(): string {
+  if (process.env.E2E_SUPABASE_COOKIE_NAME?.trim()) {
+    return process.env.E2E_SUPABASE_COOKIE_NAME.trim();
+  }
+  const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (supaUrl) {
+    try {
+      const hostPrefix = new URL(supaUrl).hostname.split(".")[0];
+      if (hostPrefix) return `sb-${hostPrefix}-auth-token`;
+    } catch {
+      // Fallback below
+    }
+  }
+  return "sb-127-auth-token";
+}
+
+async function injectSupabaseAuthCookie(
+  page: Page,
+  baseUrl: string,
+  userId: string,
+) {
+  const encode = (value: unknown) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const exp = Math.floor(Date.now() / 1000) + 3600;
+  const token = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: userId, aud: "authenticated", exp })}.synthetic-signature`;
+  const session = {
+    access_token: token,
+    refresh_token: "synthetic-refresh",
+    token_type: "bearer",
+    expires_in: 3600,
+    expires_at: exp,
+    user: {
+      id: userId,
+      email: "e2e-owner@example.invalid",
+      aud: "authenticated",
+      role: "authenticated",
+      app_metadata: {},
+      user_metadata: {},
+    },
+  };
+  await page.context().addCookies([
+    {
+      name: resolveSupabaseAuthCookieName(),
+      value: `base64-${encode(session)}`,
+      url: new URL(baseUrl).origin,
+      sameSite: "Lax",
+    },
+  ]);
+}
+
+async function verifyTrackedAffiliateCta(
+  page: Page,
+  button: Locator,
+  expectedHostRe: RegExp,
+) {
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+
+  const currentUrl = page.url();
+  const clickResponsePromise = page.waitForResponse(
+    (res) =>
+      res.url().endsWith("/api/track/click") &&
+      res.request().method() === "POST",
+  );
+  const popupPromise = page
+    .waitForEvent("popup", { timeout: 5_000 })
+    .catch(() => null);
+
+  await button.click();
+
+  const clickRes = await clickResponsePromise;
+  expect(clickRes.status()).toBe(200);
+  const clickBody = (await clickRes.json()) as {
+    clickId?: string;
+    redirectUrl?: string;
+  };
+  expect(clickBody.clickId).toBeTruthy();
+  expect(clickBody.redirectUrl).toBeTruthy();
+  const parsedRedirect = new URL(clickBody.redirectUrl!);
+  expect(parsedRedirect.protocol).toBe("https:");
+  expect(parsedRedirect.hostname).toMatch(expectedHostRe);
+
+  const popup = await popupPromise;
+  if (popup) {
+    await expect
+      .poll(() => popup.url(), { timeout: 10_000 })
+      .toMatch(expectedHostRe);
+    await popup.close();
+  } else {
+    await expect
+      .poll(() => page.url(), { timeout: 10_000 })
+      .toMatch(expectedHostRe);
+    await page.goto(currentUrl);
+  }
+}
 
 const ALL_17_PARTNER_CLICKS: Array<{
   partner: string;
@@ -592,7 +688,7 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
     );
 
     const baseOrigin = new URL(BASE_URL).origin;
-    await page.route(/^https:\/\//, (route) => {
+    await page.context().route(/^https:\/\//, (route) => {
       if (new URL(route.request().url()).origin === baseOrigin) {
         return route.continue();
       }
@@ -639,8 +735,12 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
       "Set E2E_OWNED_TRIP_ID (with auth cookie) to test owned /trips/[id] route",
     );
 
+    const authUserId =
+      process.env.E2E_AUTH_USER_ID || "11111111-1111-4111-8111-111111111111";
+    await injectSupabaseAuthCookie(page, BASE_URL, authUserId);
+
     const baseOrigin = new URL(BASE_URL).origin;
-    await page.route(/^https:\/\//, (route) => {
+    await page.context().route(/^https:\/\//, (route) => {
       if (new URL(route.request().url()).origin === baseOrigin) {
         return route.continue();
       }
@@ -657,7 +757,14 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
     await expect(page).not.toHaveURL(/\/trips\?duffel=/);
 
     // Verify Duffel return leg is present when flights exist on the trip
-    await expect(page.getByText(/Return/i).first()).toBeVisible();
+    const gettingThereSummary = page
+      .locator("summary", { hasText: "Getting there" })
+      .first();
+    await expect(gettingThereSummary).toBeVisible();
+    await gettingThereSummary.click();
+    await expect(
+      gettingThereSummary.locator("..").getByText(/^Return$/i),
+    ).toBeVisible();
 
     // Scroll so stickyBookingVisible activates before asserting BookingsSheet sticky bar
     await page.evaluate(() => window.scrollTo(0, 600));
@@ -683,6 +790,12 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
     ).toBeGreaterThan(0);
 
     // Verify _blank checkout handoff AND popup-blocked (window.open = () => null) fallback
+    const reviewBtn = page
+      .getByRole("button", { name: /Review on Viator/i })
+      .first();
+    await expect(reviewBtn).toBeVisible();
+    await expect(reviewBtn).toBeEnabled();
+
     await page.evaluate(() => {
       const opened: Array<{ url: string; target?: string }> = [];
       (
@@ -696,32 +809,18 @@ test.describe("Track B Tier 2 & 3: /create, Duffel, Checkout new-tab + BookingsS
       }) as typeof window.open;
     });
 
-    const reviewBtn = page
-      .getByRole("button", { name: /Review on Viator/i })
-      .first();
-    if ((await reviewBtn.count()) > 0 && (await reviewBtn.isEnabled())) {
-      await reviewBtn.click();
-      const dialog = page.getByRole("dialog");
-      await expect(dialog).toBeVisible();
-      const continueBtn = dialog.getByRole("button", {
-        name: /Continue to Viator/i,
-      });
-      await continueBtn.click();
-      await expect
-        .poll(async () => {
-          const opened = await page.evaluate(
-            () =>
-              (
-                window as unknown as {
-                  __OPENED_HANDOFFS__?: Array<{ url: string; target?: string }>;
-                }
-              ).__OPENED_HANDOFFS__?.length ?? 0,
-          );
-          return opened > 0 || !page.url().includes(`/trips/${tripId}`);
-        })
-        .toBe(true);
-      await page.goto(`${BASE_URL}/trips/${tripId}`);
-    }
+    await reviewBtn.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const continueBtn = dialog.getByRole("button", {
+      name: /Continue to Viator/i,
+    });
+    await continueBtn.click();
+    await page.waitForURL((url) => !url.href.includes(`/trips/${tripId}`), {
+      timeout: 15_000,
+    });
+    expect(page.url()).toMatch(/viator\.com/);
+    await page.goto(`${BASE_URL}/trips/${tripId}`);
 
     // Text export & ICS export MUST include https:// partner booking URLs
     const txtDownloadPromise = page.waitForEvent("download");
@@ -750,6 +849,14 @@ test.describe("Track B Tier 4: Public SEO, Tools, Legal & Brand/Contrast Audit",
   test("Public marketing, /blog/[slug], /destinations/[slug], 7 tools, and legal disclosures pass affiliate, brand & contrast checks", async ({
     page,
   }) => {
+    const baseOrigin = new URL(BASE_URL).origin;
+    await page.context().route(/^https:\/\//, (route) => {
+      if (new URL(route.request().url()).origin === baseOrigin) {
+        return route.continue();
+      }
+      return route.fulfill({ contentType: "text/html", body: "Mock provider" });
+    });
+
     const routes = [
       "/",
       "/destinations",
@@ -770,11 +877,13 @@ test.describe("Track B Tier 4: Public SEO, Tools, Legal & Brand/Contrast Audit",
       await page.goto(`${BASE_URL}${route}`);
       await checkNoHorizontalOverflow(page);
 
-      // Brand logo visible, no mailto: in AppStoreButtons
+      // Brand logo visible, no mailto: in AppStoreButtons (legal contact emails on /privacy & /terms are expected)
       await expect(page.locator('header a[href="/"]').first()).toBeVisible();
-      await expect(
-        page.locator('a[href^="mailto:support@faroway.ai"]'),
-      ).toHaveCount(0);
+      if (route !== "/privacy" && route !== "/terms") {
+        await expect(
+          page.locator('a[href^="mailto:support@faroway.ai"]'),
+        ).toHaveCount(0);
+      }
 
       if (route === "/privacy" || route === "/terms") {
         await expect(page.getByText(/Google Maps/i).first()).toBeVisible();
@@ -809,20 +918,25 @@ test.describe("Track B Tier 4: Public SEO, Tools, Legal & Brand/Contrast Audit",
     const financialHref = blogHrefs.find((h) =>
       /budget|cost|money|currency|wise|insurance|card/i.test(h),
     );
-    const blogTargets = financialHref
-      ? Array.from(new Set([blogHrefs[0], financialHref]))
-      : [blogHrefs[0]];
+    expect(financialHref).toBeTruthy();
+    const blogTargets = Array.from(new Set([blogHrefs[0], financialHref!]));
     for (const blogHref of blogTargets) {
       await page.goto(`${BASE_URL}${blogHref}`);
       await expect(
-        page.getByText(/We may earn a commission/i).first(),
+        page.getByText(/(?:We|Faroway) may earn a commission/i).first(),
       ).toBeVisible();
-      const partnerCtaCount = await page
-        .locator(
-          'main a[href*="stay22"], main a[href*="viator"], main a[href*="getyourguide"], main a[href*="safetywing"], main a[href*="airalo"], main a[href*="wise"], main a[target="_blank"][rel*="noopener"]',
-        )
-        .count();
-      expect(partnerCtaCount).toBeGreaterThan(0);
+      const blogPartnerBtn = page
+        .locator('main button[type="button"]')
+        .filter({
+          hasText:
+            /Stay22|Booking\.com|Expedia|Hostelworld|Viator|GetYourGuide|Klook|Skyscanner|Aviasales|SafetyWing|Airalo|Wise|DiscoverCars|iVisa/i,
+        })
+        .first();
+      await verifyTrackedAffiliateCta(
+        page,
+        blogPartnerBtn,
+        /(stay22|booking|expedia|hostelworld|viator|getyourguide|klook|skyscanner|aviasales|tp|safetywing|airalo|wise|discovercars|ivisa)\./i,
+      );
     }
 
     // Feature #16: Concrete /destinations/[slug] contextual affiliate CTAs + FTC disclosure
@@ -838,64 +952,90 @@ test.describe("Track B Tier 4: Public SEO, Tools, Legal & Brand/Contrast Audit",
     expect(destHref).toBeTruthy();
     await page.goto(`${BASE_URL}${destHref!}`);
     await expect(
-      page.getByText(/We may earn a commission/i).first(),
+      page.getByText(/(?:We|Faroway) may earn a commission/i).first(),
     ).toBeVisible();
-    expect(
-      await page
-        .locator(
-          'main a[href^="/create?destination="], main a[target="_blank"][rel*="noopener"]',
-        )
-        .count(),
-    ).toBeGreaterThan(0);
+    await expect(
+      page.locator('main a[href^="/create?destination="]').first(),
+    ).toBeVisible();
+    const destPartnerBtn = page
+      .locator('main button[type="button"]')
+      .filter({
+        hasText:
+          /Stay22|Booking\.com|Expedia|Hostelworld|Viator|GetYourGuide|Klook|Skyscanner|Aviasales|SafetyWing|Airalo|Wise|DiscoverCars|iVisa/i,
+      })
+      .first();
+    await verifyTrackedAffiliateCta(
+      page,
+      destPartnerBtn,
+      /(stay22|booking|expedia|hostelworld|viator|getyourguide|klook|skyscanner|aviasales|tp|safetywing|airalo|wise|discovercars|ivisa)\./i,
+    );
 
-    // Feature #16: Tool result / detail states expose contextual affiliate CTAs & FTC disclosures
+    // Feature #16: Tool result / detail states expose contextual TrackedAffiliateButton CTAs & FTC disclosures
     await page.goto(`${BASE_URL}/tools/visa-checker/tokyo`);
     await expect(
       page.getByText(/We may earn a commission/i).first(),
     ).toBeVisible();
-    expect(
-      await page
-        .locator(
-          'main a[href*="safetywing"], main a[href*="ivisa"], main a[target="_blank"][rel*="noopener"]',
-        )
-        .count(),
-    ).toBeGreaterThan(0);
+    const visaPartnerBtn = page
+      .locator('main button[type="button"]')
+      .filter({ hasText: /iVisa|SafetyWing/i })
+      .first();
+    await verifyTrackedAffiliateCta(
+      page,
+      visaPartnerBtn,
+      /(ivisa|safetywing)\./i,
+    );
 
     await page.goto(`${BASE_URL}/tools/trip-cost/tokyo`);
     await expect(
       page.getByText(/We may earn a commission/i).first(),
     ).toBeVisible();
-    expect(
-      await page
-        .locator(
-          'main a[href*="stay22"], main a[href*="viator"], main a[href*="booking"], main a[target="_blank"][rel*="noopener"]',
-        )
-        .count(),
-    ).toBeGreaterThan(0);
+    const tripCostPartnerBtn = page
+      .locator('main button[type="button"]')
+      .filter({
+        hasText: /Stay22|Booking\.com|Expedia|Skyscanner|Aviasales|Wise/i,
+      })
+      .first();
+    await verifyTrackedAffiliateCta(
+      page,
+      tripCostPartnerBtn,
+      /(stay22|booking|expedia|skyscanner|aviasales|tp|wise)\./i,
+    );
 
     await page.goto(`${BASE_URL}/tools/packing-list`);
+    const packingDestSelect = page.locator("#packing-destination");
+    await expect(packingDestSelect).toBeEnabled();
+    await packingDestSelect.selectOption("tokyo");
+    await page.getByRole("button", { name: /City/i }).first().click();
+    const generatePackingBtn = page.getByRole("button", {
+      name: /Generate My Packing List/i,
+    });
+    await expect(generatePackingBtn).toBeEnabled();
+    await generatePackingBtn.click();
+    await expect(
+      page.getByRole("heading", { name: /Packing for Tokyo/i }),
+    ).toBeVisible();
     await expect(
       page.getByText(/We may earn a commission/i).first(),
     ).toBeVisible();
-    expect(
-      await page
-        .locator(
-          'main a[href*="airalo"], main a[href*="safetywing"], main a[target="_blank"][rel*="noopener"]',
-        )
-        .count(),
-    ).toBeGreaterThan(0);
+    const packingPartnerBtn = page
+      .locator('main button[type="button"]')
+      .filter({ hasText: /Airalo|SafetyWing|iVisa/i })
+      .first();
+    await verifyTrackedAffiliateCta(
+      page,
+      packingPartnerBtn,
+      /(airalo|safetywing|ivisa)\./i,
+    );
 
     await page.goto(`${BASE_URL}/tools/currency-converter`);
     await expect(
       page.getByText(/We may earn a commission/i).first(),
     ).toBeVisible();
-    expect(
-      await page
-        .locator(
-          'main a[href*="wise"], main a[target="_blank"][rel*="noopener"]',
-        )
-        .count(),
-    ).toBeGreaterThan(0);
+    const currencyPartnerBtn = page
+      .locator('main button[type="button"]')
+      .filter({ hasText: /Wise/i })
+      .first();
+    await verifyTrackedAffiliateCta(page, currencyPartnerBtn, /wise\./i);
 
     // Home page WCAG AA contrast (>= 4.5 normal / >= 3.0 large), brand tokens, and zero raw emojis
     await page.goto(`${BASE_URL}/`);
