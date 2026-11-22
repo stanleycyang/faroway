@@ -9,7 +9,7 @@ export default async function TripsIndexPage({
 }: TripsIndexPageProps) {
   const params = await searchParams;
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
+  for (const [key, value] of Object.entries(params ?? {})) {
     if (typeof value === "string") {
       query.append(key, value);
     } else if (Array.isArray(value)) {

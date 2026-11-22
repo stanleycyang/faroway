@@ -1,6 +1,6 @@
 // Test-only local backend for monetization API route E2E tests.
 // Uses dedicated ports 4410 (Next) and 4411 (loopback Supabase + mock Viator API).
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { execFileSync, spawn } from "node:child_process";
 import {
@@ -41,7 +41,7 @@ const DEFAULT_E2E_AUTH_USER_ID =
 const DEFAULT_E2E_SHARED_TRIP_TOKEN =
   process.env.E2E_SHARED_TRIP_TOKEN || "e2e-shared-tokyo-token";
 const DEFAULT_E2E_OWNED_TRIP_ID =
-  process.env.E2E_OWNED_TRIP_ID || "44444444-4444-4444-4444-444444444444";
+  process.env.E2E_OWNED_TRIP_ID || "44444444-4444-4444-8444-444444444444";
 const DEFAULT_E2E_SEARCH_ID = "55555555-5555-4555-8555-555555555555";
 
 function createSeededBlogPosts() {
@@ -215,8 +215,7 @@ function createIntegratedSeedData() {
             dayNumber: 1,
             date: "2099-07-10",
             title: "Arrival & Imperial Tokyo",
-            summary:
-              "Settle in, explore Imperial Gardens, and dine in Minato.",
+            summary: "Settle in, explore Imperial Gardens, and dine in Minato.",
             morning: {
               activities: [
                 {
@@ -516,7 +515,8 @@ function sortRows(rows, orderParam) {
 function paginateRows(rows, searchParams) {
   const offsetParam = Number(searchParams.get("offset"));
   const limitParam = Number(searchParams.get("limit"));
-  const start = Number.isFinite(offsetParam) && offsetParam > 0 ? offsetParam : 0;
+  const start =
+    Number.isFinite(offsetParam) && offsetParam > 0 ? offsetParam : 0;
   const end =
     Number.isFinite(limitParam) && limitParam > 0
       ? start + limitParam
@@ -679,14 +679,85 @@ const server = createServer(async (req, res) => {
     if (!trip || trip.user_id !== body?.p_user_id) {
       return send(null);
     }
-    const reports = tripBookingReports.filter(
+    const owned = tripBookingReports.filter(
       (r) => r.trip_id === body.p_trip_id && r.user_id === body.p_user_id,
     );
+    const latest = new Map();
+    for (const row of owned) {
+      const key = `${row.generation_id}:${row.item_id}`;
+      if (!latest.has(key)) latest.set(key, row);
+    }
     const receipt = Boolean(
       body?.p_request_id &&
-        reports.some((r) => r.request_id === body.p_request_id),
+      owned.some((r) => r.request_id === body.p_request_id),
     );
-    return send({ reports, receipt });
+    return send({ reports: [...latest.values()], receipt });
+  }
+
+  if (url.pathname === "/rest/v1/rpc/report_trip_booking") {
+    const trip = trips.get(body?.p_trip_id);
+    const command = body?.p_command;
+    if (!trip || trip.user_id !== body?.p_user_id || !command) {
+      return send({ state: "conflict" });
+    }
+    const existing = tripBookingReports.find(
+      (row) => row.trip_id === trip.id && row.request_id === command.requestId,
+    );
+    if (existing) {
+      return send({
+        state:
+          JSON.stringify(existing.command) === JSON.stringify(command)
+            ? "replayed"
+            : "conflict",
+        reportId: existing.id,
+      });
+    }
+    const previous = tripBookingReports.find(
+      (row) =>
+        row.trip_id === trip.id &&
+        row.generation_id === command.generationId &&
+        row.item_id === command.itemId,
+    );
+    const itinerary = Array.isArray(trip.itineraries)
+      ? trip.itineraries[0]
+      : trip.itineraries;
+    if (
+      trip.updated_at !== command.expectedUpdatedAt ||
+      !["planned", "generated"].includes(trip.status) ||
+      trip.preferences?.planNeedsRefresh ||
+      itinerary?.booking_generation_id !== command.generationId ||
+      (previous?.id ?? null) !== command.expectedReportId
+    ) {
+      return send({ state: "conflict" });
+    }
+    let selected = null;
+    (itinerary?.days || []).forEach((day, di) => {
+      for (const period of ["morning", "afternoon", "evening"]) {
+        (day?.[period]?.activities || []).forEach((item, ai) => {
+          const id =
+            item.planItemId ||
+            `item_${createHash("md5").update(`${trip.id}:${di}:${period}:${ai}`).digest("hex")}`;
+          if (id === command.itemId) selected = { item, date: day.date };
+        });
+      }
+    });
+    if (!selected) return send({ state: "conflict" });
+    const report = {
+      id: randomUUID(),
+      trip_id: trip.id,
+      user_id: trip.user_id,
+      generation_id: command.generationId,
+      item_id: command.itemId,
+      trip_version: trip.updated_at,
+      status: command.status,
+      request_id: command.requestId,
+      item_snapshot: selected.item,
+      activity_date: selected.date,
+      created_at: new Date().toISOString(),
+      command,
+    };
+    tripBookingReports.unshift(report);
+    return send({ state: "applied", reportId: report.id });
   }
 
   if (url.pathname === "/rest/v1/rpc/increment_blog_view_count") {

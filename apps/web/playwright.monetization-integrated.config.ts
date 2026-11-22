@@ -5,7 +5,7 @@ const hasExternalBaseUrl = Boolean(process.env.E2E_BASE_URL?.trim());
 process.env.E2E_INTEGRATED_MONETIZATION ||= "true";
 process.env.E2E_BASE_URL ||= "http://127.0.0.1:4410";
 process.env.E2E_SHARED_TRIP_TOKEN ||= "e2e-shared-tokyo-token";
-process.env.E2E_OWNED_TRIP_ID ||= "44444444-4444-4444-4444-444444444444";
+process.env.E2E_OWNED_TRIP_ID ||= "44444444-4444-4444-8444-444444444444";
 process.env.E2E_AUTH_USER_ID ||= "11111111-1111-4111-8111-111111111111";
 process.env.NEXT_PUBLIC_SUPABASE_URL ||= "http://127.0.0.1:4411";
 
