@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AFFILIATE_DISCLOSURE_SHORT } from '@faroway/constants';
 
@@ -391,6 +392,93 @@ describe('TripDetailScreen direct affiliate handoff & brand UI', () => {
     expect(
       tree.root.findAllByProps({ accessibilityLabel: 'Check availability for Unlinked Hotel' })
     ).toHaveLength(0);
+    await act(async () => tree.unmount());
+  });
+
+  it('guards handleConfirmHandoff against double-taps and recovers cleanly when openAffiliateLink rejects', async () => {
+    let resolvePending!: () => void;
+    mockOpenAffiliateLink.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePending = resolve;
+        })
+    );
+
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(<TripDetailScreen />);
+    });
+
+    const hotelBtn = tree.root.findByProps({
+      accessibilityLabel: 'Check hotel rates on Stay22 for Hotel Lumiere',
+    });
+    await act(async () => hotelBtn.props.onPress());
+
+    const confirmBtn = tree.root.findByProps({ accessibilityLabel: 'Continue to Stay22' });
+    await act(async () => {
+      confirmBtn.props.onPress();
+      confirmBtn.props.onPress();
+    });
+
+    expect(mockOpenAffiliateLink).toHaveBeenCalledTimes(1);
+    expect(tree.root.findByProps({ accessibilityLabel: 'Continue to Stay22' }).props.disabled).toBe(
+      true
+    );
+
+    await act(async () => {
+      resolvePending();
+    });
+
+    // Now test rejection recovery: sheet remains open, Alert is shown, opening resets to false, retry succeeds
+    mockOpenAffiliateLink
+      .mockRejectedValueOnce(new Error('WebBrowser failed'))
+      .mockResolvedValueOnce(undefined);
+
+    await act(async () => hotelBtn.props.onPress());
+    await act(async () => {
+      tree.root.findByProps({ accessibilityLabel: 'Continue to Stay22' }).props.onPress();
+    });
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Couldn’t open partner site',
+      expect.stringContaining('Your trip stays saved in Faroway')
+    );
+    const retryBtn = tree.root.findByProps({ accessibilityLabel: 'Continue to Stay22' });
+    expect(retryBtn.props.disabled).toBe(false);
+
+    await act(async () => retryBtn.props.onPress());
+    expect(mockOpenAffiliateLink).toHaveBeenCalledTimes(3);
+    await act(async () => tree.unmount());
+  });
+
+  it('BookingsSheet handleRequestClose dismisses inline handoff first, then closes sheet on second press', async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(<TripDetailScreen />);
+    });
+
+    const openSheetBtn = tree.root.findByProps({ accessibilityLabel: 'Booking options' });
+    await act(async () => openSheetBtn.props.onPress());
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(1);
+
+    const sheetItemBtn = tree.root.findByProps({
+      accessibilityLabel: 'Open Viator for Louvre Guided Tour',
+    });
+    await act(async () => sheetItemBtn.props.onPress());
+    expect(serializeTree(tree.toJSON())).toContain('Continue to Viator');
+
+    // First close dismisses only the inline handoff card while keeping BookingsSheet open
+    await act(async () => {
+      tree.root.findByProps({ accessibilityLabel: 'Close bookings' }).props.onPress();
+    });
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(1);
+    expect(serializeTree(tree.toJSON())).not.toContain('Continue to Viator');
+
+    // Second close dismisses BookingsSheet itself
+    await act(async () => {
+      tree.root.findByProps({ accessibilityLabel: 'Close bookings' }).props.onPress();
+    });
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(0);
     await act(async () => tree.unmount());
   });
 

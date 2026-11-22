@@ -766,8 +766,454 @@ describe("BookingsSheet & BookingChecklist", () => {
       const out = JSON.stringify(renderer.toJSON());
       expect(out).toContain("Legacy Viator Tour");
       expect(out).not.toContain("Book now");
+      expect(out).not.toContain(AFFILIATE_DISCLOSURE_SHORT);
     } finally {
       await act(async () => renderer?.unmount());
+    }
+  });
+
+  it("BookingChecklist hides affiliate disclosure when all items are traveler_booked", async () => {
+    vi.stubGlobal("localStorage", {
+      getItem: vi.fn().mockReturnValue(null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+    vi.stubGlobal("window", {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      open: vi.fn(),
+      location: { assign: vi.fn() },
+    });
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes("/bookings")) {
+          return new Response(
+            JSON.stringify({
+              revision: "rev-1",
+              generationId: "11111111-1111-4111-8111-111111111111",
+              editable: true,
+              receipt: false,
+              earlier: [],
+              items: [
+                {
+                  id: "item_" + "d".repeat(32),
+                  name: "TeamLab Planets",
+                  date: "2026-11-01",
+                  status: "traveler_booked",
+                  reportId: null,
+                  needsReview: false,
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ enabled: true, attempts: [] }), {
+          status: 200,
+        });
+      }),
+    );
+
+    const days: TripDay[] = [
+      {
+        dayNumber: 1,
+        date: "2026-11-01",
+        title: "Day 1",
+        summary: "Explore",
+        morning: {
+          activities: [
+            {
+              id: "activity_gyg_10",
+              name: "TeamLab Planets",
+              description: "Museum",
+              duration: 90,
+              estimatedCost: { amount: 40, currency: "USD" },
+              category: "cultural",
+              timeOfDay: "morning",
+              location: { name: "Toyosu" },
+              vibeMatch: {
+                matchedVibes: ["culture"],
+                reasoning: "Popular museum",
+              },
+              bookingInfo: {
+                requiresReservation: true,
+                bookingUrl:
+                  "https://www.getyourguide.com/tokyo-l193/teamlab-t10/",
+                affiliateId: "getyourguide",
+              },
+            },
+          ],
+          meals: [],
+        },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        tips: [],
+      },
+    ];
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <TripCheckout
+            tripId="11111111-1111-4111-8111-111111111111"
+            travelers={2}
+          >
+            <BookingChecklist
+              tripId="11111111-1111-4111-8111-111111111111"
+              userId="owner-1"
+              days={days}
+            />
+          </TripCheckout>,
+        );
+      });
+
+      const out = JSON.stringify(renderer.toJSON());
+      expect(out).toContain("TeamLab Planets");
+      expect(out).not.toContain("Book now");
+      expect(out).not.toContain(AFFILIATE_DISCLOSURE_SHORT);
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+  });
+
+  it("BookingsSheet inside TripCheckout closes sheet and opens modal for viator_hosted and partner_click with placement='bookings_sheet'", async () => {
+    const popup = {
+      opener: { parent: true } as unknown,
+      closed: false,
+      location: { replace: vi.fn(), href: "" },
+      close: vi.fn(),
+    };
+    const openMock = vi.fn().mockReturnValue(popup);
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (
+        url.includes("/checkout") &&
+        (!init?.method || init.method === "GET")
+      ) {
+        return new Response(JSON.stringify({ enabled: true, attempts: [] }), {
+          status: 200,
+        });
+      }
+      if (url.includes("/checkout") && init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+        return new Response(
+          JSON.stringify({
+            status: "handoff_prepared",
+            attemptId: body.attemptId,
+            redirectUrl:
+              "https://www.viator.com/tours/Tokyo/Imperial/d334-123P1?pid=P1&mcid=42383&medium=api",
+          }),
+          { status: 200 },
+        );
+      }
+      if (url === "/api/track/click") {
+        return new Response(
+          JSON.stringify({
+            clickId: "clk-sheet-stay",
+            redirectUrl:
+              "https://www.stay22.com/allez/roam?aid=1&address=Tokyo&campaign=clk-sheet-stay",
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("window", {
+      open: openMock,
+      location: { assign: vi.fn() },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+
+    const sheetItems = [
+      {
+        id: "activity_v_123P1",
+        category: "experiences" as const,
+        title: "Imperial Palace Tour",
+        subtitle: "Guided walk",
+        partner: "viator",
+        partnerLabel: "Viator",
+        itemType: "activity" as const,
+        affiliateUrl:
+          "https://www.viator.com/tours/Tokyo/Imperial/d334-123P1?pid=P1&mcid=42383&medium=api",
+        date: "2026-11-01",
+        isViatorHosted: true,
+      },
+      {
+        id: "hotel-stay22-1",
+        category: "stay" as const,
+        title: "Hoshinoya Tokyo",
+        subtitle: "Stay",
+        partner: "stay22",
+        partnerLabel: "Stay22",
+        itemType: "hotel" as const,
+        affiliateUrl: "https://www.stay22.com/allez/roam?aid=1&address=Tokyo",
+        date: "2026-11-01",
+      },
+    ];
+
+    function SheetHarness() {
+      const [open, setOpen] = React.useState(true);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Reopen sheet
+          </button>
+          <BookingsSheet
+            open={open}
+            onClose={() => setOpen(false)}
+            items={sheetItems}
+            tripId="11111111-1111-4111-8111-111111111111"
+            destination="Tokyo"
+            source="itinerary"
+          />
+        </>
+      );
+    }
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <TripCheckout
+            tripId="11111111-1111-4111-8111-111111111111"
+            travelers={2}
+          >
+            <SheetHarness />
+          </TripCheckout>,
+        );
+      });
+
+      // 1. Click viator_hosted activity inside BookingsSheet
+      const viatorRowBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => textOf(b).includes("Book on Viator"))!;
+      await act(async () => {
+        await viatorRowBtn.props.onClick();
+      });
+
+      // Sheet closed and TripCheckout modal opened
+      expect(textOf(renderer.root.findByProps({ role: "dialog" }))).toContain(
+        "Continue to Viator",
+      );
+      await act(async () => {
+        await renderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Continue to Viator"))!
+          .props.onClick();
+      });
+      expect(
+        fetchMock.mock.calls.some(
+          ([u, init]) =>
+            String(u).includes("/checkout") && init?.method === "POST",
+        ),
+      ).toBe(true);
+
+      // 2. Reopen sheet and click partner_click hotel item
+      await act(async () => {
+        renderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Reopen sheet"))!
+          .props.onClick();
+      });
+      const stayButtons = renderer.root
+        .findAllByType("button")
+        .filter((b) => textOf(b).includes("Book on Stay22"));
+      expect(stayButtons.length).toBeGreaterThanOrEqual(1);
+      await act(async () => {
+        await stayButtons[0].props.onClick();
+      });
+
+      expect(textOf(renderer.root.findByProps({ role: "dialog" }))).toContain(
+        "Continue to Stay22",
+      );
+      await act(async () => {
+        await renderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Continue to Stay22"))!
+          .props.onClick();
+      });
+
+      const clickCall = fetchMock.mock.calls.find(
+        ([u]) => u === "/api/track/click",
+      );
+      expect(clickCall).toBeDefined();
+      expect(JSON.parse(String(clickCall![1]?.body))).toMatchObject({
+        itemId: "hotel-stay22-1",
+        affiliatePartner: "stay22",
+        placement: "bookings_sheet",
+      });
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+  });
+
+  it("TripCheckout fails open on /api/track/click 429/500, rejects unallowlisted URLs in review(), and resets on Keep planning or backdrop click", async () => {
+    for (const status of [429, 500]) {
+      const popup = {
+        opener: { parent: true } as unknown,
+        closed: false,
+        location: { replace: vi.fn(), href: "" },
+        close: vi.fn(),
+      };
+      const openMock = vi.fn().mockReturnValue(popup);
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ error: "rate limited" }), { status }),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+      vi.stubGlobal("window", {
+        open: openMock,
+        location: { assign: vi.fn() },
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      });
+      vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+
+      let renderer!: ReturnType<typeof create>;
+      try {
+        await act(async () => {
+          renderer = create(
+            <TripCheckout mode="shared" source="shared_trip" travelers={2}>
+              <SharedViatorTrigger />
+            </TripCheckout>,
+          );
+        });
+        await act(async () => {
+          renderer.root.findByType("button").props.onClick();
+        });
+        const continueBtn = renderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Continue to Viator"))!;
+        await act(async () => {
+          await continueBtn.props.onClick();
+        });
+
+        expect(popup.location.replace).toHaveBeenCalledWith(
+          "https://www.viator.com/tours/Rome/Colosseum/d511-123?pid=P1&mcid=42383&medium=api",
+        );
+        expect(renderer.root.findAllByProps({ role: "dialog" })).toHaveLength(
+          0,
+        );
+      } finally {
+        await act(async () => renderer?.unmount());
+      }
+    }
+
+    function EdgeTriggers() {
+      const checkout = useTripCheckout();
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              checkout?.review({
+                id: "bad-1",
+                name: "Bad Link",
+                mode: "partner_click",
+                partner: "viator",
+                affiliateUrl: "https://evil.example/phish",
+              })
+            }
+          >
+            Trigger bad URL
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              checkout?.review({
+                id: "good-1",
+                name: "Good Tour",
+                mode: "partner_click",
+                partner: "viator",
+                affiliateUrl:
+                  "https://www.viator.com/tours/Rome/Colosseum/d511-123?pid=P1&mcid=42383&medium=api",
+              })
+            }
+          >
+            Trigger good URL
+          </button>
+        </>
+      );
+    }
+
+    vi.stubGlobal("window", {
+      open: vi.fn(),
+      location: { assign: vi.fn() },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+
+    let edgeRenderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        edgeRenderer = create(
+          <TripCheckout mode="shared" source="shared_trip" travelers={2}>
+            <EdgeTriggers />
+          </TripCheckout>,
+        );
+      });
+
+      // Unallowlisted URL must NOT open modal
+      await act(async () => {
+        edgeRenderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Trigger bad URL"))!
+          .props.onClick();
+      });
+      expect(edgeRenderer.root.findAllByProps({ role: "dialog" })).toHaveLength(
+        0,
+      );
+
+      // Open valid modal, then close with "Keep planning"
+      await act(async () => {
+        edgeRenderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Trigger good URL"))!
+          .props.onClick();
+      });
+      expect(edgeRenderer.root.findAllByProps({ role: "dialog" })).toHaveLength(
+        1,
+      );
+      await act(async () => {
+        edgeRenderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Keep planning"))!
+          .props.onClick();
+      });
+      expect(edgeRenderer.root.findAllByProps({ role: "dialog" })).toHaveLength(
+        0,
+      );
+
+      // Reopen and close via backdrop click (event.target === event.currentTarget)
+      await act(async () => {
+        edgeRenderer.root
+          .findAllByType("button")
+          .find((b) => textOf(b).includes("Trigger good URL"))!
+          .props.onClick();
+      });
+      const backdrop = edgeRenderer.root
+        .findAllByType("div")
+        .find((d) => typeof d.props.onClick === "function")!;
+      const fakeCurrentTarget = { id: "backdrop" };
+      await act(async () => {
+        backdrop.props.onClick({
+          target: fakeCurrentTarget,
+          currentTarget: fakeCurrentTarget,
+        });
+      });
+      expect(edgeRenderer.root.findAllByProps({ role: "dialog" })).toHaveLength(
+        0,
+      );
+    } finally {
+      await act(async () => edgeRenderer?.unmount());
     }
   });
 });

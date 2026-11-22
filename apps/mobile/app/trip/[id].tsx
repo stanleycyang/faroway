@@ -763,6 +763,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const [showBookingsSheet, setShowBookingsSheet] = useState(false);
   const [handoffParams, setHandoffParams] = useState<ConfirmAffiliateOpenParams | null>(null);
   const [openingHandoff, setOpeningHandoff] = useState(false);
+  const openingHandoffRef = useRef(false);
   const [showRemixSheet, setShowRemixSheet] = useState(false);
   const [remixInitialAction, setRemixInitialAction] = useState<CopilotActionType | null>(null);
   const [scheduleShiftMinutes, setScheduleShiftMinutes] = useState(0);
@@ -803,7 +804,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
 
   const handleConfirmHandoff = useCallback(
     async (params: ConfirmAffiliateOpenParams): Promise<boolean> => {
-      if (openingHandoff) return false;
+      if (openingHandoffRef.current || openingHandoff) return false;
+      openingHandoffRef.current = true;
       setOpeningHandoff(true);
       const {
         priceLabel: _priceLabel,
@@ -823,6 +825,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         }
         return false;
       } finally {
+        openingHandoffRef.current = false;
         if (isActive()) setOpeningHandoff(false);
       }
     },

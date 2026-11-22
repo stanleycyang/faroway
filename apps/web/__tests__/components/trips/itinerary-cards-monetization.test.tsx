@@ -525,4 +525,178 @@ describe("Itinerary card affiliate CTAs (Feature #13)", () => {
     expect(dayHtml).not.toContain("2 bookable");
     expect(dayHtml).not.toContain("3 bookable");
   });
+
+  it("delegates HotelQuotePanel live rate CTA through TripCheckout modal when checkout context is present", async () => {
+    const popup = {
+      opener: { parent: true } as unknown,
+      closed: false,
+      location: { replace: vi.fn(), href: "" },
+      close: vi.fn(),
+    };
+    const openMock = vi.fn().mockReturnValue(popup);
+    const fetchMock = vi.fn<
+      (url: string, init?: RequestInit) => Promise<Response>
+    >(async (url: string) => {
+      if (url.includes("/checkout")) {
+        return new Response(JSON.stringify({ enabled: true, attempts: [] }), {
+          status: 200,
+        });
+      }
+      if (url.includes("/hotels")) {
+        return new Response(
+          JSON.stringify({
+            tripId: "trip-1",
+            tripUpdatedAt: "2026-10-01T00:00:00Z",
+            observedAt: "2026-10-02T00:00:00Z",
+            sandbox: true,
+            hotels: [
+              {
+                id: "lp-99",
+                name: "Park Hyatt Tokyo",
+                offers: [
+                  {
+                    id: "off-99",
+                    stayAmount: 980,
+                    currency: "USD",
+                    roomCount: 1,
+                    additionalTaxes: [],
+                    cancellationNote: "Free cancellation",
+                  },
+                ],
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      if (url === "/api/track/click") {
+        return new Response(
+          JSON.stringify({
+            clickId: "clk-hotel-panel",
+            redirectUrl:
+              "https://www.stay22.com/allez/roam?aid=stay_1&address=Park+Hyatt+Tokyo%2C+Tokyo&campaign=clk-hotel-panel",
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("window", {
+      open: openMock,
+      location: { assign: vi.fn() },
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", { body: { style: { overflow: "auto" } } });
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(
+          <AffiliateTrackingProvider
+            value={{
+              destination: "Tokyo",
+              source: "itinerary",
+              hotelPartnerLinks: {
+                primary: {
+                  partner: "stay22",
+                  label: "Check rates on Stay22",
+                  vertical: "hotels",
+                  url: "https://www.stay22.com/allez/roam?aid=stay_1&address=Tokyo",
+                  configured: true,
+                  isSearchFallback: true,
+                  disclosure: AFFILIATE_DISCLOSURE_SHORT,
+                },
+                alternatives: [],
+              },
+            }}
+          >
+            <TripCheckout tripId="trip-1" travelers={2}>
+              <HotelQuotePanel
+                trip={{
+                  id: "trip-1",
+                  user_id: "owner-1",
+                  destination: "Tokyo",
+                  start_date: "2026-11-01",
+                  end_date: "2026-11-04",
+                  travelers: 2,
+                  budget_tier: "moderate",
+                  status: "completed",
+                  vibes: [],
+                  preferences: {
+                    hotelSearch: {
+                      consentVersion: "hotel-search-nuitee-v1",
+                      countryCode: "JP",
+                      guestNationality: "US",
+                      rooms: [{ adults: 2, children: [] }],
+                    },
+                  },
+                  created_at: "2026-10-01T00:00:00Z",
+                  updated_at: "2026-10-01T00:00:00Z",
+                  is_shared: false,
+                  share_token: null,
+                }}
+              />
+            </TripCheckout>
+          </AffiliateTrackingProvider>,
+        );
+      });
+
+      const searchBtn = renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Search hotel options"))!;
+      await act(async () => {
+        await searchBtn.props.onClick();
+      });
+
+      const rateBtn = renderer.root
+        .findAllByType("button")
+        .find(
+          (b) =>
+            b.findAll(
+              (n) =>
+                typeof n.children?.[0] === "string" &&
+                n.children.join("").includes("Check live rates on Stay22"),
+            ).length > 0,
+        )!;
+      await act(async () => {
+        rateBtn.props.onClick({ currentTarget: { focus: vi.fn() } });
+      });
+
+      expect(renderer.root.findByProps({ role: "dialog" })).toBeTruthy();
+      const renderedJson = JSON.stringify(renderer.toJSON());
+      expect(renderedJson).toContain("Stay22");
+      expect(renderedJson).toContain("Park Hyatt Tokyo");
+
+      const continueBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Continue to Stay22"),
+          ),
+        )!;
+      await act(async () => {
+        await continueBtn.props.onClick();
+      });
+
+      const clickCall = fetchMock.mock.calls.find(
+        ([u]) => u === "/api/track/click",
+      );
+      expect(clickCall).toBeDefined();
+      expect(JSON.parse(String(clickCall![1]?.body))).toMatchObject({
+        itemType: "hotel",
+        itemId: "lp-99",
+        itemName: "Park Hyatt Tokyo",
+        affiliatePartner: "stay22",
+        placement: "hotel_quote_panel",
+      });
+      expect(popup.location.replace).toHaveBeenCalledWith(
+        expect.stringContaining("aid=stay_1"),
+      );
+    } finally {
+      await act(async () => renderer?.unmount());
+    }
+  });
 });

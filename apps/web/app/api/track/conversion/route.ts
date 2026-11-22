@@ -232,21 +232,86 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the original click as converted
+    // Reconcile the original click from all recorded conversions for this click_id
+    // so subsequent pending webhooks or partial cancellations never clobber
+    // confirmed revenue from another transaction.
     if (click) {
-      const { error: updateError } = await getSupabase()
-        .from("affiliate_clicks")
-        .update({
-          converted: dbStatus === "confirmed",
-          conversion_value: dbStatus === "confirmed" ? commissionValue : null,
-        })
-        .eq("id", clickId);
+      let nextConverted: boolean | null = null;
+      let nextConversionValue: number | null = null;
 
-      if (updateError) {
-        console.error(
-          "[Conversion Webhook] Failed to reconcile click:",
-          updateError,
+      const conversionsTable = getSupabase().from("affiliate_conversions");
+      let clickConversions: Array<{
+        status?: unknown;
+        commission_value?: unknown;
+      }> | null = null;
+
+      if (typeof conversionsTable?.select === "function") {
+        try {
+          const { data: rows, error: rowsError } = await conversionsTable
+            .select("status, commission_value")
+            .eq("click_id", clickId);
+          if (!rowsError && Array.isArray(rows) && rows.length > 0) {
+            clickConversions = rows;
+          }
+        } catch {
+          clickConversions = null;
+        }
+      }
+
+      if (clickConversions) {
+        const confirmedRows = clickConversions.filter(
+          (row) => row.status === "confirmed",
         );
+        if (confirmedRows.length > 0) {
+          const totalConfirmed = confirmedRows.reduce((sum, row) => {
+            const val = Number(row.commission_value);
+            return sum + (Number.isFinite(val) && val > 0 ? val : 0);
+          }, 0);
+          nextConverted = true;
+          nextConversionValue = Number(totalConfirmed.toFixed(2));
+        } else {
+          nextConverted = false;
+          nextConversionValue = null;
+        }
+      } else {
+        const alreadyConfirmed = click.converted === true;
+        if (dbStatus === "confirmed") {
+          nextConverted = true;
+          nextConversionValue = commissionValue;
+        } else if (dbStatus === "pending") {
+          nextConverted = alreadyConfirmed;
+          nextConversionValue =
+            alreadyConfirmed &&
+            typeof click.conversion_value === "number" &&
+            Number.isFinite(click.conversion_value)
+              ? click.conversion_value
+              : null;
+        } else if (!alreadyConfirmed) {
+          nextConverted = false;
+          nextConversionValue = null;
+        } else {
+          console.warn(
+            "[Conversion Webhook] Unable to query click conversions on cancellation; preserving prior confirmed click state:",
+            clickId,
+          );
+        }
+      }
+
+      if (nextConverted !== null) {
+        const { error: updateError } = await getSupabase()
+          .from("affiliate_clicks")
+          .update({
+            converted: nextConverted,
+            conversion_value: nextConversionValue,
+          })
+          .eq("id", clickId);
+
+        if (updateError) {
+          console.error(
+            "[Conversion Webhook] Failed to reconcile click:",
+            updateError,
+          );
+        }
       }
     }
 

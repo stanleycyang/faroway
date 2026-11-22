@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
     > | null,
     error: null as unknown,
   },
+  conversionRows: [] as Array<Record<string, unknown>>,
+  conversionsSelectError: null as unknown,
   upsertResult: { error: null as unknown },
   updateResult: { error: null as unknown },
   upsertSpy: vi.fn(),
@@ -23,10 +25,30 @@ vi.mock("@/lib/supabase/server", () => ({
       mocks.fromSpy(table);
       if (table === "affiliate_conversions") {
         return {
-          upsert: (row: unknown, opts: unknown) => {
+          upsert: (row: Record<string, unknown>, opts: unknown) => {
             mocks.upsertSpy(row, opts);
+            if (!mocks.upsertResult.error) {
+              const key = `${String(row.partner)}::${String(row.order_id ?? row.booking_reference ?? row.click_id)}`;
+              const idx = mocks.conversionRows.findIndex((r) => r._key === key);
+              const stored = { ...row, _key: key };
+              if (idx >= 0) mocks.conversionRows[idx] = stored;
+              else mocks.conversionRows.push(stored);
+            }
             return Promise.resolve(mocks.upsertResult);
           },
+          select: () => ({
+            eq: (_col: string, clickId: string) =>
+              Promise.resolve(
+                mocks.conversionsSelectError
+                  ? { data: null, error: mocks.conversionsSelectError }
+                  : {
+                      data: mocks.conversionRows.filter(
+                        (r) => r.click_id === clickId,
+                      ),
+                      error: null,
+                    },
+              ),
+          }),
         };
       }
       if (table === "affiliate_clicks") {
@@ -38,6 +60,9 @@ vi.mock("@/lib/supabase/server", () => ({
           }),
           update: (values: unknown) => {
             mocks.updateSpy(values);
+            if (!mocks.updateResult.error && mocks.clickResult.data) {
+              Object.assign(mocks.clickResult.data, values);
+            }
             return {
               eq: () => Promise.resolve(mocks.updateResult),
             };
@@ -76,6 +101,8 @@ describe("POST /api/track/conversion (expanded M2 webhooks)", () => {
       data: { id: "click-1", user_id: "user-1" },
       error: null,
     };
+    mocks.conversionRows = [];
+    mocks.conversionsSelectError = null;
     mocks.upsertResult = { error: null };
     mocks.updateResult = { error: null };
   });
@@ -252,5 +279,185 @@ describe("POST /api/track/conversion (expanded M2 webhooks)", () => {
       }),
       { onConflict: "partner,conversion_key" },
     );
+  });
+
+  it("never clobbers an already-confirmed click when a subsequent pending webhook arrives", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-sec-pending");
+    mocks.clickResult = {
+      data: {
+        id: "click-1",
+        user_id: "user-1",
+        converted: true,
+        conversion_value: 25,
+      },
+      error: null,
+    };
+    mocks.conversionRows = [
+      {
+        _key: "viator::tx-1",
+        click_id: "click-1",
+        partner: "viator",
+        order_id: "tx-1",
+        status: "confirmed",
+        commission_value: 25,
+      },
+    ];
+
+    const payload = JSON.stringify({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-2",
+      status: "pending",
+      bookingAmount: 100,
+      commissionAmount: 10,
+      currency: "USD",
+    });
+
+    const res = await POST(
+      makeWebhookReq(payload, sign(payload, "viator-sec-pending")),
+    );
+    expect(res.status).toBe(200);
+    expect(mocks.updateSpy).toHaveBeenLastCalledWith({
+      converted: true,
+      conversion_value: 25,
+    });
+  });
+
+  it("aggregates multi-transaction confirmed webhooks and preserves remaining confirmed revenue on partial cancellation", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-sec-multi");
+
+    const send = async (body: Record<string, unknown>) => {
+      const raw = JSON.stringify(body);
+      const res = await POST(
+        makeWebhookReq(raw, sign(raw, "viator-sec-multi")),
+      );
+      expect(res.status).toBe(200);
+    };
+
+    await send({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-1",
+      status: "confirmed",
+      bookingAmount: 200,
+      commissionAmount: 25,
+      currency: "USD",
+    });
+    expect(mocks.updateSpy).toHaveBeenLastCalledWith({
+      converted: true,
+      conversion_value: 25,
+    });
+
+    await send({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-2",
+      status: "confirmed",
+      bookingAmount: 100,
+      commissionAmount: 10.5,
+      currency: "USD",
+    });
+    expect(mocks.updateSpy).toHaveBeenLastCalledWith({
+      converted: true,
+      conversion_value: 35.5,
+    });
+
+    // Partial cancellation of tx-2 preserves tx-1's confirmed $25
+    await send({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-2",
+      status: "cancelled",
+      bookingAmount: 100,
+      commissionAmount: 10.5,
+      currency: "USD",
+    });
+    expect(mocks.updateSpy).toHaveBeenLastCalledWith({
+      converted: true,
+      conversion_value: 25,
+    });
+
+    // Cancelling the final confirmed transaction clears click attribution
+    await send({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-1",
+      status: "refunded",
+      bookingAmount: 200,
+      commissionAmount: 25,
+      currency: "USD",
+    });
+    expect(mocks.updateSpy).toHaveBeenLastCalledWith({
+      converted: false,
+      conversion_value: null,
+    });
+  });
+
+  it("still records conversion with click_id=null when click lookup misses or errors", async () => {
+    vi.stubEnv("STAY22_WEBHOOK_SECRET", "stay22-sec-miss");
+    mocks.clickResult = {
+      data: null,
+      error: { code: "PGRST116", message: "No rows" },
+    };
+
+    const payload = JSON.stringify({
+      partner: "stay22",
+      clickId: "missing-click-99",
+      externalTransactionId: "tx-orphan-1",
+      status: "confirmed",
+      bookingAmount: 180,
+      commissionAmount: 14.4,
+    });
+
+    const res = await POST(
+      makeWebhookReq(payload, sign(payload, "stay22-sec-miss")),
+    );
+    expect(res.status).toBe(200);
+    expect(mocks.upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        click_id: null,
+        user_id: null,
+        partner: "stay22",
+        order_id: "tx-orphan-1",
+      }),
+      { onConflict: "partner,conversion_key" },
+    );
+    expect(mocks.updateSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when affiliate_conversions upsert fails without updating affiliate_clicks", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-sec-err");
+    mocks.upsertResult = { error: { message: "unique violation or timeout" } };
+
+    const payload = JSON.stringify({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-fail",
+      status: "confirmed",
+      commissionAmount: 15,
+    });
+
+    const res = await POST(
+      makeWebhookReq(payload, sign(payload, "viator-sec-err")),
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "Failed to record conversion" });
+    expect(mocks.updateSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when camelCase payload omits externalTransactionId", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-sec-tx");
+    const payload = JSON.stringify({
+      partner: "viator",
+      clickId: "click-1",
+      status: "confirmed",
+      commissionAmount: 12,
+    });
+    const res = await POST(
+      makeWebhookReq(payload, sign(payload, "viator-sec-tx")),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid webhook payload" });
+    expect(mocks.upsertSpy).not.toHaveBeenCalled();
   });
 });

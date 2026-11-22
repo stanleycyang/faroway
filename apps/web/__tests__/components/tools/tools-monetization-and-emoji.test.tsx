@@ -475,4 +475,141 @@ describe("All 7 tools UI contrast, emoji removal & monetization", () => {
       "Explore stays in Montenegro",
     );
   });
+
+  it("CountryDetailDrawer preserves configured defaultLinks.stay attribution for unguided countries and prefers matched bundles", async () => {
+    const { fetchMock } = setupClickMocks(
+      "https://www.stay22.com/allez/roam?aid=stay22-123&address=Montenegro&campaign=clk",
+    );
+
+    const defaultLinks = {
+      stay: {
+        partner: "stay22" as const,
+        label: "Check rates on Stay22",
+        vertical: "hotels" as const,
+        url: "https://www.stay22.com/allez/roam?aid=stay22-123&address=world+travel",
+        configured: true,
+        isSearchFallback: true,
+        disclosure: AFFILIATE_DISCLOSURE_SHORT,
+      },
+      flight: {
+        partner: "skyscanner" as const,
+        label: "Search flights",
+        vertical: "flights" as const,
+        url: "https://www.skyscanner.com/?associateid=sky-1",
+        configured: true,
+        isSearchFallback: true,
+        disclosure: AFFILIATE_DISCLOSURE_SHORT,
+      },
+      esim: null,
+      insurance: null,
+    };
+
+    const bundlesByCountryKey = {
+      japan: {
+        stay: {
+          partner: "booking" as const,
+          label: "Check availability in Japan",
+          vertical: "hotels" as const,
+          url: "https://www.booking.com/searchresults.html?ss=Japan&aid=999888",
+          configured: true,
+          isSearchFallback: true,
+          disclosure: AFFILIATE_DISCLOSURE_SHORT,
+        },
+        flight: null,
+        esim: null,
+        insurance: null,
+      },
+    };
+
+    let montenegroRoot!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        montenegroRoot = create(
+          <CountryDetailDrawer
+            iso="MNE"
+            name="Montenegro"
+            onClose={vi.fn()}
+            bundlesByCountryKey={bundlesByCountryKey}
+            defaultLinks={defaultLinks}
+          />,
+        );
+      });
+
+      const stayBtn = montenegroRoot.root
+        .findAllByType("button")
+        .find((b) => textOf(b).includes("Explore stays in Montenegro"))!;
+      expect(stayBtn).toBeDefined();
+
+      await act(async () => {
+        await stayBtn.props.onClick({ currentTarget: { focus: vi.fn() } });
+      });
+
+      const body = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+      expect(body.affiliatePartner).toBe("stay22");
+      expect(body.affiliateUrl).toContain("aid=stay22-123");
+      expect(body.affiliateUrl).toContain("address=Montenegro");
+      expect(body.affiliateUrl).not.toContain("booking.com");
+      expect(body.itemId).toBe("map-MNE-stay-stay22");
+    } finally {
+      await act(async () => montenegroRoot?.unmount());
+    }
+
+    fetchMock.mockClear();
+    let japanRoot!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        japanRoot = create(
+          <CountryDetailDrawer
+            iso="JPN"
+            name="Japan"
+            onClose={vi.fn()}
+            bundlesByCountryKey={bundlesByCountryKey}
+            defaultLinks={defaultLinks}
+          />,
+        );
+      });
+
+      const japanStayBtn = japanRoot.root
+        .findAllByType("button")
+        .find((b) => textOf(b).includes("Check availability in Japan"))!;
+      expect(japanStayBtn).toBeDefined();
+
+      await act(async () => {
+        await japanStayBtn.props.onClick({ currentTarget: { focus: vi.fn() } });
+      });
+
+      const japanBody = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+      expect(japanBody.affiliatePartner).toBe("booking");
+      expect(japanBody.affiliateUrl).toContain("aid=999888");
+      expect(japanBody.affiliateUrl).toContain("ss=Japan");
+    } finally {
+      await act(async () => japanRoot?.unmount());
+    }
+
+    // Unconfigured fallback (no bundles, no defaultLinks) still falls back safely to Booking search
+    fetchMock.mockClear();
+    let fallbackRoot!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        fallbackRoot = create(
+          <CountryDetailDrawer iso="MNE" name="Montenegro" onClose={vi.fn()} />,
+        );
+      });
+
+      const fallbackBtn = fallbackRoot.root
+        .findAllByType("button")
+        .find((b) => textOf(b).includes("Explore stays in Montenegro"))!;
+      await act(async () => {
+        await fallbackBtn.props.onClick({ currentTarget: { focus: vi.fn() } });
+      });
+
+      const fallbackBody = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+      expect(fallbackBody.affiliatePartner).toBe("booking");
+      expect(fallbackBody.affiliateUrl).toBe(
+        "https://www.booking.com/searchresults.html?ss=Montenegro",
+      );
+    } finally {
+      await act(async () => fallbackRoot?.unmount());
+    }
+  });
 });

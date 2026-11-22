@@ -67,6 +67,36 @@ test.afterAll(async () => {
 
 async function setupSharedTripPage(page: Page, query = "") {
   const reactionPosts: Array<Record<string, unknown>> = [];
+  const clickPosts: Array<Record<string, unknown>> = [];
+  const checkoutRequests: string[] = [];
+
+  await page.route("**/api/trips/*/checkout", async (route) => {
+    checkoutRequests.push(route.request().url());
+    await route.fulfill({ status: 401, json: { error: "Unauthorized" } });
+  });
+
+  await page.route("**/api/track/click", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    clickPosts.push(body);
+    const parsed = new URL(String(body.affiliateUrl));
+    const partner = String(body.affiliatePartner || "viator");
+    const param =
+      partner === "viator" || partner === "stay22"
+        ? "campaign"
+        : partner === "getyourguide"
+          ? "cmp"
+          : "sub_id";
+    parsed.searchParams.set(param, `e2e-clk-${clickPosts.length}`);
+    await route.fulfill({
+      json: {
+        clickId: `e2e-clk-${clickPosts.length}`,
+        partner,
+        redirectUrl: parsed.toString(),
+        trackingUrl: parsed.toString(),
+      },
+    });
+  });
+
   await page.route("**/api/trips/shared/*/reactions", async (route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
@@ -89,18 +119,20 @@ async function setupSharedTripPage(page: Page, query = "") {
     });
   });
 
-  await page.route(/^https:\/\//, (route) =>
-    route.fulfill({ contentType: "text/html", body: "Mock provider" }),
-  );
+  await page
+    .context()
+    .route(/^https:\/\//, (route) =>
+      route.fulfill({ contentType: "text/html", body: "Mock provider" }),
+    );
 
   await page.goto(`${fixtureUrl}${query}`);
-  return reactionPosts;
+  return { reactionPosts, clickPosts, checkoutRequests };
 }
 
 test("SharedTripView renders itinerary, preserves clone/customize href params, and records stop reactions", async ({
   page,
 }) => {
-  const reactionPosts = await setupSharedTripPage(page);
+  const { reactionPosts } = await setupSharedTripPage(page);
 
   await expect(
     page.getByRole("heading", { name: "Tokyo, Japan", exact: true }),
@@ -492,4 +524,90 @@ test("in-browser @faroway/validation boundaries & WCAG AA contrast ratio check",
     expect(entry.bg).not.toBe("rgba(0, 0, 0, 0)");
     expect(entry.ratio).toBeGreaterThanOrEqual(4.5);
   }
+});
+
+test("SharedTripView interactive monetization: Book on Viator, Book this trip sheet, and essentials strip use /api/track/click with source='shared_trip' and ZERO /checkout calls", async ({
+  page,
+}) => {
+  const { clickPosts, checkoutRequests } = await setupSharedTripPage(page);
+
+  // 1. Click "Book on Viator" on activity_v_TOKYO1 inside SharedTripView
+  const bookViatorBtn = page.getByRole("button", { name: "Book on Viator" });
+  await expect(bookViatorBtn).toBeVisible();
+  await bookViatorBtn.click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Your next step, with Viator");
+  await expect(dialog).toContainText("Senso-ji Morning Cultural Walk");
+
+  await dialog.getByRole("button", { name: "Continue to Viator" }).click();
+  await expect.poll(() => clickPosts.length).toBe(1);
+
+  expect(clickPosts[0]).toMatchObject({
+    affiliatePartner: "viator",
+    itemId: "activity_v_TOKYO1",
+    source: "shared_trip",
+    placement: "activity_card",
+  });
+  expect(checkoutRequests).toHaveLength(0);
+  await expect(page).toHaveURL(/viator\.com.*campaign=e2e-clk-1/);
+
+  // 2. Return to shared trip, open "Book this trip" (BookingsSheet), and trigger an item inside it
+  await page.goto(fixtureUrl);
+  const bookTripBtn = page.getByRole("button", { name: /Book this trip/i });
+  await expect(bookTripBtn).toBeVisible();
+  await bookTripBtn.click();
+
+  const sheetDialog = page.getByRole("dialog", {
+    name: /Book your Tokyo, Japan trip/i,
+  });
+  await expect(sheetDialog).toBeVisible();
+  await sheetDialog
+    .getByRole("button", { name: "Review & book" })
+    .first()
+    .click();
+
+  // Sheet closes and TripCheckout modal opens
+  await expect(sheetDialog).toHaveCount(0);
+  const checkoutModal = page.getByRole("dialog");
+  await expect(checkoutModal).toBeVisible();
+
+  await checkoutModal.getByRole("button", { name: /^Continue to / }).click();
+  await expect.poll(() => clickPosts.length).toBe(2);
+
+  expect(clickPosts[1]).toMatchObject({
+    source: "shared_trip",
+    placement: "bookings_sheet",
+  });
+  expect(checkoutRequests).toHaveLength(0);
+
+  // 3. Return to shared trip and trigger a SharedTripEssentialsStrip CTA
+  await page.goto(fixtureUrl);
+  const essentialsRegion = page.getByRole("region", {
+    name: "Stays, flights & trip essentials",
+  });
+  await expect(essentialsRegion).toBeVisible();
+  const airaloBtn = essentialsRegion.getByRole("button", {
+    name: /Airalo/i,
+  });
+  await expect(airaloBtn).toBeVisible();
+  await airaloBtn.click();
+
+  await expect(page.getByRole("dialog")).toContainText(
+    "Your next step, with Airalo",
+  );
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Continue to Airalo" })
+    .click();
+  await expect.poll(() => clickPosts.length).toBe(3);
+
+  expect(clickPosts[2]).toMatchObject({
+    affiliatePartner: "airalo",
+    source: "shared_trip",
+    placement: "shared_trip_essentials",
+  });
+  expect(checkoutRequests).toHaveLength(0);
+  await expect(page).toHaveURL(/airalo\.com.*sub_id=e2e-clk-3/);
 });

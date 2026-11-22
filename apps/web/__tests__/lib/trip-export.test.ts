@@ -237,4 +237,57 @@ describe("trip export helpers", () => {
     expect(text).toContain("Airalo Japan eSIM");
     expect(text).not.toContain("viator.com");
   });
+
+  it("never throws on missing, padded, or malformed currencies in totalEstimatedCost or day.totalEstimatedCost", () => {
+    const makeDay = (currency: unknown, amount = 140) =>
+      ({
+        dayNumber: 1,
+        date: "2026-04-01",
+        title: "Arrival",
+        summary: "Explore",
+        morning: { activities: [], meals: [] },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        totalEstimatedCost: { amount, currency },
+        tips: [],
+      }) as unknown as TripDay;
+
+    for (const badCurrency of ["", "INVALID", "US", undefined, null, 123]) {
+      const text = buildTripExportText(
+        trip,
+        {
+          totalEstimatedCost: {
+            amount: 1500,
+            currency: badCurrency as string,
+          },
+          days: [makeDay(badCurrency)],
+        },
+        new Date("2026-04-08T12:00:00.000Z"),
+      );
+      expect(text).toContain("Estimated total: 1,500");
+      expect(text).toContain("Day estimate: 140");
+    }
+
+    const paddedUsd = buildTripExportText(
+      trip,
+      {
+        totalEstimatedCost: { amount: 1500, currency: " usd " },
+        days: [makeDay(" eur ", 220)],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+    expect(paddedUsd).toContain("Estimated total: $1,500");
+    expect(paddedUsd).toContain("Day estimate: €220");
+
+    const nonFinite = buildTripExportText(
+      trip,
+      {
+        totalEstimatedCost: { amount: Number.NaN, currency: "USD" },
+        days: [makeDay("USD", Number.POSITIVE_INFINITY)],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+    expect(nonFinite).not.toContain("Estimated total:");
+    expect(nonFinite).not.toContain("Day estimate:");
+  });
 });

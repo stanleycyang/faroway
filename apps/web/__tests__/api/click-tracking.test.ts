@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   insert: vi.fn(),
   optionalAuth: vi.fn(),
+  checkRateLimitAsync: vi.fn(),
+  getClientIp: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -16,6 +18,11 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/auth", () => ({
   optionalAuth: mocks.optionalAuth,
+}));
+
+vi.mock("@/lib/security/rate-limit", () => ({
+  checkRateLimitAsync: mocks.checkRateLimitAsync,
+  getClientIp: mocks.getClientIp,
 }));
 
 import { POST } from "@/app/api/track/click/route";
@@ -45,6 +52,12 @@ function makeRawRequest(body: string): NextRequest {
 describe("POST /api/track/click", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getClientIp.mockReturnValue("127.0.0.1");
+    mocks.checkRateLimitAsync.mockResolvedValue({
+      allowed: true,
+      remaining: 29,
+      resetIn: 60_000,
+    });
     mocks.optionalAuth.mockResolvedValue(mocks.user);
     mocks.from.mockReturnValue({ insert: mocks.insert });
     mocks.insert.mockReturnValue({ error: null });
@@ -331,5 +344,119 @@ describe("POST /api/track/click", () => {
     );
     expect(response.status).toBe(400);
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 Too many requests when fail-closed rate limit denies", async () => {
+    mocks.checkRateLimitAsync.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetIn: 30_000,
+    });
+
+    const response = await POST(
+      makeRequest({
+        itemType: "activity",
+        itemId: "act-rl",
+        itemName: "Rate Limited Tour",
+        affiliatePartner: "viator",
+        affiliateUrl: "https://www.viator.com/tours/Tokyo/t1",
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ error: "Too many requests" });
+    expect(mocks.checkRateLimitAsync).toHaveBeenCalledWith(
+      "affiliate-click:127.0.0.1",
+      { maxRequests: 30, windowMs: 60_000, failClosed: true },
+    );
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("records anonymous clicks (user: null) and omits partial price without currency", async () => {
+    mocks.optionalAuth.mockResolvedValueOnce(null);
+
+    const response = await POST(
+      makeRequest({
+        itemType: "hotel",
+        itemId: "hotel-anon",
+        itemName: "Anonymous Hotel",
+        affiliatePartner: "booking",
+        affiliateUrl:
+          "https://www.booking.com/searchresults.html?ss=Tokyo&aid=123",
+        price: 220,
+        source: "tool",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.partner).toBe("booking");
+    expect(body.trackingUrl).toContain(`label=${body.clickId}`);
+    expect(mocks.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: null,
+        price: null,
+        currency: null,
+        source: "tool",
+      }),
+    );
+  });
+
+  it("fails open 200 with generated clickId and trackingUrl when affiliate_clicks.insert errors", async () => {
+    mocks.insert.mockReturnValueOnce({
+      error: { message: "supabase insert timeout" },
+    });
+
+    const response = await POST(
+      makeRequest({
+        itemType: "activity",
+        itemId: "act-failopen",
+        itemName: "Fail Open Tour",
+        affiliatePartner: "getyourguide",
+        affiliateUrl:
+          "https://www.getyourguide.com/tokyo-l193/tour-t1/?partner_id=GYG1",
+        source: "itinerary",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.clickId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
+    expect(body.trackingUrl).toContain(`cmp=${body.clickId}`);
+  });
+
+  it("rejects non-UUID tripId with 400 and enforces canonical host-partner precedence on cross-partner URLs", async () => {
+    const badTrip = await POST(
+      makeRequest({
+        itemType: "activity",
+        itemId: "act-bad-trip",
+        itemName: "Bad Trip ID",
+        affiliatePartner: "viator",
+        affiliateUrl: "https://www.viator.com/tours/Tokyo/t1",
+        tripId: "not-a-valid-uuid",
+      }),
+    );
+    expect(badTrip.status).toBe(400);
+    expect(mocks.insert).not.toHaveBeenCalled();
+
+    const crossPartner = await POST(
+      makeRequest({
+        clickId: "clk_cross_1",
+        itemType: "hotel",
+        itemId: "hotel-cross",
+        itemName: "Cross Partner Hotel",
+        affiliatePartner: "viator",
+        affiliateUrl:
+          "https://www.booking.com/searchresults.html?ss=Paris&aid=999",
+        source: "itinerary",
+      }),
+    );
+    expect(crossPartner.status).toBe(200);
+    const body = await crossPartner.json();
+    expect(body.partner).toBe("booking");
+    expect(body.trackingUrl).toContain("label=clk_cross_1");
+    expect(body.trackingUrl).not.toContain("campaign=");
   });
 });

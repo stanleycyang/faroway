@@ -381,6 +381,51 @@ describe('openAffiliateLink', () => {
     expect(openUrl).toHaveBeenCalledWith('https://www.viator.com/tours/Paris?campaign=srv-1');
   });
 
+  it('omits both price and currency when currency is missing or blank', async () => {
+    const openUrl = jest.fn();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          clickId: 'srv-noprice',
+          redirectUrl: 'https://www.viator.com/tours/Paris?campaign=srv-noprice',
+        }),
+    });
+
+    await openAffiliateLink(
+      {
+        itemType: 'activity',
+        itemId: 'act-noprice',
+        itemName: 'Louvre Tour',
+        affiliatePartner: 'viator',
+        affiliateUrl: 'https://www.viator.com/tours/Paris',
+        price: 45,
+      },
+      openUrl
+    );
+
+    const bodyMissing = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(bodyMissing.price).toBeUndefined();
+    expect(bodyMissing.currency).toBeUndefined();
+
+    await openAffiliateLink(
+      {
+        itemType: 'activity',
+        itemId: 'act-blankcurr',
+        itemName: 'Louvre Tour',
+        affiliatePartner: 'viator',
+        affiliateUrl: 'https://www.viator.com/tours/Paris',
+        price: 45,
+        currency: '   ',
+      },
+      openUrl
+    );
+
+    const bodyBlank = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(bodyBlank.price).toBeUndefined();
+    expect(bodyBlank.currency).toBeUndefined();
+  });
+
   it('omits non-UUID tripIds and falls back to partner-native subID injection when tracking fails', async () => {
     const openUrl = jest.fn();
     mockFetch.mockRejectedValueOnce(new Error('Network offline'));

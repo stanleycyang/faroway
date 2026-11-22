@@ -15,6 +15,10 @@ import {
 } from "../../components/trips/FeaturedHotelCard";
 import { FlightLeg } from "../../components/trips/FlightLeg";
 import { BookingChecklist } from "../../components/trips/BookingChecklist";
+import {
+  BookingsSheet,
+  type BookingsSheetItem,
+} from "../../components/trips/BookingsSheet";
 
 const viatorActivity: Activity & { viatorContentVersion: number } = {
   id: "activity_v_123P1",
@@ -154,14 +158,55 @@ const expiredFlight: NonNullable<TripDay["transport"]> = {
   },
 };
 
+const sheetItems: BookingsSheetItem[] = [
+  {
+    id: featuredHotel.id!,
+    category: "stay",
+    title: featuredHotel.name,
+    subtitle: "Boutique stay in Paris",
+    price: 240,
+    currency: "USD",
+    partner: "stay22",
+    partnerLabel: "Stay22",
+    itemType: "hotel",
+    affiliateUrl: featuredHotel.affiliateUrl!,
+    date: "2099-06-01",
+    dateLabel: "2099-06-01 – 2099-06-04",
+  },
+  {
+    id: viatorActivity.id,
+    category: "experiences",
+    title: viatorActivity.name,
+    subtitle: "Morning · Skip-the-line",
+    price: 65,
+    currency: "USD",
+    partner: "viator",
+    partnerLabel: "Viator",
+    itemType: "activity",
+    affiliateUrl: viatorActivity.bookingInfo!.bookingUrl!,
+    date: "2099-06-01",
+    isViatorHosted: true,
+  },
+];
+
 function MonetizationCheckoutFixture() {
   const tripId = "00000000-0000-4000-8000-000000000001";
   const userId = "00000000-0000-4000-8000-000000000001";
+  const [sheetOpen, setSheetOpen] = React.useState(false);
 
   return (
     <main className="mx-auto min-h-screen max-w-4xl space-y-8 bg-[#FAF8F3] px-4 py-8">
       <ViatorContentPolicy enabled={true}>
         <TripCheckout tripId={tripId} travelers={2}>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              className="rounded-full bg-[#143D46] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Review &amp; book ({sheetItems.length})
+            </button>
+          </div>
           <section
             aria-label="Activity cards"
             className="grid gap-4 sm:grid-cols-2"
@@ -170,6 +215,14 @@ function MonetizationCheckoutFixture() {
             <ActivityCard activity={nonViatorActivity} date="2099-06-01" />
             <ActivityCard activity={unallowlistedActivity} date="2099-06-01" />
           </section>
+          <BookingsSheet
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            items={sheetItems}
+            tripId={tripId}
+            destination="Paris"
+            source="itinerary"
+          />
         </TripCheckout>
       </ViatorContentPolicy>
 

@@ -981,4 +981,164 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
     expect(viatorInverted).toContain("startDate=2026-06-10");
     expect(viatorInverted).not.toContain("endDate=2026-06-05");
   });
+
+  it("covers Travelpayouts fallbacks (Hotellook p=4115, Klook p=4110, SafetyWing) and Stay22/Booking sanitizers", () => {
+    vi.stubEnv("TRAVELPAYOUTS_MARKER", "999999");
+
+    const hotelFallback = buildHotelPartnerLinks({
+      destination: "Tokyo",
+      campaign: "camp-tp-hotel",
+    });
+    expect(hotelFallback.primary?.partner).toBe("travelpayouts");
+    expect(hotelFallback.primary?.configured).toBe(true);
+    expect(hotelFallback.primary?.url).toContain("marker=999999");
+    expect(hotelFallback.primary?.url).toContain("p=4115");
+
+    const bookingStrict = buildBookingUrl(
+      { destination: "Tokyo" },
+      { allowDirectSearchFallback: false },
+    );
+    expect(bookingStrict).toMatchObject({
+      partner: "booking",
+      url: null,
+      configured: false,
+    });
+
+    vi.stubEnv("STAY22_AID", "stay22-test");
+    const stay22Sanitized = buildStay22Url({
+      destination: "Tokyo",
+      lat: 0,
+      lng: 0,
+      checkIn: "2026-07-10",
+      checkOut: "2026-07-05",
+    });
+    expect(stay22Sanitized.url).toBeTruthy();
+    const stay22Parsed = new URL(stay22Sanitized.url!);
+    expect(stay22Parsed.searchParams.has("lat")).toBe(false);
+    expect(stay22Parsed.searchParams.has("lng")).toBe(false);
+    expect(stay22Parsed.searchParams.get("checkin")).toBe("2026-07-10");
+    expect(stay22Parsed.searchParams.has("checkout")).toBe(false);
+
+    const klookFallback = buildKlookActivitySearchUrl({
+      destination: "Tokyo",
+      query: "Tokyo Tower",
+      trackingId: "clk-klk",
+    });
+    expect(klookFallback.partner).toBe("travelpayouts");
+    expect(klookFallback.configured).toBe(true);
+    expect(klookFallback.url).toContain("marker=999999");
+    expect(klookFallback.url).toContain("p=4110");
+
+    const safetyWingFallback = buildSafetyWingUrl({
+      destination: "Japan",
+      trackingId: "clk-sw",
+    });
+    expect(safetyWingFallback.partner).toBe("travelpayouts");
+    expect(safetyWingFallback.configured).toBe(true);
+    expect(safetyWingFallback.url).toContain("marker=999999");
+    expect(safetyWingFallback.url).toContain("safetywing.com");
+  });
+
+  it("sanitizes path traversal tripId and clamps negative markupAmount in generateDuffelLink", async () => {
+    vi.stubEnv("DUFFEL_API_TOKEN", "duffel_test_token");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://www.faroway.ai");
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ data: { url: "https://links.duffel.com/s_guard" } }),
+          { status: 200 },
+        ),
+      );
+
+    const link = await generateDuffelLink("off_1", -10, "USD", {
+      tripId: "../admin",
+      clickId: "clk-guard",
+    });
+    expect(link).toBe("https://links.duffel.com/s_guard");
+    const sent = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(sent.data.markup_amount).toBe("0.00");
+    expect(sent.data.success_url).toBe(
+      "https://www.faroway.ai/dashboard?duffel=success&click_id=clk-guard",
+    );
+    expect(sent.data.failure_url).toBe(
+      "https://www.faroway.ai/dashboard?duffel=failure&click_id=clk-guard",
+    );
+    expect(sent.data.abandonment_url).toBe(
+      "https://www.faroway.ai/dashboard?duffel=abandoned&click_id=clk-guard",
+    );
+  });
+
+  it("falls back to Viator PRODUCTS freetext search on empty or non-200 DESTINATIONS and marks catalogOnly when dated", async () => {
+    vi.stubEnv("VIATOR_API_KEY", "test-key");
+    vi.stubEnv("VIATOR_PARTNER_ID", "P123");
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+    vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "ref-1");
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      // Case 1: empty DESTINATIONS -> PRODUCTS freetext with dates -> catalogOnly: true
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ destinations: { results: [] } }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            products: {
+              results: [
+                {
+                  productCode: "FT100",
+                  title: "Freetext Fallback Tour",
+                  productUrl:
+                    "https://www.viator.com/tours/Chiang-Rai/Tour/d1-FT100?pid=P123&mcid=42383&medium=api",
+                },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+      // Case 2: non-200 DESTINATIONS -> PRODUCTS freetext without dates -> no catalogOnly
+      .mockResolvedValueOnce(new Response("upstream error", { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            products: {
+              results: [
+                {
+                  productCode: "FT200",
+                  title: "Undated Freetext Tour",
+                  productUrl:
+                    "https://www.viator.com/tours/Chiang-Rai/Tour/d1-FT200?pid=P123&mcid=42383&medium=api",
+                },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const datedResults = await searchViatorProducts({
+      destination: "Unknown Hamlet",
+      startDate: "2026-08-01",
+      endDate: "2026-08-03",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(datedResults).toHaveLength(1);
+    expect(datedResults[0]).toMatchObject({
+      productCode: "FT100",
+      catalogOnly: true,
+    });
+
+    const undatedResults = await searchViatorProducts({
+      destination: "Unknown Hamlet",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(undatedResults).toHaveLength(1);
+    expect(undatedResults[0]?.productCode).toBe("FT200");
+    expect(undatedResults[0]?.catalogOnly).toBeUndefined();
+  });
 });

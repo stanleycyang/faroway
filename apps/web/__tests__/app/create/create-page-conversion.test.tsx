@@ -576,4 +576,201 @@ describe("/create conversion & origin/flight consent", () => {
       });
     }
   });
+
+  test("unauthenticated ?draft= roundtrip preserves originCity, originAirport, flightConsent, flightChildrenCount, and flightAgeText", async () => {
+    mocks.owner = "";
+    stubPlannerGlobals("", {
+      selectedPlace: { name: "Tokyo", source: "catalog", placeId: "tokyo" },
+      startDate: "2099-10-01",
+      endDate: "2099-10-06",
+      travelers: 4,
+      travelerType: "family",
+      selectedVibes: ["culture"],
+      budget: "moderate",
+      originCity: "Denver",
+      originAirport: "den",
+      flightConsent: true,
+      flightChildrenCount: 2,
+      flightAgeText: "5, 11",
+    });
+
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "/api/trips") {
+        const body = JSON.parse(String(init?.body));
+        return new Response(
+          JSON.stringify({
+            trip: { id: body.requestId, user_id: "owner-a" },
+          }),
+        );
+      }
+      return new Response(JSON.stringify({ success: true }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      const signInBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) =>
+              typeof c === "string" &&
+              c.includes("Sign in & generate itinerary"),
+          ),
+        )!;
+      expect(signInBtn.props.disabled).toBe(false);
+
+      await act(async () => {
+        await signInBtn.props.onClick();
+      });
+
+      const pushedUrl = String(mocks.push.mock.calls[0][0]);
+      const redirectTo = new URLSearchParams(pushedUrl.split("?")[1]).get(
+        "redirectTo",
+      )!;
+      expect(redirectTo).toMatch(/^\/create\?draft=/);
+
+      await act(async () => {
+        renderer.unmount();
+      });
+
+      mocks.owner = "owner-a";
+      vi.stubGlobal("window", {
+        location: { search: `?${redirectTo.split("?")[1]}` },
+        history: { replaceState: vi.fn(), length: 2 },
+      });
+
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      expect(
+        renderer.root.findByProps({ id: "create-origin-city" }).props.value,
+      ).toBe("Denver");
+      expect(
+        renderer.root.findByProps({ id: "create-origin-airport" }).props.value,
+      ).toBe("DEN");
+      expect(
+        renderer.root.findByProps({ id: "create-flight-consent" }).props
+          .checked,
+      ).toBe(true);
+      expect(
+        renderer.root.findByProps({ id: "create-flight-children" }).props.value,
+      ).toBe(2);
+      expect(
+        renderer.root.findByProps({ id: "create-flight-child-ages" }).props
+          .value,
+      ).toBe("5, 11");
+
+      const generateBtn = renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) => typeof c === "string" && c.includes("Generate itinerary"),
+          ),
+        )!;
+      expect(generateBtn.props.disabled).toBe(false);
+
+      await act(async () => {
+        await generateBtn.props.onClick();
+      });
+
+      const createCall = fetchMock.mock.calls.find(
+        ([url]) => url === "/api/trips",
+      )!;
+      const createBody = JSON.parse(String(createCall[1]?.body));
+      expect(createBody.preferences).toMatchObject({
+        originCity: "Denver",
+        originAirport: "DEN",
+        adults: 2,
+        children: 2,
+        flightSearch: {
+          childAges: [5, 11],
+          consentVersion: FLIGHT_SEARCH_CONSENT_VERSION,
+        },
+      });
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+    }
+  });
+
+  test("rejects out-of-bounds child ages (>17, negative, non-numeric) and mismatched age counts", async () => {
+    stubPlannerGlobals("", {
+      selectedPlace: { name: "Tokyo", source: "catalog", placeId: "tokyo" },
+      startDate: "2099-08-01",
+      endDate: "2099-08-06",
+      travelers: 4,
+      travelerType: "family",
+      selectedVibes: ["culture"],
+      budget: "moderate",
+      originCity: "Seattle",
+      originAirport: "SEA",
+      flightConsent: true,
+      flightChildrenCount: 2,
+      flightAgeText: "7",
+    });
+
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+
+      const getGenerateBtn = () =>
+        renderer.root
+          .findAllByType("button")
+          .find((b) =>
+            b.children.some(
+              (c) => typeof c === "string" && c.includes("Generate itinerary"),
+            ),
+          )!;
+
+      const collectRenderedText = (node: unknown): string => {
+        if (typeof node === "string" || typeof node === "number") {
+          return String(node);
+        }
+        if (Array.isArray(node)) return node.map(collectRenderedText).join("");
+        if (node && typeof node === "object" && "children" in node) {
+          return collectRenderedText((node as { children: unknown }).children);
+        }
+        return "";
+      };
+
+      // Only 1 age provided for 2 children
+      expect(getGenerateBtn().props.disabled).toBe(true);
+      expect(collectRenderedText(renderer.toJSON())).toContain(
+        "Enter 2 ages between 0 and 17.",
+      );
+
+      for (const badAges of ["5, 18", "5, -1", "5, abc"]) {
+        await act(async () => {
+          renderer.root
+            .findByProps({ id: "create-flight-child-ages" })
+            .props.onChange({ target: { value: badAges } });
+        });
+        expect(getGenerateBtn().props.disabled).toBe(true);
+        expect(collectRenderedText(renderer.toJSON())).toContain(
+          "Enter 2 ages between 0 and 17.",
+        );
+      }
+
+      // Boundary valid ages 0 and 17 enable generate
+      await act(async () => {
+        renderer.root
+          .findByProps({ id: "create-flight-child-ages" })
+          .props.onChange({ target: { value: "0, 17" } });
+      });
+      expect(getGenerateBtn().props.disabled).toBe(false);
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+    }
+  });
 });

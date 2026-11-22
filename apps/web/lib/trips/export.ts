@@ -41,11 +41,27 @@ function formatExportDate(dateStr: string) {
 function formatExportCost(cost: ExportCost) {
   if (!cost) return null;
   const amount = typeof cost === "number" ? cost : cost.amount;
-  const currency = typeof cost === "number" ? "USD" : cost.currency;
-  if (!amount || amount <= 0) return null;
+  const rawCurrency = typeof cost === "number" ? "USD" : cost.currency;
+  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  const normalizedCurrency =
+    typeof rawCurrency === "string" ? rawCurrency.trim().toUpperCase() : "";
+  if (/^[A-Z]{3}$/.test(normalizedCurrency)) {
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: normalizedCurrency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch {
+      // Fall through to numeric formatting when Intl rejects a currency code.
+    }
+  }
+
   return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);

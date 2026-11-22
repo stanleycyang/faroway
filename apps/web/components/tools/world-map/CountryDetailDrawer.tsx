@@ -45,6 +45,52 @@ function buildClientSafeBookingFallback(
   };
 }
 
+function parameterizeStayLink(
+  base: AffiliateLinkResult,
+  countryLabel: string,
+): AffiliateLinkResult {
+  if (!base.url || !isAllowedAffiliateUrl(base.url)) return base;
+  try {
+    const parsed = new URL(base.url);
+    const host = parsed.hostname.toLowerCase();
+    if (host === "stay22.com" || host.endsWith(".stay22.com")) {
+      parsed.searchParams.set("address", countryLabel);
+    } else if (host === "booking.com" || host.endsWith(".booking.com")) {
+      parsed.searchParams.set("ss", countryLabel);
+    } else if (host === "expedia.com" || host.endsWith(".expedia.com")) {
+      parsed.searchParams.set("destination", countryLabel);
+    } else if (
+      host === "hostelworld.com" ||
+      host.endsWith(".hostelworld.com")
+    ) {
+      parsed.searchParams.set("q", countryLabel);
+    } else if (
+      (host === "tp.media" || host === "tp.st") &&
+      parsed.searchParams.has("u")
+    ) {
+      const innerRaw = parsed.searchParams.get("u");
+      if (innerRaw) {
+        const inner = new URL(innerRaw);
+        if (inner.hostname.includes("hotellook.com")) {
+          inner.searchParams.set("destination", countryLabel);
+          parsed.searchParams.set("u", inner.toString());
+        }
+      }
+    }
+    const nextUrl = parsed.toString();
+    if (isAllowedAffiliateUrl(nextUrl)) {
+      return {
+        ...base,
+        label: `Explore stays in ${countryLabel}`,
+        url: nextUrl,
+      };
+    }
+  } catch {
+    // Preserve original allowlisted link if URL parsing fails
+  }
+  return base;
+}
+
 export function CountryDetailDrawer({
   iso,
   name,
@@ -88,9 +134,15 @@ export function CountryDetailDrawer({
   const stayLink =
     matchedBundle?.stay?.url && isAllowedAffiliateUrl(matchedBundle.stay.url)
       ? matchedBundle.stay
-      : defaultLinks?.stay?.url && isAllowedAffiliateUrl(defaultLinks.stay.url)
-        ? (fallbackBooking ?? defaultLinks.stay)
-        : fallbackBooking;
+      : defaultLinks?.stay?.url &&
+          isAllowedAffiliateUrl(defaultLinks.stay.url) &&
+          defaultLinks.stay.configured
+        ? parameterizeStayLink(defaultLinks.stay, countryLabel)
+        : (fallbackBooking ??
+          (defaultLinks?.stay?.url &&
+          isAllowedAffiliateUrl(defaultLinks.stay.url)
+            ? parameterizeStayLink(defaultLinks.stay, countryLabel)
+            : null));
   const flightLink =
     matchedBundle?.flight?.url &&
     isAllowedAffiliateUrl(matchedBundle.flight.url)

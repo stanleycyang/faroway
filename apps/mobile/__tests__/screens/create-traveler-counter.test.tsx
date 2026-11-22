@@ -326,3 +326,57 @@ it('captures departure city, uppercases airport code, shows IATA warning, toggle
     mockDraft = { travelers: 2 };
   }
 });
+
+it('disables Generate itinerary when flightConsent=true and origin is missing or airportCodeError is set, then enables once valid', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  mockDraft = {
+    travelers: 2,
+    destination: 'Tokyo',
+    country: 'Japan',
+    startDate: '2099-07-01',
+    endDate: '2099-07-05',
+    flightConsent: true,
+  } as typeof mockDraft & { startDate: string; endDate: string };
+  mockSetDraft.mockClear();
+
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripScreen />);
+    });
+
+    const getGenerateButton = () => renderer.root.findByProps({ title: 'Generate itinerary' });
+
+    // Missing both originCity and originAirport with flightConsent=true disables submit
+    expect(getGenerateButton().props.disabled).toBe(true);
+
+    // Invalid 2-letter airport code keeps submit disabled via airportCodeError
+    await act(async () => {
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.onChangeText('sf');
+    });
+    await act(async () => {
+      renderer.update(<CreateTripScreen />);
+    });
+    expect(
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.error
+    ).toContain('3-letter IATA');
+    expect(getGenerateButton().props.disabled).toBe(true);
+
+    // Completing valid 3-letter IATA code enables Generate itinerary
+    await act(async () => {
+      renderer.root
+        .findByProps({ label: 'Departure airport (optional)' })
+        .props.onChangeText('sfo');
+    });
+    await act(async () => {
+      renderer.update(<CreateTripScreen />);
+    });
+    expect(
+      renderer.root.findByProps({ label: 'Departure airport (optional)' }).props.error
+    ).toBeUndefined();
+    expect(getGenerateButton().props.disabled).toBe(false);
+  } finally {
+    await act(async () => renderer?.unmount());
+    mockDraft = { travelers: 2 };
+  }
+});

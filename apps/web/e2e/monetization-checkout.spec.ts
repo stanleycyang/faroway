@@ -85,11 +85,30 @@ async function setupRoutes(page: Page, options: MockOptions = {}) {
     "needed";
   let currentReportId: string | null = null;
   const bookingPosts: Array<Record<string, unknown>> = [];
+  const clickPosts: Array<Record<string, unknown>> = [];
   const checkoutPosts: Array<{
     activityId: string;
     date: string;
     attemptId: string;
   }> = [];
+
+  await page.route("**/api/track/click", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    clickPosts.push(body);
+    const parsed = new URL(String(body.affiliateUrl));
+    const partner = String(body.affiliatePartner || "stay22");
+    const param =
+      partner === "viator" || partner === "stay22" ? "campaign" : "sub_id";
+    parsed.searchParams.set(param, `e2e-checkout-clk-${clickPosts.length}`);
+    await route.fulfill({
+      json: {
+        clickId: `e2e-checkout-clk-${clickPosts.length}`,
+        partner,
+        redirectUrl: parsed.toString(),
+        trackingUrl: parsed.toString(),
+      },
+    });
+  });
 
   const getResponses = options.checkoutGetSequence ?? [
     { json: { enabled: true, attempts: [] } },
@@ -180,12 +199,15 @@ async function setupRoutes(page: Page, options: MockOptions = {}) {
     });
   });
 
-  await page.route(/^https:\/\//, (route) =>
-    route.fulfill({ contentType: "text/html", body: "Mock external provider" }),
+  await page.context().route(/^https:\/\//, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "Mock external provider",
+    }),
   );
 
   await page.goto(fixtureUrl);
-  return { bookingPosts, checkoutPosts };
+  return { bookingPosts, checkoutPosts, clickPosts };
 }
 
 test("ActivityCard opens Viator consent modal with FTC disclosure and renders safe non-Viator fallback", async ({
@@ -551,4 +573,56 @@ test("checkout and surface cards have zero horizontal overflow on 320x568 and cu
     .getByRole("dialog")
     .evaluate((el) => el.getBoundingClientRect().width);
   expect(dialogWidth).toBeLessThanOrEqual(320);
+});
+
+test("BookingsSheet delegates Stay22 partner_click and Viator hosted handoff to TripCheckout with placement='bookings_sheet'", async ({
+  page,
+}) => {
+  const { checkoutPosts, clickPosts } = await setupRoutes(page);
+
+  // 1. Open BookingsSheet and trigger Stay22 partner_click
+  await page.getByRole("button", { name: /Review & book/i }).click();
+  const sheet = page.getByRole("dialog", { name: /Book your Paris trip/i });
+  await expect(sheet).toBeVisible();
+
+  await sheet.getByRole("button", { name: "Book on Stay22" }).click();
+  await expect(sheet).toHaveCount(0);
+
+  const stayDialog = page.getByRole("dialog");
+  await expect(stayDialog).toContainText("Your next step, with Stay22");
+  await expect(stayDialog).toContainText("Hotel Recamier Saint-Germain");
+
+  await stayDialog.getByRole("button", { name: "Continue to Stay22" }).click();
+  await expect.poll(() => clickPosts.length).toBe(1);
+
+  expect(clickPosts[0]).toMatchObject({
+    affiliatePartner: "stay22",
+    itemType: "hotel",
+    placement: "bookings_sheet",
+  });
+  await expect(page).toHaveURL(/stay22\.com.*campaign=e2e-checkout-clk-1/);
+
+  // 2. Return to fixture, reopen BookingsSheet, and trigger viator_hosted activity
+  await page.goto(fixtureUrl);
+  await page.getByRole("button", { name: /Review & book/i }).click();
+  const sheet2 = page.getByRole("dialog", { name: /Book your Paris trip/i });
+  await expect(sheet2).toBeVisible();
+  await sheet2.getByRole("button", { name: "Book on Viator" }).click();
+  await expect(sheet2).toHaveCount(0);
+
+  const viatorDialog = page.getByRole("dialog");
+  await expect(viatorDialog).toContainText("Your next step, with Viator");
+  await expect(viatorDialog).toContainText("Louvre Museum Guided Tour");
+
+  await viatorDialog
+    .getByRole("button", { name: "Continue to Viator" })
+    .click();
+  await expect.poll(() => checkoutPosts.length).toBe(1);
+  expect(checkoutPosts[0]).toMatchObject({
+    activityId: "activity_v_123P1",
+    date: "2099-06-01",
+  });
+  await expect(page).toHaveURL(
+    new RegExp(`viator\\.com.*campaign=checkout-${checkoutPosts[0].attemptId}`),
+  );
 });

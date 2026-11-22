@@ -240,21 +240,62 @@ export function BookingChecklist({
     return map;
   }, [data?.items, days]);
 
-  const hasAnyBookableCta = useMemo(() => {
-    for (const act of matchedActivities.values()) {
-      const url = act.bookingInfo?.bookingUrl;
-      if (
-        (url && isAllowedAffiliateUrl(url)) ||
-        (checkout?.mode === "owner" &&
-          checkout.enabled &&
-          act.bookingInfo?.affiliateId === "viator" &&
-          /^activity_v_[a-zA-Z0-9]+$/.test(act.id))
-      ) {
-        return true;
+  const resolvedItemBookings = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        matchedActivity: ItineraryActivity;
+        bookingUrl: string | undefined;
+        hasAllowedUrl: boolean;
+        isViatorHosted: boolean;
+        canBookNow: boolean;
+        canRenderBookButton: boolean;
       }
+    >();
+    if (!data?.items?.length) return map;
+    for (const item of data.items) {
+      const matchedActivity = matchedActivities.get(item.id);
+      if (!matchedActivity) continue;
+      const viatorAllowed = canDisplayViatorContent(
+        matchedActivity,
+        viatorContentEnabled,
+      );
+      const bookingUrl = matchedActivity.bookingInfo?.bookingUrl;
+      const hasAllowedUrl = Boolean(
+        viatorAllowed && bookingUrl && isAllowedAffiliateUrl(bookingUrl),
+      );
+      const isViatorHosted = Boolean(
+        viatorAllowed &&
+        checkout?.mode === "owner" &&
+        checkout.enabled &&
+        matchedActivity.bookingInfo?.affiliateId === "viator" &&
+        /^activity_v_[a-zA-Z0-9]+$/.test(matchedActivity.id),
+      );
+      const canBookNow =
+        viatorAllowed &&
+        item.status !== "traveler_booked" &&
+        (hasAllowedUrl || isViatorHosted);
+      const canRenderBookButton =
+        canBookNow && (Boolean(checkout) || hasAllowedUrl);
+      map.set(item.id, {
+        matchedActivity,
+        bookingUrl,
+        hasAllowedUrl,
+        isViatorHosted,
+        canBookNow,
+        canRenderBookButton,
+      });
     }
-    return false;
-  }, [matchedActivities, checkout?.mode, checkout?.enabled]);
+    return map;
+  }, [data?.items, matchedActivities, viatorContentEnabled, checkout]);
+
+  const hasAnyBookableCta = useMemo(
+    () =>
+      Array.from(resolvedItemBookings.values()).some(
+        (entry) => entry.canRenderBookButton,
+      ),
+    [resolvedItemBookings],
+  );
 
   return (
     <section
@@ -370,27 +411,12 @@ export function BookingChecklist({
       )}
       <ul className="mt-3 space-y-3">
         {data?.items.map((item) => {
-          const matchedActivity = matchedActivities.get(item.id);
-          const viatorAllowed = matchedActivity
-            ? canDisplayViatorContent(matchedActivity, viatorContentEnabled)
-            : false;
-          const bookingUrl = matchedActivity?.bookingInfo?.bookingUrl;
-          const hasAllowedUrl = Boolean(
-            viatorAllowed && bookingUrl && isAllowedAffiliateUrl(bookingUrl),
-          );
-          const isViatorHosted = Boolean(
-            viatorAllowed &&
-            matchedActivity &&
-            checkout?.mode === "owner" &&
-            checkout.enabled &&
-            matchedActivity.bookingInfo?.affiliateId === "viator" &&
-            /^activity_v_[a-zA-Z0-9]+$/.test(matchedActivity.id),
-          );
-          const canBookNow =
-            viatorAllowed &&
-            item.status !== "traveler_booked" &&
-            Boolean(matchedActivity) &&
-            (hasAllowedUrl || isViatorHosted);
+          const resolved = resolvedItemBookings.get(item.id);
+          const matchedActivity = resolved?.matchedActivity;
+          const bookingUrl = resolved?.bookingUrl;
+          const hasAllowedUrl = Boolean(resolved?.hasAllowedUrl);
+          const isViatorHosted = Boolean(resolved?.isViatorHosted);
+          const canBookNow = Boolean(resolved?.canBookNow);
           const partner = hasAllowedUrl
             ? (resolveAffiliatePartnerByUrl(bookingUrl!) ??
               normalizeAffiliatePartner(
