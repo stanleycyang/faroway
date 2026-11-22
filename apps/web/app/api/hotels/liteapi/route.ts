@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
   const limit = await checkRateLimitAsync(`liteapi-sandbox:${auth.userId}`, {
     maxRequests: 5,
     windowMs: 60 * 60 * 1000,
+    failClosed: true,
   });
   if (!limit.allowed)
     return NextResponse.json(

@@ -1,10 +1,13 @@
+import * as Sentry from '@sentry/react-native';
 import { supabase } from '../lib/supabase';
 import { offlineStorage } from '../lib/offline';
 import { useUserStore } from '../stores/userStore';
 import { useTripStore } from '../stores/tripStore';
+import { usePromptStore } from '../stores/promptStore';
 import { devicePushConsent } from './pushConsentService';
 import { discardTripCreation } from '../lib/tripCreationRecovery';
 import { clearTravelerMemory } from '../lib/travelerMemory';
+import { clearGuestTripBrief } from '../lib/guestTripBrief';
 import { setAuthToken } from './api';
 
 /** Idempotent local cleanup for a server-confirmed deletion. Failures preserve
@@ -12,7 +15,7 @@ import { setAuthToken } from './api';
 export async function cleanupDeletedAccount(userId: string) {
   await devicePushConsent.forgetDeletedAccount(userId);
   await discardTripCreation(userId);
-  await clearTravelerMemory(userId).catch(() => undefined);
+  await clearTravelerMemory(userId);
   const current = await supabase.auth.getSession();
   if (current.error) throw new Error('Local account cleanup needs another attempt.');
   const profileId = useUserStore.getState().user?.id;
@@ -40,6 +43,8 @@ export async function cleanupDeletedAccount(userId: string) {
     (checkedProfile && checkedProfile !== userId)
   )
     throw new Error('Your account changed during cleanup. Please retry.');
+  await clearTravelerMemory('guest');
+  await clearGuestTripBrief();
   if (checked.data.session) {
     const result = await supabase.auth.signOut({ scope: 'local' });
     if (result.error) throw new Error('Local sign-out needs another attempt.');
@@ -47,6 +52,8 @@ export async function cleanupDeletedAccount(userId: string) {
   const after = useUserStore.getState().user?.id;
   if (after && after !== userId) throw new Error('Your account changed during cleanup.');
   setAuthToken(null);
+  Sentry.setUser(null);
+  usePromptStore.getState().resetSessionPrompts();
   useUserStore.getState().logout();
   useTripStore.setState({
     trips: [],

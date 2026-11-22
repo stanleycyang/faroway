@@ -19,6 +19,7 @@ import { API_BASE_URL } from '../lib/supabase';
 import { useTripStore, Trip, TripInput } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
 import { normalizeTripStatus } from '../lib/tripStatus';
+import { logger } from '../lib/logger';
 
 interface ApiItinerary {
   days?: unknown[];
@@ -280,7 +281,7 @@ export function useTrips() {
         return trip;
       } catch (err: unknown) {
         if (account.isCurrent()) setError(err instanceof Error ? err.message : String(err));
-        console.error('Error creating trip:', err);
+        logger.error('Error creating trip:', err);
         throw err;
       } finally {
         if (account.isCurrent()) setLoading(false);
@@ -315,11 +316,14 @@ export function useTrips() {
           if (!mutationRead.isCurrent()) continue;
           const headers = await account.headers();
           assertCurrent();
-          const response = await tripResponse(`${API_BASE_URL}/api/trips/${id}`, {
-            method: 'GET',
-            headers,
-            signal,
-          });
+          const response = await tripResponse(
+            `${API_BASE_URL}/api/trips/${encodeURIComponent(id)}`,
+            {
+              method: 'GET',
+              headers,
+              signal,
+            }
+          );
           assertCurrent();
           // Sync may have acknowledged an edit while this GET was in flight.
           // Read again after it settles, including a fresh server response.
@@ -399,7 +403,7 @@ export function useTrips() {
         }
 
         const headers = await account.headers();
-        const response = await tripResponse(`${API_BASE_URL}/api/trips/${id}`, {
+        const response = await tripResponse(`${API_BASE_URL}/api/trips/${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers,
           body: JSON.stringify(
@@ -428,7 +432,7 @@ export function useTrips() {
         return trip;
       } catch (err: unknown) {
         if (account.isCurrent()) setError(err instanceof Error ? err.message : String(err));
-        console.error('Error updating trip:', err);
+        logger.error('Error updating trip:', err);
         throw err;
       } finally {
         if (account.isCurrent()) setLoading(false);
@@ -454,8 +458,29 @@ export function useTrips() {
           return;
         }
 
+        // Offline-only local draft IDs never existed on the server.
+        if (id.startsWith('local_')) {
+          if (
+            typeof offlineStorage.getPendingMutations === 'function' &&
+            typeof offlineStorage.removePendingMutation === 'function'
+          ) {
+            const pending = await offlineStorage.getPendingMutations();
+            for (const mutation of pending) {
+              if (mutation.tripId === id) {
+                await offlineStorage.removePendingMutation(mutation.id);
+              }
+            }
+          }
+          if (typeof offlineStorage.deleteTrip === 'function') {
+            await offlineStorage.deleteTrip(id, account.ownerId);
+          }
+          account.assertCurrent();
+          removeFromStore(id);
+          return;
+        }
+
         const headers = await account.headers();
-        const response = await tripResponse(`${API_BASE_URL}/api/trips/${id}`, {
+        const response = await tripResponse(`${API_BASE_URL}/api/trips/${encodeURIComponent(id)}`, {
           method: 'DELETE',
           headers,
         });
@@ -471,7 +496,7 @@ export function useTrips() {
         removeFromStore(id);
       } catch (err: unknown) {
         if (account.isCurrent()) setError(err instanceof Error ? err.message : String(err));
-        console.error('Error deleting trip:', err);
+        logger.error('Error deleting trip:', err);
         throw err;
       } finally {
         if (account.isCurrent()) setLoading(false);
@@ -489,7 +514,7 @@ export function useTrips() {
       return await regenerateTrip(tripId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
-      console.error('Error generating itinerary:', err);
+      logger.error('Error generating itinerary:', err);
       throw err;
     } finally {
       setLoading(false);

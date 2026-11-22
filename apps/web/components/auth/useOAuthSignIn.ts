@@ -31,9 +31,6 @@ export function useOAuthSignIn(
           options: {
             skipBrowserRedirect: true,
             redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-            ...(provider === "google"
-              ? { queryParams: { access_type: "offline", prompt: "consent" } }
-              : {}),
           },
         }),
       );

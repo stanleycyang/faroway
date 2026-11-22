@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { TravelerRequirements } from '@faroway/types';
 import { API_BASE_URL } from '../constants/api';
 import { getAuthHeaders } from '../lib/supabase';
+import { logger } from '../lib/logger';
 
 export interface StreamingBlock {
   type: string;
@@ -213,7 +214,8 @@ export function parseSSEBuffer(buffer: string): {
   remaining: string;
 } {
   const events: Array<{ type: string; data: string }> = [];
-  const blocks = buffer.split('\n\n');
+  const normalized = buffer.replace(/\r\n/g, '\n');
+  const blocks = normalized.split('\n\n');
   const remaining = blocks.pop() || '';
 
   for (const block of blocks) {
@@ -342,7 +344,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
   const processEvent = useCallback((type: string, rawData: string) => {
     const data = parseStreamingJson(rawData);
     if (!isStreamingEventData(data)) {
-      console.error(`[useStreamingItinerary] Failed to parse ${type} event`);
+      logger.error(`[useStreamingItinerary] Failed to parse ${type} event`);
       return;
     }
 
@@ -624,7 +626,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         }
       }
     } catch (err) {
-      console.error(`[useStreamingItinerary] Failed to parse ${type} event:`, err);
+      logger.error(`[useStreamingItinerary] Failed to parse ${type} event:`, err);
     }
   }, []);
 
@@ -736,9 +738,15 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
               return;
             }
             if (xhr.status >= 200 && xhr.status < 300) {
+              // Flush any unread response tail that arrived without a final onprogress event
+              if (xhr.responseText && xhr.responseText.length > processedLengthRef.current) {
+                sseBuffer += xhr.responseText.substring(processedLengthRef.current);
+                processedLengthRef.current = xhr.responseText.length;
+              }
               // Process any remaining data in buffer
               if (sseBuffer.trim()) {
                 const { events } = parseSSEBuffer(sseBuffer + '\n\n');
+                sseBuffer = '';
                 for (const event of events) {
                   processEvent(event.type, event.data);
                 }
@@ -789,7 +797,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         if (abortController.signal.aborted) return;
 
         const msg = (error as Error).message || 'Connection failed';
-        console.error('[useStreamingItinerary] Stream error:', msg);
+        logger.error('[useStreamingItinerary] Stream error:', msg);
 
         setState((prev) => {
           if (prev.isComplete) return prev;

@@ -142,6 +142,7 @@ IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or 
 export async function runActivitiesAgent(
   plan: SearchPlan,
   count: number = 15,
+  options: { throwOnError?: boolean } = {},
 ): Promise<ActivityResult[]> {
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
@@ -417,6 +418,14 @@ Score each activity 0-100 on how well it matches the traveler's vibes. Do not ra
   );
 
   const realActivities = [...viatorActivities, ...getYourGuideActivities];
+
+  if (
+    options.throwOnError &&
+    aiSettled.status === "rejected" &&
+    realActivities.length === 0
+  ) {
+    throw aiSettled.reason;
+  }
 
   let allActivities = rankActivityInventory(
     deduplicateActivities(

@@ -14,7 +14,11 @@ interface Props {
 
 export function MilestoneToast({ milestone, onShare, onDismiss }: Props) {
   return (
-    <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[55] w-[min(92vw,420px)] animate-slide-up">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed top-24 left-1/2 -translate-x-1/2 z-[55] w-[min(92vw,420px)] animate-slide-up"
+    >
       <div className="bg-[#143D46] text-white rounded-2xl shadow-2xl ring-1 ring-white/20 p-4 flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
           <Sparkles className="w-5 h-5" aria-hidden="true" />

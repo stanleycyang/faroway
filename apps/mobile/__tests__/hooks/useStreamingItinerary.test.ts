@@ -60,6 +60,18 @@ describe('streaming itinerary SSE parsing', () => {
     expect(remaining).toBe('event: progress\ndata: {"progress":25}');
   });
 
+  it('parses SSE streams delimited by CRLF (\\r\\n\\r\\n)', () => {
+    const { events, remaining } = parseSSEBuffer(
+      'event: progress\r\ndata: {"progress":50}\r\n\r\n' +
+        'event: complete\r\ndata: {"tripId":"trip-1"}\r\n\r\n'
+    );
+    expect(remaining).toBe('');
+    expect(events).toEqual([
+      { type: 'progress', data: '{"progress":50}' },
+      { type: 'complete', data: '{"tripId":"trip-1"}' },
+    ]);
+  });
+
   it('handles malformed partial JSON without throwing so later chunks can continue', () => {
     expect(parseStreamingJson('{"blocks":')).toBeNull();
     expect(parseStreamingJson('{"progress":50}')).toEqual({ progress: 50 });

@@ -1,12 +1,24 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
 
+function isAuthorizedCron(
+  authHeader: string | null,
+  cronSecret: string | undefined,
+): boolean {
+  if (!cronSecret || !authHeader) return false;
+  const expected = `Bearer ${cronSecret}`;
+  const providedHash = createHash("sha256").update(authHeader).digest();
+  const expectedHash = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(providedHash, expectedHash);
+}
+
 export async function GET(request: NextRequest) {
-  // Verify cron secret to prevent unauthorized access
+  // Verify cron secret using constant-time comparison to prevent timing leaks
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedCron(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

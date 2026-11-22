@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Sparkles, Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { useUser } from "@/hooks/useUser";
 
 const NAV_ITEMS = [
   { label: "Features", href: "/#features" },
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
 ];
 
 export function Header() {
+  const { user, loading: authLoading } = useUser();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -82,18 +84,29 @@ export function Header() {
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
-              <Link
-                href="/auth/login"
-                className="hidden md:inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/dashboard"
-                className="hidden lg:inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                My trips
-              </Link>
+              {!authLoading && user ? (
+                <Link
+                  href="/dashboard"
+                  className="hidden md:inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  My trips
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="hidden md:inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="hidden lg:inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    My trips
+                  </Link>
+                </>
+              )}
               <Link
                 href="/create"
                 className="inline-flex min-h-11 items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white px-3.5 sm:px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary-900/20 hover:shadow-primary-900/30 transition-all hover:-translate-y-0.5"
@@ -137,13 +150,15 @@ export function Header() {
                     {item.label}
                   </Link>
                 ))}
-                <Link
-                  href="/auth/login"
-                  onClick={closeMenu}
-                  className="flex min-h-11 items-center px-4 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-100"
-                >
-                  Sign in
-                </Link>
+                {!(!authLoading && user) && (
+                  <Link
+                    href="/auth/login"
+                    onClick={closeMenu}
+                    className="flex min-h-11 items-center px-4 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-100"
+                  >
+                    Sign in
+                  </Link>
+                )}
                 <Link
                   href="/dashboard"
                   onClick={closeMenu}

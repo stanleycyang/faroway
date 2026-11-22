@@ -34,12 +34,22 @@ interface SyncStatusBannerProps {
    * @default true
    */
   allowManualSync?: boolean;
+  /**
+   * Safe-area top inset when rendered at the top of the screen
+   */
+  topInset?: number;
+  /**
+   * Safe-area bottom inset when rendered at the bottom of the screen
+   */
+  bottomInset?: number;
 }
 
 export function SyncStatusBanner({
   autoHide = true,
   position = 'top',
   allowManualSync = true,
+  topInset = 0,
+  bottomInset = 0,
 }: SyncStatusBannerProps) {
   const { isOffline } = useNetworkStatus();
   const { status, pendingCount, isSyncing, hasPending } = useSyncStatus();
@@ -145,7 +155,9 @@ export function SyncStatusBanner({
       accessibilityLabel={[content.text, content.subtext].filter(Boolean).join('. ')}
       style={[
         styles.container,
-        position === 'bottom' && styles.bottomPosition,
+        position === 'bottom'
+          ? [styles.bottomPosition, { paddingBottom: Math.max(bottomInset, 12) }]
+          : { paddingTop: Math.max(topInset + 6, 10) },
         {
           backgroundColor: content.bgColor,
           transform: [{ translateY }],
@@ -251,20 +263,16 @@ export function OfflineBadge({ isPending, isLocal }: OfflineBadgeProps) {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    paddingTop: 50, // Account for status bar
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 10,
   },
   bottomPosition: {
-    top: undefined,
+    position: 'absolute',
+    left: 0,
+    right: 0,
     bottom: 0,
+    zIndex: 1000,
     paddingTop: 12,
-    paddingBottom: 30, // Account for bottom safe area
   },
   content: {
     flexDirection: 'row',

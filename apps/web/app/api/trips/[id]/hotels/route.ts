@@ -66,6 +66,7 @@ export async function POST(
     const limit = await checkRateLimitAsync(`liteapi-trip:${auth.userId}`, {
       maxRequests: 5,
       windowMs: 60 * 60 * 1000,
+      failClosed: true,
     });
     if (!limit.allowed)
       return json({ error: "Hotel search limit reached" }, 429);

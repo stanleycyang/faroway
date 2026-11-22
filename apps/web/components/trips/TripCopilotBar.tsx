@@ -30,12 +30,14 @@ export interface CopilotQuickTrigger {
 }
 
 export interface TripCopilotBarProps {
+  id?: string;
   tripId: string;
   destination: string;
   itinerary: GeneratedItinerary;
   activeDayNumber: number;
   expectedUpdatedAt?: string;
   expectedPlanRevision?: string | null;
+  isShared?: boolean;
   disabled?: boolean;
   pendingAction?: CopilotQuickTrigger | null;
   onBusyChange?: (busy: boolean) => void;
@@ -58,12 +60,14 @@ interface CopilotResponsePayload extends Omit<
 }
 
 export function TripCopilotBar({
+  id,
   tripId,
   destination,
   itinerary,
   activeDayNumber,
   expectedUpdatedAt,
   expectedPlanRevision,
+  isShared = false,
   disabled = false,
   pendingAction,
   onBusyChange,
@@ -259,8 +263,9 @@ export function TripCopilotBar({
 
   return (
     <section
+      id={id}
       aria-label="Trip co-pilot remix bar"
-      className="print-hidden mb-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm"
+      className="print-hidden mb-6 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
@@ -268,11 +273,9 @@ export function TripCopilotBar({
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           </span>
           <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              Surgical Trip Co-Pilot
-            </h3>
+            <h3 className="text-sm font-bold text-slate-900">Trip Co-Pilot</h3>
             <p className="text-xs text-slate-500">
-              Tweak {destination} in one tap — only grounded venues, always
+              Adjust {destination} in one tap — verified local spots, always
               undoable.
             </p>
           </div>
@@ -288,6 +291,12 @@ export function TripCopilotBar({
           </button>
         )}
       </div>
+      {isShared && (
+        <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+          Your trip currently has an active public share link. Applying an edit
+          turns off that link until you share the updated plan.
+        </p>
+      )}
 
       {/* 1-tap quick intent pills */}
       <div className="flex flex-wrap gap-2 mb-3">

@@ -18,8 +18,15 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 import { loadSharedTrip } from "../../lib/trips/load-shared-trip";
-test("public sharing omits hotel consent, nationality and children's ages", async () => {
+test("public sharing uses an allowlist and omits origin, internal hashes, hotel/flight consent, and requirements", async () => {
   const preferences = {
+    travelerType: "family",
+    originCity: "Seattle",
+    originAirport: "SEA",
+    adults: 2,
+    children: 1,
+    creationRequestHash: "a".repeat(64),
+    planNeedsRefresh: false,
     flightSearch: { childAges: [7], consentVersion: "flight-search-duffel-v1" },
     requirements: { allergies: ["peanut"] },
     interests: ["art"],
@@ -33,13 +40,17 @@ test("public sharing omits hotel consent, nationality and children's ages", asyn
     error: null,
   });
   const shared = await loadSharedTrip("public-link");
-  expect(shared).toMatchObject({
-    preferences: { interests: ["art"] },
+  expect(shared?.preferences).toEqual({
+    travelerType: "family",
+    interests: ["art"],
   });
   expect(preferences.hotelSearch).toBeDefined();
   expect(shared?.preferences).not.toHaveProperty("hotelSearch");
   expect(shared?.preferences).not.toHaveProperty("flightSearch");
   expect(shared?.preferences).not.toHaveProperty("requirements");
+  expect(shared?.preferences).not.toHaveProperty("originCity");
+  expect(shared?.preferences).not.toHaveProperty("originAirport");
+  expect(shared?.preferences).not.toHaveProperty("creationRequestHash");
 });
 test("shared read preserves revoked/missing links as unavailable", async () => {
   mocks.single.mockResolvedValueOnce({

@@ -117,7 +117,9 @@ test("resumes a lost creation response after reload without a duplicate trip", a
     .getByRole("button", { name: "Share & start planning" })
     .click();
   await expect(
-    page.getByRole("alert").filter({ hasText: /fetch/i }),
+    page
+      .getByRole("alert")
+      .filter({ hasText: /We couldn’t reach Faroway|fetch/i }),
   ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Resume saved trip" }).click();
@@ -168,7 +170,10 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
     .getByRole("button", { name: "Create public link", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Share sheet canceled" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Share sheet canceled" })
+      .first(),
   ).toBeVisible();
   const shared = (
     await (await request.get("http://127.0.0.1:4401/fixture/state")).json()
@@ -194,7 +199,10 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
     .getByRole("button", { name: "Create public link", exact: true })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Share sheet canceled" }),
+    page
+      .getByRole("status")
+      .filter({ hasText: "Share sheet canceled" })
+      .first(),
   ).toBeVisible();
   const reshared = (
     await (await request.get("http://127.0.0.1:4401/fixture/state")).json()

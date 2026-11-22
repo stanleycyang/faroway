@@ -11,7 +11,8 @@ import {
   validationErrorResponse,
   AuthResult,
 } from "@/lib/auth/middleware";
-import { checkRateLimit } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
+import { safeHttpsUrl } from "@/lib/places/display";
 import { z } from "zod";
 
 interface ProfileRow {
@@ -28,22 +29,39 @@ interface ProfileRow {
   updated_at: string;
 }
 
-const UpdateProfileSchema = z.object({
-  email: z.string().email().optional(),
-  display_name: z.string().min(1).max(100).trim().optional(),
-  avatar_url: z.string().url().optional(),
-  preferences: z
-    .object({
-      vibes: z.array(z.string().max(50)).max(10).optional(),
-      budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-      travelerType: z
-        .enum(["solo", "couple", "family", "friends", "business"])
-        .optional(),
-    })
-    .optional(),
-  notification_settings: z.record(z.string(), z.boolean()).optional(),
-  notification_consent_version: z.string().optional(),
-});
+const NotificationSettingsSchema = z
+  .object({
+    trip_reminders: z.boolean().optional(),
+    deals: z.boolean().optional(),
+    itinerary_updates: z.boolean().optional(),
+    app_updates: z.boolean().optional(),
+  })
+  .strict();
+
+const UpdateProfileSchema = z
+  .object({
+    display_name: z.string().min(1).max(100).trim().optional(),
+    avatar_url: z
+      .string()
+      .max(2048)
+      .refine((value) => safeHttpsUrl(value) !== undefined, {
+        message: "Avatar URL must be a valid HTTPS URL",
+      })
+      .optional(),
+    preferences: z
+      .object({
+        vibes: z.array(z.string().max(50)).max(10).optional(),
+        budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+        travelerType: z
+          .enum(["solo", "couple", "family", "friends", "business"])
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    notification_settings: NotificationSettingsSchema.optional(),
+    notification_consent_version: z.string().max(64).optional(),
+  })
+  .strict();
 
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -109,17 +127,23 @@ export async function PATCH(request: NextRequest) {
 
   const { user } = authResult as AuthResult;
 
-  // Rate limit: 10 req/min per user
-  const rl = checkRateLimit(`profile-patch:${user!.id}`, {
+  // Rate limit: 10 req/min per user (distributed, fail-closed)
+  const rl = await checkRateLimitAsync(`profile-patch:${user!.id}`, {
     maxRequests: 10,
     windowMs: 60_000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return validationErrorResponse("Invalid JSON body");
+    }
     const parseResult = UpdateProfileSchema.safeParse(body);
 
     if (!parseResult.success) {
@@ -131,14 +155,11 @@ export async function PATCH(request: NextRequest) {
 
     const updates: Record<string, unknown> = {};
 
-    if (parseResult.data.email) {
-      updates.email = parseResult.data.email;
-    }
     if (parseResult.data.display_name !== undefined) {
       updates.display_name = parseResult.data.display_name;
     }
     if (parseResult.data.avatar_url !== undefined) {
-      updates.avatar_url = parseResult.data.avatar_url;
+      updates.avatar_url = safeHttpsUrl(parseResult.data.avatar_url);
     }
     if (parseResult.data.preferences !== undefined) {
       updates.preferences = parseResult.data.preferences;

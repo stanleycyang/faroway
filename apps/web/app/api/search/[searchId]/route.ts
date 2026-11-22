@@ -286,7 +286,9 @@ export async function GET(
       response.error = search.error_message || "An error occurred";
     }
 
-    return NextResponse.json(filterViatorDisplay(response));
+    return NextResponse.json(filterViatorDisplay(response), {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (error) {
     console.error("[Search Status] Error:", error);
     return NextResponse.json(

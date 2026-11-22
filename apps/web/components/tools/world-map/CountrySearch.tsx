@@ -97,8 +97,15 @@ export function CountrySearch({ onPick }: Props) {
         e.key === "/" &&
         tag !== "INPUT" &&
         tag !== "TEXTAREA" &&
+        tag !== "SELECT" &&
+        !target?.isContentEditable &&
         !e.metaKey &&
-        !e.ctrlKey
+        !e.ctrlKey &&
+        !(
+          typeof document !== "undefined" &&
+          typeof document.querySelector === "function" &&
+          document.querySelector('[aria-modal="true"]')
+        )
       ) {
         e.preventDefault();
         setOpen(true);

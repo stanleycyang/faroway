@@ -1,25 +1,33 @@
 import * as Haptics from 'expo-haptics';
 
+function fireHaptic(trigger: () => Promise<void> | void): void {
+  try {
+    void Promise.resolve(trigger()).catch(() => {});
+  } catch {
+    // Ignore haptic failures on unsupported devices or simulators.
+  }
+}
+
 export const hapticFeedback = {
   light: () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    fireHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
   },
   medium: () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    fireHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
   },
   heavy: () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    fireHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
   },
   success: () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    fireHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
   },
   warning: () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    fireHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
   },
   error: () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    fireHaptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error));
   },
   selection: () => {
-    Haptics.selectionAsync();
+    fireHaptic(() => Haptics.selectionAsync());
   },
 };

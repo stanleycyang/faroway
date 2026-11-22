@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -14,6 +15,7 @@ import { useTripStore } from '../stores/tripStore';
 import { useUserStore } from '../stores/userStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { FONT_LOAD_TIMEOUT_MS, FONT_SOURCES } from '../constants/fonts';
+import { useNetworkStatus, useSyncStatus } from '../hooks/useOfflineSync';
 
 SplashScreen.preventAutoHideAsync?.().catch(() => {});
 
@@ -30,6 +32,10 @@ Sentry.init({
 function RootLayoutNav() {
   const { initialized } = useAuthContext();
   const reduceMotion = useReduceMotion();
+  const insets = useSafeAreaInsets();
+  const { isOffline } = useNetworkStatus();
+  const { status: syncStatus, hasPending } = useSyncStatus();
+  const syncBannerVisible = isOffline || hasPending || syncStatus === 'syncing';
   const hydrateFromOffline = useTripStore((state) => state.hydrateFromOffline);
   const accountRevision = useUserStore((state) => state.accountRevision);
   const [fontsLoaded, fontError] = useFonts(FONT_SOURCES);
@@ -75,8 +81,8 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="dark" />
-      <SyncStatusBanner position="top" autoHide={true} />
-      <TripSyncConflicts />
+      <SyncStatusBanner position="top" autoHide={true} topInset={insets.top} />
+      <TripSyncConflicts topInset={syncBannerVisible ? 0 : insets.top} />
       <Stack
         screenOptions={{
           headerShown: false,

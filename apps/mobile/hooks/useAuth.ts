@@ -15,6 +15,10 @@ import {
 } from '../lib/authProviders';
 import { useUserStore, type User as AppUser } from '../stores/userStore';
 import { useTripStore } from '../stores/tripStore';
+import { usePromptStore } from '../stores/promptStore';
+import { clearTravelerMemory } from '../lib/travelerMemory';
+import { discardTripCreation } from '../lib/tripCreationRecovery';
+import { clearGuestTripBrief } from '../lib/guestTripBrief';
 import {
   discardPendingOAuthTripDraft,
   resolveWebOAuthRedirectUrl,
@@ -143,12 +147,22 @@ export function useAuth() {
         setAuthToken(null);
         Sentry.setUser(null);
         clearUserStore();
-        if (hadAuthenticatedSessionRef.current) clearTrips();
+        if (hadAuthenticatedSessionRef.current) {
+          clearTrips();
+          usePromptStore.getState().resetSessionPrompts();
+          if (previousAccount) {
+            void clearTravelerMemory(previousAccount).catch(() => undefined);
+            void discardTripCreation(previousAccount).catch(() => undefined);
+          }
+        }
         hadAuthenticatedSessionRef.current = false;
       } else {
         if (previousAccount && previousAccount !== session.user.id) {
           clearUserStore();
           clearTrips();
+          usePromptStore.getState().resetSessionPrompts();
+          void clearTravelerMemory(previousAccount).catch(() => undefined);
+          void discardTripCreation(previousAccount).catch(() => undefined);
         }
         hadAuthenticatedSessionRef.current = true;
         setAuthToken(session.access_token);
@@ -352,10 +366,19 @@ export function useAuth() {
     activeAccountRef.current = null;
     clearUserStore();
     clearTrips();
+    usePromptStore.getState().resetSessionPrompts();
     hadAuthenticatedSessionRef.current = false;
     setAuthToken(null);
     Sentry.setUser(null);
     setAuthState({ user: null, session: null, loading: false, initialized: true });
+
+    // Best-effort clear of local personal memory and recovery drafts for the signed-out account.
+    if (signingOutAccount) {
+      void clearTravelerMemory(signingOutAccount).catch(() => undefined);
+      void discardTripCreation(signingOutAccount).catch(() => undefined);
+    }
+    void clearTravelerMemory('guest').catch(() => undefined);
+    void clearGuestTripBrief().catch(() => undefined);
 
     // Clear cached Google credentials so account picker shows on next sign-in
     try {
@@ -394,12 +417,21 @@ export function useAuth() {
     }
     if (!isCurrentDeletion()) return;
     hadAuthenticatedSessionRef.current = false;
+    Sentry.setUser(null);
     setAuthState({
       user: null,
       session: null,
       loading: false,
       initialized: true,
     });
+
+    // Clear cached Google credentials so the deleted account is not re-selected automatically.
+    try {
+      const googleSignIn = await getGoogleSignInModule();
+      await googleSignIn?.GoogleSignin.signOut();
+    } catch {
+      // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
+    }
   }, []);
 
   return {

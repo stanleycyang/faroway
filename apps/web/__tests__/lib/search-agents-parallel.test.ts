@@ -383,6 +383,51 @@ describe("search agents internal parallelism", () => {
     expect(results.map((a) => a.name)).toEqual(["東京国立博物館", "浅草寺"]);
   });
 
+  it("does not collapse distinct non-Latin hotel names during deduplication", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        hotels: [
+          { ...aiHotel, name: "帝国ホテル" },
+          { ...aiHotel, name: "ホテルオークラ" },
+        ],
+      },
+    });
+    const results = await runHotelsAgent(plan as never, 5);
+    expect(results.map((h) => h.name)).toEqual([
+      "帝国ホテル",
+      "ホテルオークラ",
+    ]);
+  });
+
+  it("propagates AI errors when throwOnError is enabled on specialist agents", async () => {
+    mocks.generateObject.mockRejectedValueOnce(new Error("hotels outage"));
+    await expect(
+      runHotelsAgent(plan as never, 5, { throwOnError: true }),
+    ).rejects.toThrow("hotels outage");
+
+    mocks.generateObject.mockRejectedValueOnce(new Error("activities outage"));
+    await expect(
+      runActivitiesAgent(plan as never, 5, { throwOnError: true }),
+    ).rejects.toThrow("activities outage");
+
+    mocks.generateObject.mockRejectedValueOnce(new Error("dining outage"));
+    await expect(
+      runDiningAgent(
+        {
+          ...plan,
+          diningCriteria: {
+            cuisineTypes: [],
+            priceRange: "moderate",
+            dietaryNeeds: [],
+            mealPriorities: ["dinner"],
+          },
+        } as unknown as SearchPlan,
+        5,
+        { throwOnError: true },
+      ),
+    ).rejects.toThrow("dining outage");
+  });
+
   it("does not return adult-only flight quotes for a party with children", async () => {
     const result = await runTransportAgent(
       {

@@ -7,6 +7,8 @@ import {
   type TripEssentialExportLink,
   type TripExportOptions,
 } from "./export-links";
+import { parseTripDate } from "./date-duration";
+import { knownEstimate } from "./budget";
 
 export interface TripExportTrip {
   destination: string;
@@ -29,7 +31,7 @@ type ExportItinerary =
   | null;
 
 function formatExportDate(dateStr: string) {
-  const date = new Date(dateStr);
+  const date = parseTripDate(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -42,29 +44,26 @@ function formatExportCost(cost: ExportCost) {
   if (!cost) return null;
   const amount = typeof cost === "number" ? cost : cost.amount;
   const rawCurrency = typeof cost === "number" ? "USD" : cost.currency;
-  if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+  const normalizedCurrency =
+    typeof rawCurrency === "string"
+      ? rawCurrency.trim().toUpperCase()
+      : rawCurrency;
+  const status =
+    typeof cost === "object" && cost !== null && "status" in cost
+      ? (cost as { status?: unknown }).status
+      : undefined;
+  const valid = knownEstimate(amount, normalizedCurrency, status);
+  if (!valid) return null;
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: valid.currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(valid.amount);
+  } catch {
     return null;
   }
-
-  const normalizedCurrency =
-    typeof rawCurrency === "string" ? rawCurrency.trim().toUpperCase() : "";
-  if (/^[A-Z]{3}$/.test(normalizedCurrency)) {
-    try {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: normalizedCurrency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
-    } catch {
-      // Fall through to numeric formatting when Intl rejects a currency code.
-    }
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatExportSlot(

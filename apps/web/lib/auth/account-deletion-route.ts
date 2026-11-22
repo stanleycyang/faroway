@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { purgeAccountData } from "./account-data";
 import {
   DeletionError,
@@ -63,6 +64,19 @@ export async function DELETE(request: NextRequest) {
       return reply(
         { error: "Sign in to resume deletion.", code: "unauthorized" },
         401,
+      );
+    const deleteLimit = await checkRateLimitAsync(`account-delete:${user.id}`, {
+      maxRequests: 10,
+      windowMs: 60 * 60 * 1000,
+      failClosed: true,
+    });
+    if (!deleteLimit.allowed)
+      return reply(
+        {
+          error: "Too many deletion attempts. Please wait before retrying.",
+          code: "rate_limited",
+        },
+        429,
       );
     const db = getSupabase();
     const config = appleDeletionConfiguration();
@@ -165,6 +179,12 @@ export async function DELETE(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!enabled())
     return reply({ error: "Deletion recovery is unavailable." }, 503);
+  const recoveryLimit = await checkRateLimitAsync(
+    `account-delete-recovery:${getClientIp(request)}`,
+    { maxRequests: 20, windowMs: 60_000, failClosed: true },
+  );
+  if (!recoveryLimit.allowed)
+    return reply({ error: "Too many requests. Please wait." }, 429);
   const input = z
     .object({ recoveryToken: z.string().regex(/^[a-f0-9]{64}$/) })
     .safeParse(await request.json().catch(() => null));
@@ -222,6 +242,12 @@ export async function PATCH(request: NextRequest) {
     } = await auth.auth.getUser();
     if (error || !user)
       return reply({ error: "Sign in to cancel this request." }, 401);
+    const cancelLimit = await checkRateLimitAsync(
+      `account-delete-cancel:${user.id}`,
+      { maxRequests: 10, windowMs: 60_000, failClosed: true },
+    );
+    if (!cancelLimit.allowed)
+      return reply({ error: "Too many requests. Please wait." }, 429);
     const db = getSupabase();
     const proof = await db.rpc("lookup_account_deletion", {
       p_recovery_hash: recoveryHash(input.data.recoveryToken),

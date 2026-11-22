@@ -12,13 +12,17 @@ import {
   tripWebUrl,
 } from '../../lib/offline/conflict-review';
 
-export function TripSyncConflicts() {
-  const ownerId = useUserStore((state) => state.user?.id);
-  const revision = useUserStore((state) => state.accountRevision);
-  return ownerId ? <ConflictSession key={`${ownerId}:${revision}`} /> : null;
+interface TripSyncConflictsProps {
+  topInset?: number;
 }
 
-function ConflictSession() {
+export function TripSyncConflicts({ topInset = 0 }: TripSyncConflictsProps) {
+  const ownerId = useUserStore((state) => state.user?.id);
+  const revision = useUserStore((state) => state.accountRevision);
+  return ownerId ? <ConflictSession key={`${ownerId}:${revision}`} topInset={topInset} /> : null;
+}
+
+function ConflictSession({ topInset }: { topInset: number }) {
   const reduceMotion = useReduceMotion();
   const [account] = useState(captureTripAccount);
   const mounted = useRef(false);
@@ -167,12 +171,21 @@ function ConflictSession() {
   return (
     <>
       {error && !selected && (
-        <Text accessibilityRole="alert" style={{ padding: 16, color: '#a52820' }}>
+        <Text
+          accessibilityRole="alert"
+          style={{ padding: 16, paddingTop: topInset + 16, color: '#a52820' }}
+        >
           {error}
         </Text>
       )}
       {mutations.length > 0 && (
-        <View style={{ padding: 16, backgroundColor: '#fff5ee' }}>
+        <View
+          style={{
+            padding: 16,
+            paddingTop: error && !selected ? 16 : topInset + 16,
+            backgroundColor: '#fff5ee',
+          }}
+        >
           <Text>
             Your unsynced trip changes need review. Nothing will be overwritten automatically.
           </Text>
@@ -198,7 +211,12 @@ function ConflictSession() {
         }}
       >
         <ScrollView
-          contentContainerStyle={{ padding: 24, paddingTop: 64, paddingBottom: 48, gap: 16 }}
+          contentContainerStyle={{
+            padding: 24,
+            paddingTop: topInset > 0 ? topInset + 20 : 64,
+            paddingBottom: 48,
+            gap: 16,
+          }}
         >
           <Text accessibilityRole="header" style={{ fontSize: 24, fontWeight: '700' }}>
             Review your trip changes

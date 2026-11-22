@@ -36,19 +36,41 @@ vi.mock("@/lib/supabase/server", () => ({
             }
             return Promise.resolve(mocks.upsertResult);
           },
-          select: () => ({
-            eq: (_col: string, clickId: string) =>
-              Promise.resolve(
-                mocks.conversionsSelectError
-                  ? { data: null, error: mocks.conversionsSelectError }
-                  : {
-                      data: mocks.conversionRows.filter(
-                        (r) => r.click_id === clickId,
-                      ),
-                      error: null,
+          select: (cols?: string) => {
+            if (cols === "status") {
+              return {
+                eq: (_col1: string, partnerVal: string) => ({
+                  eq: (_col2: string, keyVal: string) => ({
+                    limit: () => {
+                      const matches = mocks.conversionRows.filter(
+                        (r) =>
+                          r.partner === partnerVal &&
+                          (r.order_id ?? r.booking_reference ?? r.click_id) ===
+                            keyVal,
+                      );
+                      return Promise.resolve({
+                        data: matches.slice(0, 1),
+                        error: null,
+                      });
                     },
-              ),
-          }),
+                  }),
+                }),
+              };
+            }
+            return {
+              eq: (_col: string, clickId: string) =>
+                Promise.resolve(
+                  mocks.conversionsSelectError
+                    ? { data: null, error: mocks.conversionsSelectError }
+                    : {
+                        data: mocks.conversionRows.filter(
+                          (r) => r.click_id === clickId,
+                        ),
+                        error: null,
+                      },
+                ),
+            };
+          },
         };
       }
       if (table === "affiliate_clicks") {
@@ -209,41 +231,54 @@ describe("POST /api/track/conversion (expanded M2 webhooks)", () => {
     },
   );
 
-  it("returns 400 on malformed JSON or invalid schema fields", async () => {
-    const badJson = await POST(makeWebhookReq("{broken"));
+  it("rejects unsigned malformed JSON with 401 and returns 400 for signed malformed JSON or invalid schema fields", async () => {
+    vi.stubEnv("VIATOR_WEBHOOK_SECRET", "viator-sec-validation");
+
+    const unsignedBadJson = await POST(makeWebhookReq("{broken"));
+    expect(unsignedBadJson.status).toBe(401);
+
+    const badJson = await POST(
+      makeWebhookReq("{broken", sign("{broken", "viator-sec-validation")),
+    );
     expect(badJson.status).toBe(400);
 
+    const badCurrencyBody = JSON.stringify({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-1",
+      currency: "usd",
+    });
     const lowercaseCurrency = await POST(
       makeWebhookReq(
-        JSON.stringify({
-          partner: "viator",
-          clickId: "click-1",
-          externalTransactionId: "tx-1",
-          currency: "usd",
-        }),
+        badCurrencyBody,
+        sign(badCurrencyBody, "viator-sec-validation"),
       ),
     );
     expect(lowercaseCurrency.status).toBe(400);
 
+    const invalidDateBody = JSON.stringify({
+      partner: "viator",
+      clickId: "click-1",
+      externalTransactionId: "tx-1",
+      occurredAt: "2026-02-30",
+    });
     const invalidDate = await POST(
       makeWebhookReq(
-        JSON.stringify({
-          partner: "viator",
-          clickId: "click-1",
-          externalTransactionId: "tx-1",
-          occurredAt: "2026-02-30",
-        }),
+        invalidDateBody,
+        sign(invalidDateBody, "viator-sec-validation"),
       ),
     );
     expect(invalidDate.status).toBe(400);
 
+    const whitespaceBody = JSON.stringify({
+      partner: "viator",
+      clickId: "   ",
+      externalTransactionId: "tx-1",
+    });
     const whitespaceClickId = await POST(
       makeWebhookReq(
-        JSON.stringify({
-          partner: "viator",
-          clickId: "   ",
-          externalTransactionId: "tx-1",
-        }),
+        whitespaceBody,
+        sign(whitespaceBody, "viator-sec-validation"),
       ),
     );
     expect(whitespaceClickId.status).toBe(400);

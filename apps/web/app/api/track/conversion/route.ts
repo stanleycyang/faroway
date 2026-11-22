@@ -8,6 +8,15 @@ import type { AffiliatePartnerId } from "@faroway/constants";
 import { conversionWebhookSchema } from "@faroway/validation";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+
+const MAX_WEBHOOK_BODY_BYTES = 16_384;
+
+const STATUS_RANK: Record<"pending" | "confirmed" | "cancelled", number> = {
+  pending: 0,
+  confirmed: 1,
+  cancelled: 2,
+};
 
 const WEBHOOK_SECRET_ENV_KEYS: Partial<Record<AffiliatePartnerId, string>> = {
   viator: "VIATOR_WEBHOOK_SECRET",
@@ -25,6 +34,35 @@ function getWebhookSecret(partner: AffiliatePartnerId): string | undefined {
   if (!envKey) return undefined;
   const value = process.env[envKey]?.trim();
   return value || undefined;
+}
+
+function normalizeSignature(signature: string | null): string | null {
+  if (!signature) {
+    return null;
+  }
+  const normalizedSig = signature.startsWith("sha256=")
+    ? signature.slice(7)
+    : signature;
+  if (!/^[a-f0-9]{64}$/i.test(normalizedSig)) {
+    return null;
+  }
+  return normalizedSig;
+}
+
+function verifySignatureWithSecret(
+  secret: string,
+  payload: string,
+  signature: string,
+): boolean {
+  const expectedSignature = crypto
+    .createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex");
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, "hex"),
+    Buffer.from(expectedSignature, "hex"),
+  );
 }
 
 /**
@@ -45,27 +83,33 @@ function verifyWebhookSignature(
     return false;
   }
 
-  if (!signature) {
+  const normalizedSig = normalizeSignature(signature);
+  if (!normalizedSig) {
     return false;
   }
 
-  const normalizedSig = signature.startsWith("sha256=")
-    ? signature.slice(7)
-    : signature;
+  return verifySignatureWithSecret(secret, payload, normalizedSig);
+}
 
-  if (!/^[a-f0-9]{64}$/i.test(normalizedSig)) {
+function verifyAnyConfiguredPartnerSignature(
+  payload: string,
+  signature: string | null,
+): boolean {
+  const normalizedSig = normalizeSignature(signature);
+  if (!normalizedSig) {
     return false;
   }
-
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(payload)
-    .digest("hex");
-
-  return crypto.timingSafeEqual(
-    Buffer.from(normalizedSig, "hex"),
-    Buffer.from(expectedSignature, "hex"),
-  );
+  let matched = false;
+  for (const partner of Object.keys(
+    WEBHOOK_SECRET_ENV_KEYS,
+  ) as AffiliatePartnerId[]) {
+    const secret = getWebhookSecret(partner);
+    if (!secret) continue;
+    if (verifySignatureWithSecret(secret, payload, normalizedSig)) {
+      matched = true;
+    }
+  }
+  return matched;
 }
 
 function normalizeWebhookInput(raw: Record<string, unknown>): {
@@ -125,12 +169,55 @@ function normalizeWebhookInput(raw: Record<string, unknown>): {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimitAsync(`conversion-webhook:${ip}`, {
+      maxRequests: 60,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
+    const contentLength = Number(request.headers.get("content-length") || "0");
+    if (
+      Number.isFinite(contentLength) &&
+      contentLength > MAX_WEBHOOK_BODY_BYTES
+    ) {
+      return NextResponse.json(
+        { error: "Webhook payload too large" },
+        { status: 413 },
+      );
+    }
+
     const rawBody = await request.text();
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_WEBHOOK_BODY_BYTES) {
+      return NextResponse.json(
+        { error: "Webhook payload too large" },
+        { status: 413 },
+      );
+    }
+
+    const normalizedSig = normalizeSignature(
+      request.headers.get("x-webhook-signature"),
+    );
+    if (!normalizedSig) {
+      return NextResponse.json(
+        { error: "Invalid webhook signature" },
+        { status: 401 },
+      );
+    }
 
     let parsedJson: unknown;
     try {
       parsedJson = JSON.parse(rawBody);
     } catch {
+      if (!verifyAnyConfiguredPartnerSignature(rawBody, normalizedSig)) {
+        return NextResponse.json(
+          { error: "Invalid webhook signature" },
+          { status: 401 },
+        );
+      }
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
@@ -139,9 +226,40 @@ export async function POST(request: NextRequest) {
       typeof parsedJson !== "object" ||
       Array.isArray(parsedJson)
     ) {
+      if (!verifyAnyConfiguredPartnerSignature(rawBody, normalizedSig)) {
+        return NextResponse.json(
+          { error: "Invalid webhook signature" },
+          { status: 401 },
+        );
+      }
       return NextResponse.json(
         { error: "Invalid webhook payload" },
         { status: 400 },
+      );
+    }
+
+    // Verify webhook authenticity BEFORE full schema validation so unauthenticated
+    // callers cannot probe payload structure or trigger validation work.
+    const rawPartner = (parsedJson as Record<string, unknown>).partner;
+    const isKnownSecretPartner =
+      typeof rawPartner === "string" && rawPartner in WEBHOOK_SECRET_ENV_KEYS;
+
+    const signatureValid = isKnownSecretPartner
+      ? verifyWebhookSignature(
+          rawPartner as AffiliatePartnerId,
+          rawBody,
+          normalizedSig,
+        )
+      : verifyAnyConfiguredPartnerSignature(rawBody, normalizedSig);
+
+    if (!signatureValid) {
+      console.error(
+        "[Conversion Webhook] Invalid signature for partner:",
+        rawPartner,
+      );
+      return NextResponse.json(
+        { error: "Invalid webhook signature" },
+        { status: 401 },
       );
     }
 
@@ -170,19 +288,6 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const signature = request.headers.get("x-webhook-signature");
-
-    // Verify webhook authenticity
-    if (!verifyWebhookSignature(data.partner, rawBody, signature)) {
-      console.error(
-        "[Conversion Webhook] Invalid signature for partner:",
-        data.partner,
-      );
-      return NextResponse.json(
-        { error: "Invalid webhook signature" },
-        { status: 401 },
-      );
-    }
 
     // Find the original click (use .single() for mock compatibility)
     const { data: click, error: findError } = await getSupabase()
@@ -203,6 +308,37 @@ export async function POST(request: NextRequest) {
     const currency = data.currency ?? "USD";
     const bookingValue = data.bookingAmount ?? 0;
     const commissionValue = data.commissionAmount ?? 0;
+
+    // Monotonic status guard: prevent out-of-order or replayed older webhooks
+    // from regressing a confirmed/cancelled conversion to an earlier state.
+    const conversionKey =
+      legacyOrderId ||
+      externalTransactionId ||
+      legacyBookingReference ||
+      (click?.id ?? null);
+    const guardTable = getSupabase().from("affiliate_conversions");
+    if (conversionKey && typeof guardTable?.select === "function") {
+      const { data: existingRows } = await guardTable
+        .select("status")
+        .eq("partner", data.partner)
+        .eq("conversion_key", conversionKey)
+        .limit(1);
+      const existingStatus = Array.isArray(existingRows)
+        ? (existingRows[0] as { status?: string } | undefined)?.status
+        : undefined;
+      if (
+        existingStatus &&
+        existingStatus in STATUS_RANK &&
+        STATUS_RANK[existingStatus as keyof typeof STATUS_RANK] >
+          STATUS_RANK[dbStatus]
+      ) {
+        return NextResponse.json({
+          success: true,
+          clickId,
+          ignored: true,
+        });
+      }
+    }
 
     // Record the conversion idempotently. Partner webhooks are retried and may
     // advance a booking from pending to confirmed or cancelled.

@@ -202,8 +202,9 @@ describe("P2-3 runtime Zod validation (zero as unknown as)", () => {
   });
 
   it("preserves hotels with null optional fields and null progress stages in /api/trips/[id]/stream", async () => {
+    const tripId = "11111111-1111-4111-8111-111111111111";
     mocks.tripRow = {
-      id: "trip-1",
+      id: tripId,
       status: "generating",
       search_id: "search-1",
       destination: "Tokyo",
@@ -250,10 +251,10 @@ describe("P2-3 runtime Zod validation (zero as unknown as)", () => {
     };
 
     const res = await streamPost(
-      new NextRequest("http://localhost:3000/api/trips/trip-1/stream", {
+      new NextRequest(`http://localhost:3000/api/trips/${tripId}/stream`, {
         method: "POST",
       }),
-      { params: Promise.resolve({ id: "trip-1" }) },
+      { params: Promise.resolve({ id: tripId }) },
     );
     expect(res.status).toBe(200);
     const sseText = await res.text();
@@ -264,8 +265,9 @@ describe("P2-3 runtime Zod validation (zero as unknown as)", () => {
   });
 
   it("rejects malformed ir.days in /api/trips/[id]/stream BEFORE emitting event: itinerary", async () => {
+    const tripId = "11111111-1111-4111-8111-111111111111";
     mocks.tripRow = {
-      id: "trip-1",
+      id: tripId,
       status: "generating",
       search_id: "search-1",
       destination: "Tokyo",
@@ -286,10 +288,10 @@ describe("P2-3 runtime Zod validation (zero as unknown as)", () => {
     };
 
     const res = await streamPost(
-      new NextRequest("http://localhost:3000/api/trips/trip-1/stream", {
+      new NextRequest(`http://localhost:3000/api/trips/${tripId}/stream`, {
         method: "POST",
       }),
-      { params: Promise.resolve({ id: "trip-1" }) },
+      { params: Promise.resolve({ id: tripId }) },
     );
     const sseText = await res.text();
     expect(sseText).not.toContain("event: itinerary");

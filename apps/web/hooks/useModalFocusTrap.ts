@@ -12,6 +12,12 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(", ");
 
+// Ref-counted body scroll lock so stacked modals never clobber an outer lock,
+// and modals that already manage their own scroll lock before this hook runs
+// are left intact.
+let activeScrollLocks = 0;
+let savedBodyOverflow = "";
+
 interface UseModalFocusTrapOptions<T extends HTMLElement> {
   open: boolean;
   dialogRef: RefObject<T | null>;
@@ -40,6 +46,21 @@ export function useModalFocusTrap<T extends HTMLElement>({
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const dialog = dialogRef.current;
     dialog?.focus();
+
+    let ownsScrollLock = false;
+    const bodyStyle =
+      typeof document !== "undefined" ? document.body?.style : undefined;
+    if (
+      bodyStyle &&
+      (activeScrollLocks > 0 || bodyStyle.overflow !== "hidden")
+    ) {
+      if (activeScrollLocks === 0) {
+        savedBodyOverflow = bodyStyle.overflow;
+        bodyStyle.overflow = "hidden";
+      }
+      activeScrollLocks += 1;
+      ownsScrollLock = true;
+    }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -83,6 +104,12 @@ export function useModalFocusTrap<T extends HTMLElement>({
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      if (ownsScrollLock) {
+        activeScrollLocks = Math.max(0, activeScrollLocks - 1);
+        if (activeScrollLocks === 0 && bodyStyle) {
+          bodyStyle.overflow = savedBodyOverflow;
+        }
+      }
       if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
   }, [dialogRef, open]);

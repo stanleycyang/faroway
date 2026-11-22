@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRetrySegment } from "@/hooks/useRetrySegment";
 import * as Sentry from "@sentry/nextjs";
 
 export default function BlogError({
@@ -12,6 +13,7 @@ export default function BlogError({
   reset: () => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const { retry, retrying } = useRetrySegment(reset);
   useEffect(() => {
     Sentry.captureException(error);
     headingRef.current?.focus();
@@ -41,10 +43,12 @@ export default function BlogError({
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={reset}
-            className="min-h-12 rounded-xl bg-[#143D46] px-6 py-3 font-semibold text-white hover:bg-[#0E2C33] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#143D46]"
+            onClick={retry}
+            disabled={retrying}
+            aria-busy={retrying}
+            className="min-h-12 rounded-xl bg-[#143D46] px-6 py-3 font-semibold text-white hover:bg-[#0E2C33] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#143D46] disabled:opacity-60"
           >
-            Try again
+            {retrying ? "Trying again…" : "Try again"}
           </button>
           <Link
             href="/destinations"

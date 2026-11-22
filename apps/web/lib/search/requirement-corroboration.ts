@@ -1,24 +1,64 @@
 import type { ActivityResult, DiningResult, SearchPlan } from "./types";
 
 const dietClaim =
-  /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|nuts?|peanuts?|shellfish|dairy)[ -]?free|allergy[ -]safe|vegan|vegetarian|halal|kosher)\b/i;
+  /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|wheat|nuts?|tree[ -]?nuts?|peanuts?|shellfish|fish|dairy|milk|lactose|eggs?|soy|sesame|sulfites?)[ -]?(?:free|safe|friendly)|allergy[ -]?(?:safe|friendly)|vegan|vegetarian|halal|kosher)\b/i;
 const accessPromise =
   /\b(?:wheelchair[ -](?:accessible|friendly)|step[ -]free|stair[ -]free|fully accessible)\b/i;
+
+const ACCESS_NEED_PATTERN =
+  /\b(?:stroller(?:\s+access)?|wheelchair(?:\s+access)?|step[- ]free(?:\s+access|\s+entrance|\s+routes?)?|stair[- ]free)\b/i;
+const ACCESS_NEGATION_PATTERN =
+  /\b(?:not\s+required|not\s+needed|no\s+(?:wheelchair|stroller|step[- ]free|stair[- ]free)(?:\s+access)?\s+(?:needed|required)|unnecessary)\b/i;
 
 export const DIETARY_UNVERIFIED_NOTE =
   "Suitability for dietary restrictions has not been verified. Contact the venue before relying on this suggestion.";
 export const ACCESS_UNVERIFIED_NOTE =
   "Access for this stop has not been verified with the venue. A draft label is not evidence that the entrance, route or seating meets your request.";
 
+type MobilityPlanInput = {
+  mobilityNeeds?: string;
+  requirements?: {
+    allergies?: readonly string[];
+    dietaryPreferences?: readonly string[];
+    accessibility?: readonly string[];
+    mobilityNotes?: string;
+  };
+};
+
+export function stepFreeTextRequested(plan: MobilityPlanInput): boolean {
+  const clauses = [plan.mobilityNeeds, plan.requirements?.mobilityNotes]
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && value.trim().length > 0,
+    )
+    .flatMap((value) =>
+      value
+        .normalize("NFKC")
+        .toLowerCase()
+        .split(/[.;\n]/),
+    )
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+  return clauses.some(
+    (clause) =>
+      ACCESS_NEED_PATTERN.test(clause) && !ACCESS_NEGATION_PATTERN.test(clause),
+  );
+}
+
+export function stepFreeRequested(plan: MobilityPlanInput): boolean {
+  return (
+    Boolean(plan.requirements?.accessibility?.includes("step_free_entrance")) ||
+    stepFreeTextRequested(plan)
+  );
+}
+
 export function accessRequested(
   plan: Pick<SearchPlan, "mobilityNeeds" | "requirements">,
 ) {
-  const request = (plan.mobilityNeeds ?? "").normalize("NFKC").toLowerCase();
-  const explicit =
-    /^(?:stroller access|wheelchair access|step[- ]free)\b/.test(
-      request.trim(),
-    ) && !/\b(?:not required|not needed|unnecessary)\b/.test(request);
-  return Boolean(plan.requirements?.accessibility?.length) || explicit;
+  return (
+    Boolean(plan.requirements?.accessibility?.length) ||
+    stepFreeTextRequested(plan)
+  );
 }
 
 function withoutClaims(text: string, claim: RegExp) {

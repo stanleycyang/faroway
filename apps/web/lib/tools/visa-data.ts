@@ -81,7 +81,7 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       status: "e-visa",
       duration: "180 days",
       notes:
-        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£16 fee)",
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -503,9 +503,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -715,9 +716,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -927,9 +929,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "EU freedom of movement",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "Post-Brexit: no visa needed for short stays",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; Irish citizens exempt — verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -1563,9 +1566,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -1775,9 +1779,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -1987,9 +1992,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism (as of 2024)",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -2199,9 +2205,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-required",
+      status: "e-visa",
       duration: "180 days",
-      notes: "Standard Visitor visa required",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -2623,9 +2630,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -2835,9 +2843,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",
@@ -3047,9 +3056,10 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       notes: "Schengen zone — 90 days in any 180-day period",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",

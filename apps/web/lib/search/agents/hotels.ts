@@ -82,9 +82,10 @@ IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or 
  */
 function normalizeHotelName(name: string): string {
   return name
+    .normalize("NFKC")
     .toLowerCase()
     .replace(/\b(hotel|resort|the|a|an|&|and)\b/g, "")
-    .replace(/[^a-z0-9]/g, "")
+    .replace(/[^\p{L}\p{N}]/gu, "")
     .trim();
 }
 
@@ -96,7 +97,8 @@ function deduplicateHotels(hotels: HotelResult[]): HotelResult[] {
   const seen = new Map<string, HotelResult>();
 
   for (const hotel of hotels) {
-    const key = normalizeHotelName(hotel.name);
+    const normalized = normalizeHotelName(hotel.name);
+    const key = normalized ? `name:${normalized}` : `id:${hotel.id}`;
     const existing = seen.get(key);
 
     if (!existing || (hotel.userRating ?? -1) > (existing.userRating ?? -1)) {
@@ -110,6 +112,7 @@ function deduplicateHotels(hotels: HotelResult[]): HotelResult[] {
 export async function runHotelsAgent(
   plan: SearchPlan,
   count: number = 10,
+  options: { throwOnError?: boolean } = {},
 ): Promise<HotelResult[]> {
   const { destination, dates, hotelCriteria, vibeInterpretation } = plan;
   const { priceRange, starRating, amenities, neighborhoods } = hotelCriteria;
@@ -123,6 +126,7 @@ export async function runHotelsAgent(
     vibes: vibeInterpretation.vibes,
     travelerContext: plan,
     count,
+    throwOnError: options.throwOnError,
   });
 
   // Live quotes are requested separately through the consented LiteAPI flow.
@@ -166,6 +170,7 @@ async function generateAiHotelFallbacks(params: {
     | "requirements"
   >;
   count: number;
+  throwOnError?: boolean;
 }): Promise<HotelResult[]> {
   const {
     destination,
@@ -177,6 +182,7 @@ async function generateAiHotelFallbacks(params: {
     vibes,
     travelerContext,
     count,
+    throwOnError,
   } = params;
   const prompt = `Generate ${count} real hotel recommendations for ${destination}.
 
@@ -264,6 +270,7 @@ For vibes like:
       "empty",
       detail,
     );
+    if (throwOnError) throw error;
     return [];
   }
 }

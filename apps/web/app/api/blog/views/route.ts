@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { z } from "zod";
+
+const MAX_HEADER_LENGTH = 512;
 
 const ViewSchema = z.object({
   slug: z
@@ -11,29 +13,40 @@ const ViewSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
 });
 
-async function hashIP(ip: string): Promise<string> {
+async function hashIP(ip: string): Promise<string | null> {
+  const salt =
+    process.env.IP_HASH_SALT ||
+    (process.env.NODE_ENV === "production" ? null : "faroway-blog");
+  if (!salt) return null;
   const encoder = new TextEncoder();
-  const data = encoder.encode(
-    ip + (process.env.IP_HASH_SALT || "faroway-blog"),
-  );
+  const data = encoder.encode(`${ip}:${salt}`);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function POST(request: NextRequest) {
-  // Rate limit: 30 req/min per IP
+  // Rate limit: 30 req/min per IP (distributed)
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`blog-views:${ip}`, {
+  const rl = await checkRateLimitAsync(`blog-views:${ip}`, {
     maxRequests: 30,
     windowMs: 60_000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
     const parseResult = ViewSchema.safeParse(body);
 
     if (!parseResult.success) {
@@ -45,8 +58,20 @@ export async function POST(request: NextRequest) {
 
     const { slug } = parseResult.data;
     const viewerIpHash = await hashIP(ip);
-    const userAgent = request.headers.get("user-agent") || null;
-    const referrer = request.headers.get("referer") || null;
+    if (!viewerIpHash) {
+      return NextResponse.json(
+        { error: "View tracking unavailable" },
+        { status: 503 },
+      );
+    }
+    const rawUserAgent = request.headers.get("user-agent");
+    const rawReferrer = request.headers.get("referer");
+    const userAgent = rawUserAgent
+      ? rawUserAgent.slice(0, MAX_HEADER_LENGTH)
+      : null;
+    const referrer = rawReferrer
+      ? rawReferrer.slice(0, MAX_HEADER_LENGTH)
+      : null;
 
     const supabase = getSupabase();
 

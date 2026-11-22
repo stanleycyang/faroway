@@ -20,6 +20,19 @@ interface CompactPayload {
 }
 
 const PAYLOAD_VERSION = 2;
+export const MAX_SHARE_PARAM_LENGTH = 4_096;
+export const MAX_DECOMPRESSED_SHARE_LENGTH = 32_768;
+export const MAX_SHARE_NAME_LENGTH = 60;
+const MAX_SHARE_EMOJI_LENGTH = 16;
+const MAX_SHARE_FIELD_LENGTH = 120;
+
+function boundedText(value: string, maxCodepoints: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  const points = Array.from(normalized);
+  return points.length <= maxCodepoints
+    ? normalized
+    : points.slice(0, maxCodepoints).join("").trimEnd();
+}
 
 export function encodeProfileToUrl(profile: Profile): string {
   const d: CompactTupleV2[] = Object.values(profile.visits).map((v) => {
@@ -45,9 +58,10 @@ export interface DecodedProfile {
 }
 
 export function decodeProfileFromUrl(encoded: string): DecodedProfile | null {
+  if (!encoded || encoded.length > MAX_SHARE_PARAM_LENGTH) return null;
   try {
     const raw = LZString.decompressFromEncodedURIComponent(encoded);
-    if (!raw) return null;
+    if (!raw || raw.length > MAX_DECOMPRESSED_SHARE_LENGTH) return null;
     const parsed = JSON.parse(raw) as CompactPayload;
     if (!parsed || ![1, 2].includes(parsed.v) || !Array.isArray(parsed.d))
       return null;
@@ -67,20 +81,35 @@ export function decodeProfileFromUrl(encoded: string): DecodedProfile | null {
       visits[iso] = {
         iso,
         status: "visited",
-        firstVisit: typeof firstVisit === "string" ? firstVisit : undefined,
+        firstVisit:
+          typeof firstVisit === "string"
+            ? boundedText(firstVisit, MAX_SHARE_FIELD_LENGTH) || undefined
+            : undefined,
         visitCount:
           typeof visitCount === "number" &&
           Number.isSafeInteger(visitCount) &&
           visitCount > 0
             ? visitCount
             : undefined,
-        pinnedCity: typeof pinnedCity === "string" ? pinnedCity : undefined,
+        pinnedCity:
+          typeof pinnedCity === "string"
+            ? boundedText(pinnedCity, MAX_SHARE_FIELD_LENGTH) || undefined
+            : undefined,
       };
     }
 
+    const boundedName =
+      typeof parsed.n === "string"
+        ? boundedText(parsed.n, MAX_SHARE_NAME_LENGTH)
+        : "";
+    const boundedEmoji =
+      typeof parsed.e === "string"
+        ? boundedText(parsed.e, MAX_SHARE_EMOJI_LENGTH) || undefined
+        : undefined;
+
     return {
-      name: typeof parsed.n === "string" && parsed.n ? parsed.n : "Traveler",
-      emoji: typeof parsed.e === "string" ? parsed.e : undefined,
+      name: boundedName || "Traveler",
+      emoji: boundedEmoji,
       visits,
     };
   } catch {

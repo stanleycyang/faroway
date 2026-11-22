@@ -1,3 +1,19 @@
+const mockSetSentryUser = jest.fn();
+jest.mock('@sentry/react-native', () => ({
+  setUser: (...args: unknown[]) => mockSetSentryUser(...args),
+}));
+const mockClearTravelerMemory = jest.fn();
+jest.mock('../../lib/travelerMemory', () => ({
+  clearTravelerMemory: (userId?: string | null) => mockClearTravelerMemory(userId),
+}));
+const mockClearGuestBrief = jest.fn();
+jest.mock('../../lib/guestTripBrief', () => ({
+  clearGuestTripBrief: () => mockClearGuestBrief(),
+}));
+const mockResetSessionPrompts = jest.fn();
+jest.mock('../../stores/promptStore', () => ({
+  usePromptStore: { getState: () => ({ resetSessionPrompts: mockResetSessionPrompts }) },
+}));
 jest.mock('../../lib/tripCreationRecovery', () => ({
   discardTripCreation: jest.fn(async () => {}),
 }));
@@ -26,17 +42,25 @@ beforeEach(() => {
   profile = { id: 'a' };
   session.mockResolvedValue({ data: { session: { user: { id: 'a' } } } });
   signOut.mockResolvedValue({ error: null });
+  mockClearTravelerMemory.mockResolvedValue(undefined);
+  mockClearGuestBrief.mockResolvedValue(undefined);
 });
-it.each(['push', 'trips', 'signout'])(
+it.each(['push', 'memory', 'trips', 'signout'])(
   'propagates %s failure so recovery proof can survive',
   async (boundary) => {
     if (boundary === 'push') forget.mockRejectedValueOnce(new Error('push'));
+    if (boundary === 'memory') mockClearTravelerMemory.mockRejectedValueOnce(new Error('memory'));
     if (boundary === 'trips') clear.mockRejectedValueOnce(new Error('trips'));
     if (boundary === 'signout') signOut.mockResolvedValueOnce({ error: new Error('signout') });
     await expect(cleanupDeletedAccount('a')).rejects.toThrow();
     expect(setTrips).not.toHaveBeenCalled();
     await cleanupDeletedAccount('a');
     expect(setTrips).toHaveBeenCalledTimes(1);
+    expect(mockClearTravelerMemory).toHaveBeenCalledWith('a');
+    expect(mockClearTravelerMemory).toHaveBeenCalledWith('guest');
+    expect(mockClearGuestBrief).toHaveBeenCalled();
+    expect(mockSetSentryUser).toHaveBeenCalledWith(null);
+    expect(mockResetSessionPrompts).toHaveBeenCalled();
   }
 );
 it('does not clear another signed-in account', async () => {

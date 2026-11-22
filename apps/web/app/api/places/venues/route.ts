@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { fetchWithTimeout } from "@/lib/search/runtime";
-import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { normalizePlaceDisplay } from "@/lib/places/display";
 
 // This route serves a user-triggered, transient display only. No cache, database,
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
       501,
     );
   }
+  const auth = await requireUserIdFromRequest(request);
+  if (auth instanceof NextResponse) return auth;
   if (
     !!query === !!placeId ||
     (query && (query.length < 2 || query.length > 120)) ||
@@ -30,10 +33,11 @@ export async function GET(request: NextRequest) {
   ) {
     return reply({ error: "Provide a search query or a valid place ID" }, 400);
   }
-  const limit = await checkRateLimitAsync(
-    `places-venues:${getClientIp(request)}`,
-    { maxRequests: 30, windowMs: 60_000, failClosed: true },
-  );
+  const limit = await checkRateLimitAsync(`places-venues:${auth.userId}`, {
+    maxRequests: 20,
+    windowMs: 60_000,
+    failClosed: true,
+  });
   if (!limit.allowed)
     return reply({ error: "Please wait before looking up more places." }, 429);
   const key = process.env.GOOGLE_PLACES_API_KEY;

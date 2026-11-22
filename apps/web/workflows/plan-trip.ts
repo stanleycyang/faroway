@@ -3,6 +3,7 @@ import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
+import { createFatalWorkflowError } from "@/lib/workflow/runtime";
 import {
   buildAccessibilityDiscovery,
   buildActivitiesDiscovery,
@@ -501,7 +502,7 @@ async function buildSearchPlanStep(params: {
 
   const plan = await runOrchestratorAgent(searchInput);
 
-  await getSupabase()
+  const { error: progressError } = await getSupabase()
     .from("searches")
     .update({
       progress: {
@@ -515,6 +516,9 @@ async function buildSearchPlanStep(params: {
       },
     })
     .eq("id", searchId);
+  if (progressError) {
+    throw new Error("Could not save orchestrator progress");
+  }
   const orchestratorDiscovery = buildOrchestratorDiscovery(plan);
   await Promise.all([
     mergeIntermediateResult(searchId, "searchPlan", plan),
@@ -556,7 +560,7 @@ async function runHotelsStep(
     ]);
     return [];
   }
-  const hotels = await runHotelsAgent(plan, 10);
+  const hotels = await runHotelsAgent(plan, 10, { throwOnError: true });
   const hotelDiscovery = buildHotelsDiscovery(hotels, plan.dates.nights);
   await Promise.all([
     mergeIntermediateResult(searchId, "hotels", hotels),
@@ -579,7 +583,9 @@ async function runActivitiesStep(
   const startedAt = Date.now();
   const dayCount = Math.max(1, (plan.dates.nights ?? 0) + 1);
   const targetCount = Math.min(40, Math.max(15, dayCount * 4));
-  const activities = await runActivitiesAgent(plan, targetCount);
+  const activities = await runActivitiesAgent(plan, targetCount, {
+    throwOnError: true,
+  });
   const activitiesDiscovery = buildActivitiesDiscovery(activities);
   await Promise.all([
     mergeIntermediateResult(searchId, "activitiesCount", activities.length),
@@ -607,7 +613,9 @@ async function runDiningStep(
   const startedAt = Date.now();
   const dayCount = Math.max(1, (plan.dates.nights ?? 0) + 1);
   const targetCount = Math.min(36, Math.max(12, dayCount * 3 + 3));
-  const dining = await runDiningAgent(plan, targetCount);
+  const dining = await runDiningAgent(plan, targetCount, {
+    throwOnError: true,
+  });
   const diningDiscoveries = buildDiningDiscoveries(dining, plan);
   await Promise.all([
     mergeIntermediateResult(searchId, "diningCount", dining.length),
@@ -919,7 +927,7 @@ async function markItineraryComposed(
 
   console.log(`[Workflow] Step 3: Itinerary composed for ${searchId}`);
 
-  await getSupabase()
+  const { error: composedError } = await getSupabase()
     .from("searches")
     .update({
       progress: {
@@ -933,6 +941,9 @@ async function markItineraryComposed(
       },
     })
     .eq("id", searchId);
+  if (composedError) {
+    throw new Error("Could not record composed itinerary progress");
+  }
 
   if (tripId) {
     await applyGenerationUpdate(tripId, searchId, "progress", {
@@ -1059,9 +1070,27 @@ async function buildAndSaveSpec(
   // Save search results to database
   await saveSearchResults(searchId, result);
 
+  // ── Bridge to itineraries table BEFORE marking search completed ──
+  // If the trip attempt was canceled or superseded, do not falsely mark
+  // the search as completed.
+  if (meta.tripId) {
+    const applied = await bridgeToItineraries(
+      searchId,
+      meta.tripId,
+      meta.userId,
+      result,
+      meta,
+    );
+    if (!applied) {
+      throw createFatalWorkflowError(
+        "This planning attempt is no longer active",
+      );
+    }
+  }
+
   // Save the json-render spec and mark as completed. Keep intermediate results
   // so reconnecting SSE clients can still hydrate final itinerary events.
-  await getSupabase()
+  const { error: completeError } = await getSupabase()
     .from("searches")
     .update({
       status: "completed",
@@ -1078,14 +1107,20 @@ async function buildAndSaveSpec(
       },
     })
     .eq("id", searchId);
-
-  // ── Bridge to itineraries table (for web trip detail page) ────────
-  if (meta.tripId) {
-    await bridgeToItineraries(searchId, meta.tripId, meta.userId, result, meta);
+  if (completeError) {
+    throw new Error("Could not mark search as completed");
   }
 
   console.log(`[Workflow] Step 4 complete – search ${searchId} done`);
 }
+
+// Persistence performs non-idempotent inserts into search_results /
+// search_itineraries; never retry automatically on partial failure.
+buildAndSaveSpec.maxRetries = 0;
+
+export const persistenceStepRetries = {
+  buildAndSaveSpec: buildAndSaveSpec.maxRetries,
+};
 
 /**
  * Bridge search results to the itineraries table so the existing web trip
@@ -1098,7 +1133,7 @@ async function bridgeToItineraries(
   userId: string | undefined,
   result: MappedItinerary,
   meta: { destination: string; startDate: string; endDate: string },
-): Promise<void> {
+): Promise<boolean> {
   // The bridge output (result.days) is already in TripDay format with
   // proper { activities: ItineraryActivity[], meals: Restaurant[] } structure
   // thanks to mapSearchResultsToItinerary, so we can use them directly.
@@ -1131,9 +1166,17 @@ async function bridgeToItineraries(
     general_tips: [],
     generated_at: new Date().toISOString(),
   };
-  await applyGenerationUpdate(tripId, searchId, "planned", itineraryPayload);
+  const applied = await applyGenerationUpdate(
+    tripId,
+    searchId,
+    "planned",
+    itineraryPayload,
+  );
 
-  console.log(`[Workflow] Bridged itinerary for trip ${tripId}`);
+  if (applied) {
+    console.log(`[Workflow] Bridged itinerary for trip ${tripId}`);
+  }
+  return applied;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -1151,7 +1194,13 @@ async function setProgressState(
 ): Promise<void> {
   "use step";
   const db = getSupabase();
-  await db.from("searches").update({ progress }).eq("id", searchId);
+  const { error: progressError } = await db
+    .from("searches")
+    .update({ progress })
+    .eq("id", searchId);
+  if (progressError) {
+    throw new Error("Could not update search progress");
+  }
 
   if (workflow?.discoveries && workflow.discoveries.length > 0) {
     await db.rpc("merge_intermediate_results", {
@@ -1196,7 +1245,13 @@ async function updateSearchStatus(
     update.error_message = errorMessage;
   }
 
-  await getSupabase().from("searches").update(update).eq("id", searchId);
+  const { error } = await getSupabase()
+    .from("searches")
+    .update(update)
+    .eq("id", searchId);
+  if (error) {
+    console.error("[Workflow] Failed to update search status:", error);
+  }
 }
 
 export async function saveSearchResults(

@@ -28,6 +28,9 @@ jest.mock('expo-router', () => ({
   router: { replace: jest.fn() },
 }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }),
+}));
 jest.mock('react-native', () => ({
   View: 'View',
   ActivityIndicator: 'ActivityIndicator',
@@ -59,6 +62,10 @@ jest.mock('../../stores/userStore', () => ({
   useUserStore: (sel: (s: { accountRevision: number }) => unknown) => sel({ accountRevision: 0 }),
 }));
 jest.mock('../../hooks/useReduceMotion', () => ({ useReduceMotion: () => true }));
+jest.mock('../../hooks/useOfflineSync', () => ({
+  useNetworkStatus: () => ({ isOffline: false }),
+  useSyncStatus: () => ({ status: 'idle', hasPending: false }),
+}));
 
 Object.assign(globalThis, { __DEV__: false });
 

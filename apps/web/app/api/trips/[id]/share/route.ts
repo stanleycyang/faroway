@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { nanoid } from "nanoid";
 
 type Params = {
@@ -26,6 +27,15 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimitAsync(`trip-share:${user.id}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const consent = await request.json().catch(() => null);
@@ -118,6 +128,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimitAsync(`trip-share:${user.id}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { count, error: updateError } = await getSupabase()

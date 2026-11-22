@@ -434,15 +434,6 @@ test("a socket disconnect preserves chapters and reconnects the same trip withou
 }) => {
   const observations: string[] = [];
   const generationWrites: string[] = [];
-  let dropAutoReconnects = 0;
-  await page.route("**/api/trips/fixture/stream", async (route) => {
-    if (dropAutoReconnects > 0) {
-      dropAutoReconnects--;
-      await route.abort();
-      return;
-    }
-    await route.continue();
-  });
   page.on("request", (req) => {
     const pathname = new URL(req.url()).pathname;
     if (pathname === "/api/trips/fixture/stream")
@@ -460,11 +451,10 @@ test("a socket disconnect preserves chapters and reconnects the same trip withou
   await expect(chapter).toBeVisible();
   await chapter.click();
   await expect(chapter).toHaveAttribute("aria-expanded", "false");
-  dropAutoReconnects = 2;
   await request.get(`${fixtureUrl}/fixture/stage?value=transport-drop`);
   await expect(
     page.getByRole("heading", { name: "Live updates paused" }),
-  ).toBeVisible({ timeout: 15_000 });
+  ).toBeVisible();
   await expect(chapter).toHaveAttribute("aria-expanded", "false");
   // Preserved progress can already match before the reconnect effect runs.
   // Wait for the new observation stream before asserting or sending completion.
@@ -481,7 +471,7 @@ test("a socket disconnect preserves chapters and reconnects the same trip withou
     "42",
   );
   await expect(chapter).toHaveAttribute("aria-expanded", "false");
-  expect(observations.length).toBeGreaterThanOrEqual(2);
+  expect(observations).toEqual(["GET", "GET"]);
   expect(generationWrites).toEqual([]);
   await request.get(`${fixtureUrl}/fixture/stage?value=complete`);
   await page.getByRole("button", { name: "Open my trip" }).click();
@@ -523,15 +513,6 @@ test("malformed terminal updates cannot strand the live observer", async ({
   page,
   request,
 }) => {
-  let dropAutoReconnects = 0;
-  await page.route("**/api/trips/fixture/stream", async (route) => {
-    if (dropAutoReconnects > 0) {
-      dropAutoReconnects--;
-      await route.abort();
-      return;
-    }
-    await route.continue();
-  });
   await page.goto(`${fixtureUrl}?screen=live`);
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
@@ -542,11 +523,10 @@ test("malformed terminal updates cannot strand the live observer", async ({
   await expect(
     page.getByRole("button", { name: /Art and the Left Bank/ }),
   ).toBeVisible();
-  dropAutoReconnects = 2;
   await request.get(`${fixtureUrl}/fixture/stage?value=malformed-error`);
   await expect(
     page.getByText("Live updates paused", { exact: true }),
-  ).toBeVisible({ timeout: 15_000 });
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Art and the Left Bank/ }),
   ).toBeVisible();

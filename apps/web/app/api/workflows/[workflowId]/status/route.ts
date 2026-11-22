@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClientFromRequest } from "@/lib/supabase/server";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 
 type Params = {
   params: Promise<{
@@ -45,10 +44,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const adminClient = createSupabaseAdmin(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    const adminClient = getSupabase();
 
     // Get workflow run
     const { data: workflowRun, error: runError } = await adminClient
@@ -88,7 +84,7 @@ export async function GET(request: NextRequest, { params }: Params) {
         result = { itineraryId: itinerary.id };
       }
     } else if (workflowRun.status === "failed") {
-      result = { error: workflowRun.error_message || "Workflow failed" };
+      result = { error: "Workflow failed" };
     }
 
     const response: WorkflowStatusResponse = {
@@ -103,7 +99,9 @@ export async function GET(request: NextRequest, { params }: Params) {
       result,
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (error) {
     console.error("[API] Error fetching workflow status:", error);
     return NextResponse.json(

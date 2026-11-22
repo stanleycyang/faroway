@@ -122,12 +122,8 @@ export async function searchTripAdvisorLocations(
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(
-        "[TripAdvisor] location/search error:",
-        response.status,
-        error,
-      );
+      await response.text().catch(() => {});
+      console.error("[TripAdvisor] location/search error:", response.status);
       return [];
     }
 
@@ -159,8 +155,10 @@ export async function searchTripAdvisorLocations(
 export async function getTripAdvisorDetails(
   locationId: string,
 ): Promise<TripAdvisorDetails | null> {
-  if (!isTripAdvisorConfigured()) {
-    console.warn("[TripAdvisor] API not configured, returning null");
+  if (!isTripAdvisorConfigured() || !/^[A-Za-z0-9_-]{1,64}$/.test(locationId)) {
+    if (!isTripAdvisorConfigured()) {
+      console.warn("[TripAdvisor] API not configured, returning null");
+    }
     return null;
   }
 
@@ -171,19 +169,15 @@ export async function getTripAdvisorDetails(
     });
 
     const response = await fetchWithTimeout(
-      `${TRIPADVISOR_API_BASE}/location/${locationId}/details?${params}`,
+      `${TRIPADVISOR_API_BASE}/location/${encodeURIComponent(locationId)}/details?${params}`,
       {
         headers: { Accept: "application/json" },
       },
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(
-        "[TripAdvisor] location/details error:",
-        response.status,
-        error,
-      );
+      await response.text().catch(() => {});
+      console.error("[TripAdvisor] location/details error:", response.status);
       return null;
     }
 
@@ -210,8 +204,10 @@ export async function getTripAdvisorReviews(
   locationId: string,
   limit?: number,
 ): Promise<TripAdvisorReview[]> {
-  if (!isTripAdvisorConfigured()) {
-    console.warn("[TripAdvisor] API not configured, returning empty results");
+  if (!isTripAdvisorConfigured() || !/^[A-Za-z0-9_-]{1,64}$/.test(locationId)) {
+    if (!isTripAdvisorConfigured()) {
+      console.warn("[TripAdvisor] API not configured, returning empty results");
+    }
     return [];
   }
 
@@ -222,19 +218,15 @@ export async function getTripAdvisorReviews(
     });
 
     const response = await fetchWithTimeout(
-      `${TRIPADVISOR_API_BASE}/location/${locationId}/reviews?${params}`,
+      `${TRIPADVISOR_API_BASE}/location/${encodeURIComponent(locationId)}/reviews?${params}`,
       {
         headers: { Accept: "application/json" },
       },
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error(
-        "[TripAdvisor] location/reviews error:",
-        response.status,
-        error,
-      );
+      await response.text().catch(() => {});
+      console.error("[TripAdvisor] location/reviews error:", response.status);
       return [];
     }
 
@@ -272,7 +264,9 @@ export function generateTripAdvisorAffiliateUrl(
   locationId: string,
   trackingId: string,
 ): string {
-  return `https://www.tripadvisor.com/${locationId}?m=faroway&ref=${trackingId}`;
+  const safeLocation = encodeURIComponent(locationId);
+  const params = new URLSearchParams({ m: "faroway", ref: trackingId });
+  return `https://www.tripadvisor.com/${safeLocation}?${params}`;
 }
 
 // ── Enrichment ──────────────────────────────────────────────────────────────

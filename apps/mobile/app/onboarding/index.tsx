@@ -37,7 +37,13 @@ export default function OnboardingScreen() {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => {
+            if (typeof router.canGoBack === 'function' && !router.canGoBack()) {
+              router.replace('/(tabs)');
+            } else {
+              router.back();
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel="Back"
           style={styles.back}

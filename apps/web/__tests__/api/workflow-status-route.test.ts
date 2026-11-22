@@ -64,10 +64,7 @@ const createClientFromRequestMock = vi.fn(async (request: unknown) => {
 vi.mock("@/lib/supabase/server", () => ({
   createClientFromRequest: (request: unknown) =>
     createClientFromRequestMock(request),
-}));
-
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => adminClient),
+  getSupabase: () => adminClient,
 }));
 
 import { GET } from "@/app/api/workflows/[workflowId]/status/route";
@@ -97,6 +94,7 @@ describe("GET /api/workflows/[workflowId]/status", () => {
 
     expect(createClientFromRequestMock).toHaveBeenCalledWith(req);
     expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(json).toMatchObject({
       workflowId: "workflow-1",
       tripId: "trip-1",

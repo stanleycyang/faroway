@@ -325,7 +325,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
               </span>
               {reviewCount != null && (
                 <span className="text-xs text-slate-600">
-                  ({reviewCount.toLocaleString()})
+                  ({reviewCount.toLocaleString("en-US")})
                 </span>
               )}
             </div>
@@ -445,7 +445,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
               </span>
               {reviewCount != null && (
                 <span className="text-slate-600">
-                  ({reviewCount.toLocaleString()})
+                  ({reviewCount.toLocaleString("en-US")})
                 </span>
               )}
             </span>
@@ -475,7 +475,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
                   variant="badge"
                   label={`${activity.tripadvisorRating.toFixed(1)} on TripAdvisor${
                     activity.tripadvisorReviewCount != null
-                      ? ` (${activity.tripadvisorReviewCount.toLocaleString()})`
+                      ? ` (${activity.tripadvisorReviewCount.toLocaleString("en-US")})`
                       : ""
                   }`}
                   affiliateUrl={activity.tripadvisorUrl!}
@@ -495,7 +495,8 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
                   {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
                   {activity.tripadvisorReviewCount != null && (
                     <span className="text-slate-600 font-normal">
-                      ({activity.tripadvisorReviewCount.toLocaleString()})
+                      ({activity.tripadvisorReviewCount.toLocaleString("en-US")}
+                      )
                     </span>
                   )}
                 </span>
@@ -785,7 +786,7 @@ export function RestaurantCard({
                   </span>
                   {reviewCount != null && (
                     <span className="text-slate-600">
-                      ({reviewCount.toLocaleString()})
+                      ({reviewCount.toLocaleString("en-US")})
                     </span>
                   )}
                 </span>
@@ -816,7 +817,7 @@ export function RestaurantCard({
                       variant="badge"
                       label={`${restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor${
                         restaurant.tripadvisorReviewCount != null
-                          ? ` (${restaurant.tripadvisorReviewCount.toLocaleString()})`
+                          ? ` (${restaurant.tripadvisorReviewCount.toLocaleString("en-US")})`
                           : ""
                       }`}
                       affiliateUrl={restaurant.tripadvisorUrl!}
@@ -836,7 +837,11 @@ export function RestaurantCard({
                       {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
                       {restaurant.tripadvisorReviewCount != null && (
                         <span className="text-slate-600 font-normal">
-                          ({restaurant.tripadvisorReviewCount.toLocaleString()})
+                          (
+                          {restaurant.tripadvisorReviewCount.toLocaleString(
+                            "en-US",
+                          )}
+                          )
                         </span>
                       )}
                     </span>

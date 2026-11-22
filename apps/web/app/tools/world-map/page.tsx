@@ -12,7 +12,7 @@ import { WorldMapClient } from "./WorldMapClient";
 export const metadata: Metadata = {
   title: "World Map Tracker — Pin Every Country You've Visited",
   description:
-    "A beautiful, interactive world map to track every country you've lived in, visited, or still dream of. No sign-up, no backend — everything lives in your browser. Export JSON, share by URL, download as PNG.",
+    "A beautiful, interactive world map to pin every country you've visited, with dates, notes, and photos. No sign-up, no backend — everything lives in your browser. Export JSON, share by URL, download as PNG.",
   alternates: { canonical: "/tools/world-map" },
   openGraph: {
     title: "World Map Tracker | Faroway",

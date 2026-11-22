@@ -116,6 +116,35 @@ export async function POST(request: NextRequest) {
     const partner = urlPartner;
 
     const user = await optionalAuth(request);
+    const db = getSupabase();
+
+    // Only associate a click with a trip or search owned by the authenticated user.
+    let verifiedTripId: string | null = null;
+    let verifiedSearchId: string | null = null;
+    if (user) {
+      if (data.tripId) {
+        const { data: ownedTrip } = await db
+          .from("trips")
+          .select("id")
+          .eq("id", data.tripId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (ownedTrip?.id === data.tripId) {
+          verifiedTripId = data.tripId;
+        }
+      }
+      if (data.searchId) {
+        const { data: ownedSearch } = await db
+          .from("searches")
+          .select("id")
+          .eq("id", data.searchId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (ownedSearch?.id === data.searchId) {
+          verifiedSearchId = data.searchId;
+        }
+      }
+    }
 
     // Generate a unique click ID for conversion tracking
     const clickId = data.clickId || crypto.randomUUID();
@@ -137,25 +166,23 @@ export async function POST(request: NextRequest) {
     // Store only a complete price/currency pair.
     const price = readPrice(data.price, data.currency);
     const clickedAt = new Date().toISOString();
-    const { error } = await getSupabase()
-      .from("affiliate_clicks")
-      .insert(
-        affiliateClickInsert({
-          clickId,
-          userId: user?.id || null,
-          itemType: data.itemType,
-          itemId: data.itemId,
-          itemName: data.itemName,
-          affiliatePartner: partner,
-          affiliateUrl: data.affiliateUrl,
-          searchId: data.searchId || null,
-          tripId: data.tripId || null,
-          price: price?.amount ?? null,
-          currency: price?.currency ?? null,
-          source: data.source || "search_results",
-          clickedAt,
-        }),
-      );
+    const { error } = await db.from("affiliate_clicks").insert(
+      affiliateClickInsert({
+        clickId,
+        userId: user?.id || null,
+        itemType: data.itemType,
+        itemId: data.itemId,
+        itemName: data.itemName,
+        affiliatePartner: partner,
+        affiliateUrl: data.affiliateUrl,
+        searchId: verifiedSearchId,
+        tripId: verifiedTripId,
+        price: price?.amount ?? null,
+        currency: price?.currency ?? null,
+        source: data.source || "search_results",
+        clickedAt,
+      }),
+    );
 
     if (error) {
       console.error("[Click Tracking] Database error:", error);

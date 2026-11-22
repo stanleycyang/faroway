@@ -366,3 +366,23 @@ it('round-trips a suggested hotel whose price is unavailable without inventing a
   expect(restored[0].hotel?.name).toBe('A suggested stay');
   expect(Number.isNaN(restored[0].hotel?.pricePerNight)).toBe(true);
 });
+
+it('cancels a pending offline create when the same local draft is deleted before syncing', async () => {
+  const localTrip = cachedTrip('local_draft_1');
+  await offlineStorage.addPendingMutation({
+    type: 'create',
+    tripId: localTrip.id,
+    ownerId: 'owner-a',
+    localTrip,
+    data: { destination: localTrip.destination },
+  });
+  expect(await offlineStorage.getPendingMutations()).toHaveLength(1);
+
+  await offlineStorage.addPendingMutation({
+    type: 'delete',
+    tripId: localTrip.id,
+    ownerId: 'owner-a',
+  });
+  expect(await offlineStorage.getPendingMutations()).toEqual([]);
+  expect((await offlineStorage.getSyncMeta()).pendingCount).toBe(0);
+});

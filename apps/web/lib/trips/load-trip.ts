@@ -153,7 +153,7 @@ export async function loadTripForUserUncached(
   const { data: rawTrip, error } = await db
     .from("trips")
     .select(
-      "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, dietary_restrictions, mobility_needs, budget_tier, user_id, search_id, is_shared, share_token, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
+      "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, dietary_restrictions, mobility_needs, budget_tier, user_id, search_id, plan_revision_id, is_shared, share_token, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
     )
     .eq("id", id)
     .eq("user_id", userId)

@@ -98,6 +98,12 @@ export function PlacesExplorer({
         `/api/places/venues?${new URLSearchParams(params)}`,
         { cache: "no-store", signal: controller.signal },
       );
+      if (res.status === 401) {
+        setError(
+          "Sign in to view live place details. You can continue planning without them.",
+        );
+        return;
+      }
       if (!res.ok)
         throw new Error(
           "Live place details are unavailable. You can continue planning or try again.",

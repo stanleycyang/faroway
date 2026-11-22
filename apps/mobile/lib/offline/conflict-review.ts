@@ -1,4 +1,5 @@
 import type { PendingMutation } from './storage';
+import { travelerRequirementLines, travelerRequirementsSchema } from '../travelerRequirements';
 export { savedTripReviewUrl as tripWebUrl } from '../savedTripUrl';
 
 const fields: Record<string, string> = {
@@ -11,6 +12,7 @@ const fields: Record<string, string> = {
   travelerType: 'Traveling as',
   originCity: 'Starting city',
   originAirport: 'Starting airport',
+  requirements: 'Dietary & access needs',
   adults: 'Adults',
   children: 'Children',
   interests: 'Interests',
@@ -23,16 +25,28 @@ export function conflictRows(mutation: PendingMutation, latest?: Record<string, 
   };
   const local = flatten(mutation.data ?? {});
   const server = flatten(latest ?? {});
-  const display = (value: unknown) =>
-    value === undefined || value === null || value === ''
-      ? 'Not set'
-      : Array.isArray(value)
-        ? value.join(', ') || 'None'
-        : String(value);
+  const display = (key: string, value: unknown) => {
+    if (value === undefined || value === null || value === '') return 'Not set';
+    if (key === 'requirements') {
+      const parsed = travelerRequirementsSchema.nullish().safeParse(value);
+      if (parsed.success) {
+        return travelerRequirementLines(parsed.data).join('; ') || 'None';
+      }
+    }
+    if (Array.isArray(value)) return value.join(', ') || 'None';
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return 'Custom details';
+      }
+    }
+    return String(value);
+  };
   return Object.entries(local).map(([key, value]) => ({
     label: fields[key] ?? key,
-    yours: display(value),
-    latest: latest ? display(server[key]) : 'Load the latest trip to compare',
+    yours: display(key, value),
+    latest: latest ? display(key, server[key]) : 'Load the latest trip to compare',
   }));
 }
 

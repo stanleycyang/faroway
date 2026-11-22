@@ -19,6 +19,7 @@ jest.mock('react-native', () => ({
 }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 jest.mock('expo-linear-gradient', () => ({ LinearGradient: 'Gradient' }));
+jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn() }));
 jest.mock('../../hooks/useReduceMotion', () => ({ useReduceMotion: () => true }));
 jest.mock('../../components/AuthProvider', () => ({
   useAuthContext: () => ({ signInWithGoogle: mockGoogle, signInWithApple: mockGoogle }),

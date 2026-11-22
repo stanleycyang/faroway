@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { getSupabase } from "@/lib/supabase/server";
 import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 import { planItems, stampPlanItems } from "@/lib/trips/plan-edits";
@@ -65,6 +66,12 @@ export async function GET(request: NextRequest, context: Context) {
     if (auth instanceof NextResponse) return auth;
     if (process.env.FAROWAY_BOOKING_CHECKLIST_ENABLED !== "true")
       return json({ error: "Booking progress is not available yet." }, 503);
+    const rateLimit = await checkRateLimitAsync(
+      `trip-bookings-read:${auth.userId}`,
+      { maxRequests: 60, windowMs: 60_000 },
+    );
+    if (!rateLimit.allowed)
+      return json({ error: "Too many requests. Please wait a moment." }, 429);
     const requestId = request.nextUrl.searchParams.get("requestId");
     if (requestId && !z.string().uuid().safeParse(requestId).success)
       return json({ error: "Invalid request identity" }, 400);
@@ -137,6 +144,15 @@ export async function POST(request: NextRequest, context: Context) {
     if (auth instanceof NextResponse) return auth;
     if (process.env.FAROWAY_BOOKING_CHECKLIST_ENABLED !== "true")
       return json({ error: "Booking progress is not available yet." }, 503);
+    const rateLimit = await checkRateLimitAsync(
+      `trip-bookings:${auth.userId}`,
+      { maxRequests: 30, windowMs: 60_000, failClosed: true },
+    );
+    if (!rateLimit.allowed)
+      return json(
+        { error: "Too many booking updates. Please wait a moment." },
+        429,
+      );
     const parsed = BookingReportCommand.safeParse(
       await request.json().catch(() => null),
     );

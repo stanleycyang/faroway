@@ -29,7 +29,7 @@ type SearchRecord = {
 
 const dbState = {
   trip: {
-    id: "trip-e2e-1",
+    id: "00000000-0000-4000-8000-000000000001",
     user_id: "user-1",
     status: "draft",
     destination: "Tokyo",
@@ -209,6 +209,15 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => supabaseMock),
 }));
 
+vi.mock("@/lib/security/rate-limit", () => ({
+  checkRateLimitAsync: vi.fn(async () => ({
+    allowed: true,
+    remaining: 9,
+    resetIn: 60_000,
+  })),
+  getClientIp: vi.fn(() => "127.0.0.1"),
+}));
+
 import { POST as postGenerate } from "@/app/api/trips/[id]/generate/route";
 import {
   POST as postStream,
@@ -219,7 +228,7 @@ describe("Itinerary workflow API e2e", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbState.trip = {
-      id: "trip-e2e-1",
+      id: "00000000-0000-4000-8000-000000000001",
       user_id: "user-1",
       status: "draft",
       destination: "Tokyo",
@@ -266,10 +275,17 @@ describe("Itinerary workflow API e2e", () => {
         ["GET", getStream],
       ] as const) {
         const response = await handler(
-          new NextRequest("http://localhost/api/trips/trip-e2e-1/stream", {
-            method,
-          }),
-          { params: Promise.resolve({ id: "trip-e2e-1" }) },
+          new NextRequest(
+            "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
+            {
+              method,
+            },
+          ),
+          {
+            params: Promise.resolve({
+              id: "00000000-0000-4000-8000-000000000001",
+            }),
+          },
         );
         const body = await response.text();
         expect(body).not.toContain("PRIVATE FOREIGN TRIP");
@@ -280,7 +296,7 @@ describe("Itinerary workflow API e2e", () => {
 
   it("runs generate kickoff and exposes progress + spec events over stream", async () => {
     const generateReq = new NextRequest(
-      "http://localhost/api/trips/trip-e2e-1/generate",
+      "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/generate",
       {
         method: "POST",
         headers: {
@@ -291,7 +307,7 @@ describe("Itinerary workflow API e2e", () => {
       },
     );
     const generateRes = await postGenerate(generateReq, {
-      params: Promise.resolve({ id: "trip-e2e-1" }),
+      params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
     });
     expect(generateRes.status).toBe(200);
     expect(dbState.trip.search_id).toBe("search-e2e-1");
@@ -357,13 +373,13 @@ describe("Itinerary workflow API e2e", () => {
     };
 
     const streamReq = new NextRequest(
-      "http://localhost/api/trips/trip-e2e-1/stream",
+      "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
       {
         method: "POST",
       },
     );
     const streamRes = await postStream(streamReq, {
-      params: Promise.resolve({ id: "trip-e2e-1" }),
+      params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
     });
     expect(streamRes.status).toBe(200);
     const text = await streamRes.text();
@@ -455,14 +471,14 @@ describe("Itinerary workflow API e2e", () => {
     const abortController = new AbortController();
     abortController.abort();
     const streamReq = new NextRequest(
-      "http://localhost/api/trips/trip-e2e-1/stream",
+      "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
       {
         method: "POST",
         signal: abortController.signal,
       },
     );
     const streamRes = await postStream(streamReq, {
-      params: Promise.resolve({ id: "trip-e2e-1" }),
+      params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
     });
     const events = parseSse(await streamRes.text());
 
@@ -499,10 +515,15 @@ describe("Itinerary workflow API e2e", () => {
     };
 
     const streamRes = await postStream(
-      new NextRequest("http://localhost/api/trips/trip-e2e-1/stream", {
-        method: "POST",
-      }),
-      { params: Promise.resolve({ id: "trip-e2e-1" }) },
+      new NextRequest(
+        "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
+        {
+          method: "POST",
+        },
+      ),
+      {
+        params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
+      },
     );
     const events = parseSse(await streamRes.text());
 
@@ -541,10 +562,15 @@ describe("Itinerary workflow API e2e", () => {
     };
 
     const streamRes = await postStream(
-      new NextRequest("http://localhost/api/trips/trip-e2e-1/stream", {
-        method: "POST",
-      }),
-      { params: Promise.resolve({ id: "trip-e2e-1" }) },
+      new NextRequest(
+        "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
+        {
+          method: "POST",
+        },
+      ),
+      {
+        params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
+      },
     );
     const events = parseSse(await streamRes.text());
 
@@ -585,10 +611,15 @@ describe("Itinerary workflow API e2e", () => {
     };
 
     const streamRes = await postStream(
-      new NextRequest("http://localhost/api/trips/trip-e2e-1/stream", {
-        method: "POST",
-      }),
-      { params: Promise.resolve({ id: "trip-e2e-1" }) },
+      new NextRequest(
+        "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
+        {
+          method: "POST",
+        },
+      ),
+      {
+        params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
+      },
     );
     const events = parseSse(await streamRes.text());
 
@@ -630,13 +661,13 @@ describe("Itinerary workflow API e2e", () => {
     };
 
     const streamReq = new NextRequest(
-      "http://localhost/api/trips/trip-e2e-1/stream",
+      "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
       {
         method: "POST",
       },
     );
     const streamRes = await postStream(streamReq, {
-      params: Promise.resolve({ id: "trip-e2e-1" }),
+      params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
     });
     const events = parseSse(await streamRes.text());
     const eventNames = events.map((e) => e.event);
@@ -680,10 +711,15 @@ describe("Itinerary workflow API e2e", () => {
     };
 
     const streamRes = await postStream(
-      new NextRequest("http://localhost/api/trips/trip-e2e-1/stream", {
-        method: "POST",
-      }),
-      { params: Promise.resolve({ id: "trip-e2e-1" }) },
+      new NextRequest(
+        "http://localhost/api/trips/00000000-0000-4000-8000-000000000001/stream",
+        {
+          method: "POST",
+        },
+      ),
+      {
+        params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }),
+      },
     );
     const events = parseSse(await streamRes.text());
     const eventNames = events.map((event) => event.event);

@@ -2,6 +2,7 @@ import { validBriefComposition } from "@/lib/trips/brief";
 import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { CreateTripSchema } from "@/lib/trips/create-trip-command";
 import { createHash } from "node:crypto";
 import {
@@ -89,6 +90,15 @@ export async function POST(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimitAsync(`trips-create:${user.id}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const body = await request.json();

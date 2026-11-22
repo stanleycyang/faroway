@@ -1,14 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const mocks = vi.hoisted(() => ({
   checkRateLimitAsync: vi.fn(),
   getClientIp: vi.fn(),
+  requireUserIdFromRequest: vi.fn(),
 }));
 
 vi.mock("@/lib/security/rate-limit", () => ({
   checkRateLimitAsync: mocks.checkRateLimitAsync,
   getClientIp: mocks.getClientIp,
+}));
+
+vi.mock("@/lib/auth/middleware", () => ({
+  requireUserIdFromRequest: mocks.requireUserIdFromRequest,
 }));
 
 const fetchMock = vi.fn();
@@ -50,6 +55,8 @@ describe("Places API proxy routes", () => {
     vi.clearAllMocks();
     mocks.checkRateLimitAsync.mockResolvedValue({ allowed: true });
     mocks.getClientIp.mockReturnValue("127.0.0.1");
+    mocks.requireUserIdFromRequest.mockResolvedValue({ userId: "user-1" });
+    fetchMock.mockReset();
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ suggestions: [] }),
@@ -66,7 +73,7 @@ describe("Places API proxy routes", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mocks.checkRateLimitAsync).toHaveBeenCalledWith(
       "places-autocomplete:127.0.0.1",
-      { maxRequests: 120, windowMs: 60_000, failClosed: true },
+      { maxRequests: 30, windowMs: 60_000, failClosed: true },
     );
   });
 
@@ -83,6 +90,18 @@ describe("Places API proxy routes", () => {
     expect(mocks.checkRateLimitAsync).not.toHaveBeenCalled();
   });
 
+  it("requires authentication on place details before calling Google", async () => {
+    mocks.requireUserIdFromRequest.mockResolvedValueOnce(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+    const { GET } = await importDetailsRoute();
+
+    const res = await GET(makeRequest("/api/places/details?placeId=abc123"));
+
+    expect(res.status).toBe(401);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rate limits place details requests before calling Google", async () => {
     mocks.checkRateLimitAsync.mockResolvedValueOnce({ allowed: false });
     const { GET } = await importDetailsRoute();
@@ -92,8 +111,8 @@ describe("Places API proxy routes", () => {
     expect(res.status).toBe(429);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mocks.checkRateLimitAsync).toHaveBeenCalledWith(
-      "places-venues:127.0.0.1",
-      { maxRequests: 30, windowMs: 60_000, failClosed: true },
+      "places-venues:user-1",
+      { maxRequests: 20, windowMs: 60_000, failClosed: true },
     );
   });
 

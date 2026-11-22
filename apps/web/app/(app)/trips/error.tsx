@@ -3,12 +3,19 @@
 import Link from "next/link";
 import { TripRecovery } from "@/components/trips/TripRecovery";
 
-export default function TripsError({ reset }: { reset: () => void }) {
+export default function TripsError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <TripRecovery
       eyebrow="Your journey"
       title="Your trip couldn’t load"
       description="Try loading it again in a moment. If you recently saved a change, check the trip before submitting it again."
+      error={error}
       reset={reset}
     >
       <Link

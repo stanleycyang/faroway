@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, borderRadius } from '../../constants/theme';
 import { getMarkedDates, localCalendarDate } from '../../lib/dateRangeMarks';
 import { formatTripDate } from '../../lib/tripDate';
 import { getDatePickerModalHeight } from '../../lib/datePickerLayout';
 import { hapticFeedback } from '../../utils/haptics';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 
 interface DateRangePickerProps {
   startDate: string;
@@ -35,6 +37,8 @@ export function DateRangePicker({
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('start');
   const { height: viewportHeight } = useWindowDimensions();
   const modalHeight = getDatePickerModalHeight(viewportHeight);
+  const reduceMotion = useReduceMotion();
+  const insets = useSafeAreaInsets();
 
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return 'Select date';
@@ -149,7 +153,13 @@ export function DateRangePicker({
         </TouchableOpacity>
       </View>
 
-      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={closePicker}>
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType={reduceMotion ? 'none' : 'slide'}
+        statusBarTranslucent
+        onRequestClose={closePicker}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { height: modalHeight }]} accessibilityViewIsModal>
             {/* Drag handle */}
@@ -233,7 +243,7 @@ export function DateRangePicker({
             </ScrollView>
 
             {/* Done button */}
-            <View style={styles.doneContainer}>
+            <View style={[styles.doneContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
               <TouchableOpacity
                 style={[styles.doneButton, (!startDate || !endDate) && styles.doneButtonDisabled]}
                 onPress={closePicker}

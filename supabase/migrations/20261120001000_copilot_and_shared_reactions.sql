@@ -199,7 +199,7 @@ CREATE INDEX IF NOT EXISTS idx_shared_trip_reactions_token_stop
 
 ALTER TABLE public.shared_trip_reactions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.shared_trip_reactions FROM anon, authenticated;
-GRANT SELECT, INSERT, DELETE ON public.shared_trip_reactions TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.shared_trip_reactions TO service_role;
 
 CREATE OR REPLACE FUNCTION public.get_shared_trip_reaction_counts(p_share_token TEXT)
 RETURNS TABLE(stop_key TEXT, reaction TEXT, count BIGINT)

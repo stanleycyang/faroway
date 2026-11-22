@@ -199,4 +199,37 @@ describe("vendor response deadline", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("cancels an in-progress body read when the parent signal aborts after headers resolve", async () => {
+    let bodyController!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        bodyController = controller;
+      },
+    });
+    let fetchSignal!: AbortSignal;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input, init) => {
+        fetchSignal = init.signal;
+        return new Response(body);
+      }),
+    );
+    try {
+      const { fetchWithTimeout } = await import("@/lib/search/runtime");
+      const parent = new AbortController();
+      const response = await fetchWithTimeout(
+        "https://example.invalid/vendor",
+        { signal: parent.signal },
+        5000,
+      );
+      const reading = response.text();
+      parent.abort(new DOMException("Parent cancelled", "AbortError"));
+      await expect(reading).rejects.toThrow("Parent cancelled");
+      expect(fetchSignal.aborted).toBe(true);
+    } finally {
+      bodyController.error(new Error("Fixture cleanup"));
+      vi.unstubAllGlobals();
+    }
+  });
 });

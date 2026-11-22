@@ -51,7 +51,7 @@ import {
 } from '../../lib/tripCreationRecovery';
 import { useGuestTripBrief } from '../../hooks/useGuestTripBrief';
 import { tripInputFromLink } from '../../lib/tripLinkInput';
-import { buildDestinationStaticMapUrl, isValidIataAirportCode } from '../../lib/flightOrigin';
+import { isValidIataAirportCode } from '../../lib/flightOrigin';
 import { AuthGate } from '../../components/AuthGate';
 import {
   BUDGET_TIERS,
@@ -62,12 +62,6 @@ import {
 } from '@faroway/constants';
 import { colors, borderRadius, shadows, fontFamilies } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
-
-const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
-
-function getStaticMapUrl(destination: string, country: string): string | null {
-  return buildDestinationStaticMapUrl(destination, country, GOOGLE_API_KEY);
-}
 
 export default function CreateTripScreen() {
   const router = useRouter();
@@ -146,7 +140,6 @@ export default function CreateTripScreen() {
 
   const [showSearch, setShowSearch] = useState(!params.destination && !draftInput?.destination);
   const [showAllDestinations, setShowAllDestinations] = useState(false);
-  const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
   const [travelerMemory, setTravelerMemory] = useState<TravelerMemoryDefaults | null>(null);
@@ -272,7 +265,6 @@ export default function CreateTripScreen() {
       if (parsed.destination) {
         updates.destination = parsed.destination;
         updates.country = parsed.country ?? '';
-        setMapLoadFailed(false);
         setShowSearch(false);
       }
       if (parsed.startDate) updates.startDate = parsed.startDate;
@@ -349,7 +341,6 @@ export default function CreateTripScreen() {
         updates.startDate = fmt(start);
         updates.endDate = fmt(end);
       }
-      setMapLoadFailed(false);
       setShowSearch(false);
       setDraftInput(updates);
     },
@@ -390,7 +381,6 @@ export default function CreateTripScreen() {
 
   const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();
-    setMapLoadFailed(false);
     setDraftInput({ destination: name, country, placeId });
     setShowSearch(false);
   };
@@ -458,10 +448,6 @@ export default function CreateTripScreen() {
 
   const selectedDestination = popularDestinations.find((d) => d.name === draftInput?.destination);
 
-  const mapUrl = draftInput?.destination
-    ? getStaticMapUrl(draftInput.destination, draftInput.country || '')
-    : null;
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -473,7 +459,13 @@ export default function CreateTripScreen() {
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => router.back()}
+              onPress={() => {
+                if (typeof router.canGoBack === 'function' && !router.canGoBack()) {
+                  router.replace('/(tabs)');
+                } else {
+                  router.back();
+                }
+              }}
               accessibilityRole="button"
               accessibilityLabel="Close trip planner"
             >
@@ -590,7 +582,13 @@ export default function CreateTripScreen() {
               memoryApplied={memoryApplied}
               onSaveCurrentAsMemory={handleSaveCurrentAsMemory}
               onClearMemory={handleClearMemory}
-              onEditMemory={() => router.push('/(tabs)/profile')}
+              onEditMemory={() => {
+                if (typeof router.dismissTo === 'function') {
+                  router.dismissTo('/(tabs)/profile');
+                } else {
+                  router.replace('/(tabs)/profile');
+                }
+              }}
             />
 
             {/* Destination Selection */}
@@ -610,15 +608,7 @@ export default function CreateTripScreen() {
                     style={StyleSheet.absoluteFill}
                     accessible={false}
                   />
-                  {mapUrl && !mapLoadFailed ? (
-                    <Image
-                      source={{ uri: mapUrl }}
-                      style={styles.selectedDestinationImage}
-                      resizeMode="cover"
-                      onError={() => setMapLoadFailed(true)}
-                      accessible={false}
-                    />
-                  ) : selectedDestination ? (
+                  {selectedDestination ? (
                     <Image
                       source={{ uri: selectedDestination.image }}
                       style={styles.selectedDestinationImage}
@@ -634,7 +624,7 @@ export default function CreateTripScreen() {
                     colors={['transparent', 'rgba(20,61,70,0.85)']}
                     style={styles.selectedDestinationGradient}
                   />
-                  {(!mapUrl || mapLoadFailed) && !selectedDestination && (
+                  {!selectedDestination && (
                     <Ionicons
                       name="location"
                       size={40}
@@ -970,7 +960,6 @@ export default function CreateTripScreen() {
                 if (!isRecoveryCurrent()) return;
                 setDraftInput(savedCreation);
                 setShowSearch(false);
-                setMapLoadFailed(false);
               }}
             >
               <Text>Restore unfinished trip to {savedCreation.destination}</Text>
@@ -1014,7 +1003,6 @@ export default function CreateTripScreen() {
                             setRecoveryError(null);
                             useTripStore.getState().clearDraft();
                             setShowSearch(true);
-                            setMapLoadFailed(false);
                           })
                           .catch((reason: unknown) => {
                             if (!isRecoveryCurrent()) return;

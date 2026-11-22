@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { securityHeaders } from "@/lib/security/headers";
+import { buildSecurityHeaders, securityHeaders } from "@/lib/security/headers";
 
 describe("securityHeaders", () => {
   it("is a non-empty array of header objects", () => {
@@ -67,5 +67,15 @@ describe("securityHeaders", () => {
     );
     expect(xdpc).toBeDefined();
     expect(xdpc!.value).toBe("on");
+  });
+
+  it("pins CSP to the configured Supabase project origin instead of a wildcard", () => {
+    const headers = buildSecurityHeaders({
+      NEXT_PUBLIC_SUPABASE_URL: "https://myprojectref.supabase.co",
+      NODE_ENV: "production",
+    });
+    const csp = headers.find((h) => h.key === "Content-Security-Policy")!.value;
+    expect(csp).toContain("https://myprojectref.supabase.co");
+    expect(csp).not.toContain("*.supabase.co");
   });
 });

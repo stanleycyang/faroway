@@ -135,7 +135,7 @@ function ExportSession({
         setOpen(false);
       } finally {
         a.remove();
-        URL.revokeObjectURL(blobUrl);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       }
     } catch {
       if (mounted.current)

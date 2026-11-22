@@ -765,3 +765,78 @@ it('keeps the local draft and retry identity if saving the confirmed server copy
     save.mockRestore();
   }
 });
+
+it('formats traveler requirements readably and allows reapplying requirement edits', () => {
+  const mutation = {
+    id: 'm-req',
+    type: 'update' as const,
+    tripId: 'trip-1',
+    ownerId: 'owner',
+    timestamp: 1,
+    retryCount: 0,
+    data: {
+      expectedUpdatedAt: '2026-10-01T00:00:00Z',
+      preferences: {
+        requirements: {
+          allergies: ['Peanuts'],
+          dietaryPreferences: ['Vegetarian'],
+          accessibility: ['step_free_entrance'],
+          mobilityNotes: 'Avoid stairs',
+        },
+      },
+    },
+  };
+  expect(supportsConflictReapply(mutation)).toBe(true);
+  const rows = conflictRows(mutation, {
+    preferences: {
+      requirements: {
+        allergies: [],
+        dietaryPreferences: ['Vegan'],
+        accessibility: [],
+        mobilityNotes: '',
+      },
+    },
+  });
+  expect(rows).toEqual([
+    {
+      label: 'Dietary & access needs',
+      yours:
+        'Food allergies: Peanuts; Dietary preferences: Vegetarian; Access needs: Step-free entrance; Mobility and rest: Avoid stairs',
+      latest: 'Dietary preferences: Vegan',
+    },
+  ]);
+});
+
+it('resolves queued local_ deletes locally without sending DELETE /api/trips/local_*', async () => {
+  const localTrip: Trip = {
+    id: 'local_only_trip',
+    destination: 'Lisbon',
+    country: 'Portugal',
+    startDate: '2099-06-01',
+    endDate: '2099-06-03',
+    travelers: 2,
+    travelerType: 'couple',
+    vibes: [],
+    days: [],
+    coverImage: '',
+    createdAt: '2026-10-10T00:00:00Z',
+    status: 'draft',
+  };
+  await offlineStorage.saveTrip(localTrip);
+  await syncService.queueDelete(localTrip.id);
+  fetchMock.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ trips: [] }),
+  });
+
+  const result = await syncService.sync(true);
+  expect(result.success).toBe(true);
+  expect(result.synced).toBe(1);
+  expect(
+    fetchMock.mock.calls.some(
+      ([url, init]) => String(url).includes('local_only_trip') || init?.method === 'DELETE'
+    )
+  ).toBe(false);
+  expect(await offlineStorage.loadSavedTrips()).toEqual([]);
+});

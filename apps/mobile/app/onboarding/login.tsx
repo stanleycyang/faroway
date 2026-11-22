@@ -16,10 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
 import { isRequestCanceled } from '../../lib/authProviders';
+import { openSafeHttpsUrl } from '../../lib/openExternalUrl';
 import { colors, borderRadius } from '../../constants/theme';
 
 export default function LoginScreen() {
@@ -76,7 +76,13 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              if (typeof router.canGoBack === 'function' && !router.canGoBack()) {
+                router.replace('/(tabs)');
+              } else {
+                router.back();
+              }
+            }}
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -155,7 +161,7 @@ export default function LoginScreen() {
             <Text
               style={styles.legalLink}
               accessibilityRole="link"
-              onPress={() => void WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+              onPress={() => void openSafeHttpsUrl('https://faroway.ai/terms')}
             >
               Terms of Service
             </Text>{' '}
@@ -163,7 +169,7 @@ export default function LoginScreen() {
             <Text
               style={styles.legalLink}
               accessibilityRole="link"
-              onPress={() => void WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+              onPress={() => void openSafeHttpsUrl('https://faroway.ai/privacy')}
             >
               Privacy Policy
             </Text>

@@ -159,7 +159,6 @@ function CheckoutSession({
     } catch {
       if (!current()) return;
       setHistoryError(true);
-      setEnabled(false);
     }
   }, [endpoint, isOwnerMode]);
 
@@ -278,13 +277,17 @@ function CheckoutSession({
           closePreopenedAffiliateTab(popup);
           return;
         }
-        const data = await response.json();
+        const data = await response.json().catch(() => null);
         if (!mounted.current) {
           closePreopenedAffiliateTab(popup);
           return;
         }
         if (!response.ok)
-          throw new Error(data.error || "Could not prepare checkout.");
+          throw new Error(
+            typeof data?.error === "string" && data.error.trim()
+              ? data.error
+              : "Could not prepare checkout.",
+          );
         if (
           data?.status !== "handoff_prepared" ||
           data?.attemptId !== selection.attemptId

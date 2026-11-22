@@ -176,6 +176,7 @@ export function TripDetailClient({
 }: TripDetailClientProps) {
   const router = useRouter();
   const viatorContentEnabled = useViatorContentEnabled();
+  const copilotBarId = `trip-${tripId}-copilot`;
   const [selectedDay, setSelectedDay] = useState(0);
   const hydrated = useHydrated();
   const [planEditorOpen, setPlanEditorOpen] = useState(false);
@@ -248,13 +249,44 @@ export function TripDetailClient({
   const [copilotQuickAction, setCopilotQuickAction] =
     useState<CopilotQuickTrigger | null>(null);
   const [copilotBusy, setCopilotBusy] = useState(false);
+  const copilotBusyRef = useRef(false);
+  useEffect(() => {
+    copilotBusyRef.current = copilotBusy;
+  }, [copilotBusy]);
   const copilotNonceRef = useRef(0);
+  const shareUrlRef = useRef<string | null>(initialShareUrl);
+  useEffect(() => {
+    shareUrlRef.current = shareUrl;
+  }, [shareUrl]);
+  // A floating notice for actions triggered far from their result (header
+  // share button, day-card co-pilot taps); the share card status is below the fold.
+  const [floatingNotice, setFloatingNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showFloatingNotice = useCallback((message: string) => {
+    setFloatingNotice(message);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setFloatingNotice(null), 6000);
+  }, []);
+  useEffect(
+    () => () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    },
+    [],
+  );
   const handleCopilotItineraryUpdated = useCallback(
     (
       updated: GeneratedItinerary,
       updatedAt?: string,
       planRevision?: string | null,
     ) => {
+      // Applied edits revoke public access server-side so a shared link never
+      // shows a plan the owner did not re-approve. Tell the owner.
+      if (shareUrlRef.current) {
+        const message =
+          "Your edit turned off the public link so no one sees an outdated plan. Create a new link to share the updated trip.";
+        setShareStatus(message);
+        showFloatingNotice(message);
+      }
       setItinerary(updated);
       setShareUrl(null);
       setTrip((prev) =>
@@ -279,13 +311,31 @@ export function TripDetailClient({
       dayNumber: number;
       stopName?: string;
     }) => {
+      if (copilotBusyRef.current) {
+        showFloatingNotice(
+          "Still applying your last change. Try again in a moment.",
+        );
+        return;
+      }
       copilotNonceRef.current += 1;
       setCopilotQuickAction({
         ...action,
         nonce: copilotNonceRef.current,
       });
+      // Progress and results render in the co-pilot bar; bring it into view
+      // when the tap came from a day card further down the page.
+      if (typeof document !== "undefined") {
+        const bar = document.getElementById?.(copilotBarId);
+        bar?.scrollIntoView({
+          block: "nearest",
+          behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "instant"
+            : "smooth",
+        });
+      }
     },
-    [],
+    [showFloatingNotice, copilotBarId],
   );
 
   // Determine if we should stream
@@ -467,10 +517,29 @@ export function TripDetailClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- we intentionally depend on trip?.status and trip?.search_id, not the whole trip object
   }, [trip?.status, trip?.search_id, tripId, fetchTrip, generation.phase]);
 
+  const shareCardId = `trip-${tripId}-share`;
+  // Share can start from the header; its status otherwise renders only in the
+  // share card further down the page.
+  const reportShareStatus = (message: string) => {
+    setShareStatus(message);
+    const rect =
+      typeof document !== "undefined"
+        ? document.getElementById?.(shareCardId)?.getBoundingClientRect?.()
+        : null;
+    const cardVisible =
+      !!rect &&
+      typeof window !== "undefined" &&
+      rect.top < window.innerHeight &&
+      rect.bottom > 0;
+    if (!cardVisible) showFloatingNotice(message);
+  };
+
   const handleShare = async (confirmed = false) => {
     if (!refreshMounted.current) return;
     if (trip?.preferences?.planNeedsRefresh) {
-      setShareStatus("Update the plan for your saved brief before sharing it.");
+      reportShareStatus(
+        "Update the plan for your saved brief before sharing it.",
+      );
       return;
     }
     if (shareLock.current) return;
@@ -524,17 +593,17 @@ export function TripDetailClient({
           url: url!,
         });
         if (refreshMounted.current)
-          setShareStatus(
+          reportShareStatus(
             "Link ready to send. Anyone with it can view this trip.",
           );
       } else {
         await navigator.clipboard.writeText(url!);
         if (refreshMounted.current)
-          setShareStatus("Public share link copied to your clipboard.");
+          reportShareStatus("Public share link copied to your clipboard.");
       }
     } catch (err) {
       if (!refreshMounted.current) return;
-      setShareStatus(
+      reportShareStatus(
         shareSheetOpened && err instanceof Error && err.name === "AbortError"
           ? "Share sheet canceled. Your public link remains active; use Turn off public access to revoke it."
           : "Sharing did not finish. If a public link was created, it remains active until you turn off public access.",
@@ -1025,7 +1094,7 @@ export function TripDetailClient({
             role="alert"
             className="fixed left-4 right-4 top-4 z-[120] rounded-xl bg-amber-50 p-4 text-amber-900"
           >
-            {error}. Your trip is saved.{" "}
+            {error.replace(/\.+$/, "")}. Your trip is saved.{" "}
             <button
               type="button"
               className="underline"
@@ -1131,6 +1200,23 @@ export function TripDetailClient({
           </aside>
         </ItineraryGenerationLoader>
         {planningConsentModal}
+        {floatingNotice && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="print-hidden fixed top-4 left-1/2 z-[110] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white shadow-xl"
+          >
+            <span>{floatingNotice}</span>
+            <button
+              type="button"
+              onClick={() => setFloatingNotice(null)}
+              aria-label="Dismiss notice"
+              className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1196,7 +1282,7 @@ export function TripDetailClient({
             role="alert"
             className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"
           >
-            {error}. Your last loaded trip is still shown.{" "}
+            {error.replace(/\.+$/, "")}. Your last loaded trip is still shown.{" "}
             <button
               type="button"
               onClick={() => fetchTrip()}
@@ -1346,6 +1432,7 @@ export function TripDetailClient({
                     }
                   />
                   <TripCopilotBar
+                    id={copilotBarId}
                     tripId={tripId}
                     destination={trip.destination}
                     itinerary={itinerary}
@@ -1354,6 +1441,7 @@ export function TripDetailClient({
                     }
                     expectedUpdatedAt={trip.updated_at}
                     expectedPlanRevision={trip.plan_revision_id ?? null}
+                    isShared={Boolean(shareUrl)}
                     pendingAction={copilotQuickAction}
                     onBusyChange={setCopilotBusy}
                     onItineraryUpdated={handleCopilotItineraryUpdated}
@@ -1655,7 +1743,10 @@ export function TripDetailClient({
 
         {/* Share This Trip */}
         {trip && (
-          <div className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 text-center sm:p-8">
+          <div
+            id={shareCardId}
+            className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 text-center sm:p-8"
+          >
             <h3 className="font-editorial text-2xl text-slate-900 mb-2">
               Bring someone into the journey
             </h3>
@@ -1786,6 +1877,23 @@ export function TripDetailClient({
         )}
       </main>
       {planningConsentModal}
+      {floatingNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="print-hidden fixed top-4 left-1/2 z-[110] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white shadow-xl"
+        >
+          <span>{floatingNotice}</span>
+          <button
+            type="button"
+            onClick={() => setFloatingNotice(null)}
+            aria-label="Dismiss notice"
+            className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-white"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Sticky Booking Bar */}
       {isComplete && (bookableCount > 0 || bookingItems.length > 0) && (

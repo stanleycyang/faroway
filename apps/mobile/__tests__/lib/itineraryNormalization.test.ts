@@ -514,3 +514,28 @@ test('does not fabricate opentable on meals and normalizes hotel/activity/transp
   const unlinkedHotel = transformApiHotel({ name: 'Unlinked Hotel' });
   expect(unlinkedHotel?.bookingUrl).toBeUndefined();
 });
+
+test('transformApiHotel coerces string and negative coordinates to finite numbers for offline cache safety', () => {
+  const hotel = transformApiHotel({
+    id: 'hotel-coords',
+    name: 'Southern Cross Hotel',
+    location: {
+      name: 'CBD',
+      lat: '-33.8688',
+      lng: '151.2093',
+    },
+  });
+  expect(hotel?.location.lat).toBe(-33.8688);
+  expect(hotel?.location.lng).toBe(151.2093);
+
+  const fallback = transformApiHotel({
+    id: 'hotel-bad-coords',
+    name: 'Mystery Inn',
+    location: {
+      lat: 'not-a-coord',
+      coordinates: { lat: 35.6762, lng: 'bad' },
+    },
+  });
+  expect(fallback?.location.lat).toBe(35.6762);
+  expect(fallback?.location.lng).toBe(0);
+});

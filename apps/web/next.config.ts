@@ -1,4 +1,7 @@
-import { securityHeaders } from "./lib/security/headers";
+import {
+  getPinnedSupabaseOrigin,
+  securityHeaders,
+} from "./lib/security/headers";
 import { assertDatabaseIsolation } from "./lib/config/database-isolation";
 import { withWorkflow } from "workflow/next";
 import { withSentryConfig } from "@sentry/nextjs/config";
@@ -10,6 +13,14 @@ assertDatabaseIsolation({
     process.env.FAROWAY_STAGING_SUPABASE_PROJECT_REF,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
 });
+
+const pinnedSupabaseOrigin = getPinnedSupabaseOrigin(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  "production",
+);
+const pinnedSupabaseHostname = pinnedSupabaseOrigin
+  ? new URL(pinnedSupabaseOrigin).hostname
+  : null;
 
 const nextConfig: NextConfig = {
   // The local Workflow backend uses Node's real entrypoint to resolve its
@@ -36,11 +47,15 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
-      {
-        protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      },
+      ...(pinnedSupabaseHostname
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: pinnedSupabaseHostname,
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
       {
         protocol: "https",
         hostname: "hare-media-cdn.tripadvisor.com",

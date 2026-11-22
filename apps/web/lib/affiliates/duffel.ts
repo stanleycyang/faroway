@@ -325,8 +325,8 @@ export async function searchDuffelFlights(
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("[Duffel] offer_requests error:", response.status, error);
+      await response.text().catch(() => {});
+      console.error("[Duffel] offer_requests error:", response.status);
       return [];
     }
 
@@ -429,8 +429,8 @@ export async function generateDuffelLink(
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("[Duffel] links/sessions error:", response.status, error);
+      await response.text().catch(() => {});
+      console.error("[Duffel] links/sessions error:", response.status);
       return null;
     }
 

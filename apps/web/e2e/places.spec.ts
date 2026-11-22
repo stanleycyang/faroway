@@ -63,7 +63,7 @@ test("keeps Google references out of independent catalog selections", async ({
   await page.goto(fixtureUrl);
   await page.getByRole("combobox").fill("Tok");
   await expect(page.getByText("Google Maps", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Tokyo Japan" }).click();
+  await page.getByRole("option", { name: "Tokyo Japan" }).click();
   await expect(page.locator("output")).toContainText('"source":"catalog"');
   await expect(page.locator("output")).not.toContainText("placeId");
 });
@@ -76,7 +76,7 @@ test("keeps local selection usable without provider credentials or attribution",
   );
   await page.goto(fixtureUrl);
   await page.getByRole("combobox").fill("Tok");
-  await page.getByRole("button", { name: "Tokyo Japan" }).click();
+  await page.getByRole("option", { name: "Tokyo Japan" }).click();
   await expect(page.locator("output")).toContainText('"source":"catalog"');
   await expect(page.getByText("Google Maps", { exact: true })).toHaveCount(0);
 });
@@ -97,7 +97,7 @@ test("clears old provider predictions while a different query is loading", async
   await page.getByRole("combobox").fill("Tok");
   await expect(page.getByText("Google Maps", { exact: true })).toBeVisible();
   await page.getByRole("combobox").fill("P");
-  await expect(page.getByRole("button", { name: "Tokyo Japan" })).toHaveCount(
+  await expect(page.getByRole("option", { name: "Tokyo Japan" })).toHaveCount(
     0,
   );
   await expect(page.getByText("Google Maps", { exact: true })).toHaveCount(0);
@@ -179,7 +179,7 @@ test("user destination text is preserved independently of Google predictions", a
     page.getByText("Provider-derived name", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Plan with “My destination”" })
+    .getByRole("option", { name: "Plan with “My destination”" })
     .click();
   await expect(page.locator("output")).toHaveText(
     '{"name":"My destination","source":"user"}',
@@ -263,7 +263,7 @@ test("gated live references fail gracefully without blocking independent plannin
     .click();
   await expect(page.getByRole("alert")).toContainText("continue planning");
   await page.getByRole("combobox").fill("Tok");
-  await page.getByRole("button", { name: "Tokyo Japan" }).click();
+  await page.getByRole("option", { name: "Tokyo Japan" }).click();
   await expect(page.locator("output")).toContainText('"source":"catalog"');
 });
 

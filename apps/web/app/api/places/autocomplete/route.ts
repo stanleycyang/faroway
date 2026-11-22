@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   const ip = getClientIp(request);
   const rl = await checkRateLimitAsync(`places-autocomplete:${ip}`, {
-    maxRequests: 120,
+    maxRequests: 30,
     windowMs: 60_000,
     failClosed: true,
   });

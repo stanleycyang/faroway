@@ -157,13 +157,27 @@ async function validateAndFetchTrip(
   }
 
   // Build TripPreferences from input + database
+  const budgetTier =
+    input.budget ||
+    trip.budget_tier ||
+    (trip.budget === "budget" ||
+    trip.budget === "moderate" ||
+    trip.budget === "luxury"
+      ? trip.budget
+      : undefined) ||
+    "moderate";
+  const travelers = input.travelers ||
+    trip.travelers_data ||
+    (trip.travelers && typeof trip.travelers === "object"
+      ? trip.travelers
+      : undefined) || { adults: 2, children: 0 };
   const preferences: TripPreferences = {
     destination: input.destination || trip.destination,
     startDate: input.startDate || trip.start_date,
     endDate: input.endDate || trip.end_date,
-    budget: input.budget || trip.budget || "moderate",
+    budget: budgetTier,
     vibes: input.preferences?.vibes || trip.vibes || ["adventure", "cultural"],
-    travelers: input.travelers || trip.travelers || { adults: 2, children: 0 },
+    travelers,
     interests: input.preferences?.interests || trip.interests,
     dietaryRestrictions:
       input.preferences?.dietaryRestrictions || trip.dietary_restrictions,
@@ -206,9 +220,11 @@ async function generateItineraryWithAI(
     const itinerary = await generateItinerary(preferences, {
       onProgress: async (progress) => {
         // Map AI progress to workflow progress (10% -> 90%)
-        const mappedProgress =
-          10 +
-          Math.floor(((progress.currentDay || 0) / progress.totalDays) * 80);
+        const ratio =
+          progress.totalDays > 0
+            ? (progress.currentDay || 0) / progress.totalDays
+            : 0;
+        const mappedProgress = 10 + Math.floor(ratio * 80);
 
         await supabase
           .from("workflow_progress")

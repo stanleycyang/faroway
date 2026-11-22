@@ -18,6 +18,7 @@ import { requestWithTimeout } from '../../services/request';
 import * as Crypto from 'expo-crypto';
 import { captureTripAccount, readTripSession } from '../tripAccountScope';
 import { useUserStore } from '../../stores/userStore';
+import { logger } from '../logger';
 
 async function syncResponse(input: RequestInfo | URL, init: RequestInit) {
   return requestWithTimeout(
@@ -201,7 +202,7 @@ class SyncService {
       // Only trigger "network restored" sync after the initial state has settled.
       // The unknown → online transition at startup is not a real restore.
       if (wasOffline && this.state.isOnline && this.autoSyncEnabled && this.hasResolvedNetwork) {
-        console.log('[SyncService] Network restored, triggering sync');
+        logger.debug('[SyncService] Network restored, triggering sync');
         await this.sync();
       }
 
@@ -225,7 +226,7 @@ class SyncService {
       account
     );
 
-    console.log('[SyncService] Initialized', this.state);
+    logger.debug('[SyncService] Initialized', this.state);
   }
 
   /**
@@ -265,7 +266,7 @@ class SyncService {
       try {
         listener(this.getState());
       } catch (error) {
-        console.error('[SyncService] Listener error:', error);
+        logger.error('[SyncService] Listener error:', error);
       }
     });
   }
@@ -301,14 +302,14 @@ class SyncService {
     if (!account.ownerId) return { success: false, synced: 0, failed: 0, errors: [] };
     // Prevent concurrent syncs
     if (this.syncInProgress) {
-      console.log('[SyncService] Sync already in progress');
+      logger.debug('[SyncService] Sync already in progress');
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
 
     // Rate limiting
     const now = Date.now();
     if (!force && now - this.lastSyncAttempt < MIN_SYNC_INTERVAL) {
-      console.log('[SyncService] Sync rate limited');
+      logger.debug('[SyncService] Sync rate limited');
       return { success: false, synced: 0, failed: 0, errors: [] };
     }
 
@@ -364,7 +365,7 @@ class SyncService {
       if (result.failed === 0) await offlineStorage.recordSuccessfulSync();
       else await offlineStorage.recordFailedSync();
 
-      console.log('[SyncService] Sync complete:', result);
+      logger.debug('[SyncService] Sync complete:', result);
       return result;
     } catch (error: unknown) {
       result.success = false;
@@ -376,7 +377,7 @@ class SyncService {
         error instanceof TypeError && /network request failed/i.test(error.message);
 
       if (isNetworkError) {
-        console.log('[SyncService] Backend unreachable, treating as offline');
+        logger.debug('[SyncService] Backend unreachable, treating as offline');
         this.updateState(
           {
             status: 'offline',
@@ -388,7 +389,7 @@ class SyncService {
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[SyncService] Sync failed:', error);
+      logger.error('[SyncService] Sync failed:', error);
       result.errors.push({ mutationId: '', error: errorMessage });
 
       this.updateState(
@@ -424,7 +425,7 @@ class SyncService {
       return result;
     }
 
-    console.log(`[SyncService] Pushing ${mutations.length} pending mutations`);
+    logger.debug(`[SyncService] Pushing ${mutations.length} pending mutations`);
 
     // Process in order (oldest first)
     const sorted = mutations.sort((a, b) => a.timestamp - b.timestamp);
@@ -451,7 +452,7 @@ class SyncService {
         account.assertCurrent();
         await offlineStorage.removePendingMutation(mutation.id);
         result.synced++;
-        console.log(`[SyncService] Mutation ${mutation.id} synced successfully`);
+        logger.debug(`[SyncService] Mutation ${mutation.id} synced successfully`);
       } catch (error: unknown) {
         if (!account.isCurrent()) throw error;
         // If backend is unreachable, stop processing the rest of the queue
@@ -461,7 +462,7 @@ class SyncService {
           throw error; // Let sync() handle this as offline
         }
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`[SyncService] Mutation ${mutation.id} failed:`, error);
+        logger.error(`[SyncService] Mutation ${mutation.id} failed:`, error);
         if (error instanceof TripRevisionConflict) {
           await offlineStorage.blockPendingMutation(mutation.id, errorMessage);
         } else {
@@ -525,7 +526,7 @@ class SyncService {
 
       case 'update': {
         const response = await ownedSyncResponse(
-          `${API_BASE_URL}/api/trips/${mutation.tripId}`,
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(mutation.tripId)}`,
           {
             method: 'PATCH',
             headers,
@@ -554,8 +555,13 @@ class SyncService {
       }
 
       case 'delete': {
+        // Offline-only draft IDs never existed on the server; remove locally without a 400 DELETE.
+        if (mutation.tripId.startsWith('local_')) {
+          await offlineStorage.deleteTrip(mutation.tripId, mutation.ownerId);
+          break;
+        }
         const response = await ownedSyncResponse(
-          `${API_BASE_URL}/api/trips/${mutation.tripId}`,
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(mutation.tripId)}`,
           {
             method: 'DELETE',
             headers,
@@ -610,13 +616,13 @@ class SyncService {
       await accountSession(session.user.id);
       account.assertCurrent();
       await offlineStorage.saveTrips(mergedTrips, session.user.id);
-      console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
+      logger.debug(`[SyncService] Pulled ${serverTrips.length} trips from server`);
     } catch (error) {
       // Network errors are handled by sync() — only log non-network failures here
       const isNetworkError =
         error instanceof TypeError && /network request failed/i.test((error as Error).message);
       if (!isNetworkError) {
-        console.error('[SyncService] Pull failed:', error);
+        logger.error('[SyncService] Pull failed:', error);
       }
       throw error;
     }
@@ -773,7 +779,7 @@ class SyncService {
       if (revision) {
         const session = await accountSession(snapshot.ownerId);
         const response = await ownedSyncResponse(
-          `${API_BASE_URL}/api/trips/${snapshot.tripId}`,
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(snapshot.tripId)}`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },

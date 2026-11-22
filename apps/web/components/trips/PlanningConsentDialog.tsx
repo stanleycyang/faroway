@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { type RefObject, useEffect, useId, useRef } from "react";
 import { Sparkles, X } from "lucide-react";
 
 interface PlanningConsentDialogProps {
@@ -8,6 +8,37 @@ interface PlanningConsentDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  fallbackFocusRef?: RefObject<HTMLElement | null>;
+}
+
+function isElementFocusable(el: HTMLElement | null): el is HTMLElement {
+  if (!el || !el.isConnected) return false;
+  if ("disabled" in el && Boolean((el as HTMLButtonElement).disabled)) {
+    return false;
+  }
+  if (el.getAttribute("aria-disabled") === "true") return false;
+  if (typeof el.closest === "function" && el.closest("fieldset:disabled")) {
+    return false;
+  }
+  return true;
+}
+
+function findFallbackFocusTarget(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  const candidates = document.querySelectorAll<HTMLElement>(
+    '[role="status"][tabindex], [aria-live][tabindex], button[aria-live], main [tabindex="-1"], main button:not([disabled]), main a[href]',
+  );
+  for (const candidate of candidates) {
+    if (isElementFocusable(candidate)) return candidate;
+  }
+  const main = document.querySelector<HTMLElement>("main");
+  if (main && main.isConnected) {
+    if (!main.hasAttribute("tabindex")) {
+      main.tabIndex = -1;
+    }
+    return main;
+  }
+  return null;
 }
 
 export function PlanningConsentDialog({
@@ -15,15 +46,20 @@ export function PlanningConsentDialog({
   message,
   onConfirm,
   onCancel,
+  fallbackFocusRef,
 }: PlanningConsentDialogProps) {
   const titleId = useId();
   const bodyId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
-  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const onCancelRef = useRef(onCancel);
+  const fallbackRef = useRef(fallbackFocusRef);
   useEffect(() => {
     onCancelRef.current = onCancel;
   }, [onCancel]);
+  useEffect(() => {
+    fallbackRef.current = fallbackFocusRef;
+  }, [fallbackFocusRef]);
 
   useEffect(() => {
     if (!open) return;
@@ -33,7 +69,7 @@ export function PlanningConsentDialog({
         : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    confirmButtonRef.current?.focus();
+    cancelButtonRef.current?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -64,7 +100,16 @@ export function PlanningConsentDialog({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
+      if (isElementFocusable(previouslyFocused)) {
+        previouslyFocused.focus();
+      } else {
+        const explicitFallback = fallbackRef.current?.current ?? null;
+        if (isElementFocusable(explicitFallback)) {
+          explicitFallback.focus();
+        } else {
+          findFallbackFocusTarget()?.focus();
+        }
+      }
     };
   }, [open]);
 
@@ -114,6 +159,7 @@ export function PlanningConsentDialog({
 
         <div className="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
           <button
+            ref={cancelButtonRef}
             type="button"
             onClick={onCancel}
             className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
@@ -121,7 +167,6 @@ export function PlanningConsentDialog({
             Not now
           </button>
           <button
-            ref={confirmButtonRef}
             type="button"
             onClick={onConfirm}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-800"

@@ -1,9 +1,8 @@
-import { createHmac } from "node:crypto";
-
 /**
  * Rate limiter — uses an atomic Supabase RPC in production and an in-memory
  * fallback for local development and tests.
  *
+ * Uses Web Crypto (crypto.subtle) so it works in both Node.js and Edge runtimes.
  * Identifiers are HMAC-hashed before storage so IP addresses and user IDs are
  * not persisted in plaintext.
  */
@@ -15,27 +14,36 @@ const useSupabase = !!(SUPABASE_URL && SUPABASE_SERVICE_KEY && RATE_LIMIT_SALT);
 
 // ── In-memory fallback ────────────────────────────────────────────────────────
 
+const MAX_MEMORY_ENTRIES = 10_000;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+let lastCleanupAt = 0;
 
-// Cleanup old entries every 5 minutes to prevent unbounded growth in long-lived processes.
-const cleanupTimer = setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, value] of rateLimitMap) {
-      if (now > value.resetTime) {
-        rateLimitMap.delete(key);
-      }
+function pruneExpiredMemoryEntries(now: number): void {
+  if (
+    now - lastCleanupAt < CLEANUP_INTERVAL_MS &&
+    rateLimitMap.size < MAX_MEMORY_ENTRIES
+  ) {
+    return;
+  }
+  lastCleanupAt = now;
+  for (const [key, value] of rateLimitMap) {
+    if (now > value.resetTime) {
+      rateLimitMap.delete(key);
     }
-  },
-  5 * 60 * 1000,
-);
-cleanupTimer.unref?.();
+  }
+  if (rateLimitMap.size >= MAX_MEMORY_ENTRIES) {
+    const oldestKey = rateLimitMap.keys().next().value;
+    if (oldestKey !== undefined) rateLimitMap.delete(oldestKey);
+  }
+}
 
 function checkRateLimitMemory(
   identifier: string,
   config: RateLimitConfig,
 ): { allowed: boolean; remaining: number; resetIn: number } {
   const now = Date.now();
+  pruneExpiredMemoryEntries(now);
   const entry = rateLimitMap.get(identifier);
 
   if (!entry || now > entry.resetTime) {
@@ -61,13 +69,30 @@ function checkRateLimitMemory(
 
 // ── Supabase backend ──────────────────────────────────────────────────────────
 
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    encoder.encode(message),
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 async function checkRateLimitSupabase(
   identifier: string,
   config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
-  const key = createHmac("sha256", RATE_LIMIT_SALT!)
-    .update(identifier)
-    .digest("hex");
+  const key = await hmacSha256Hex(RATE_LIMIT_SALT!, identifier);
 
   try {
     const response = await fetch(
@@ -152,13 +177,25 @@ export async function checkRateLimitAsync(
   return checkRateLimitMemory(identifier, config);
 }
 
+function rightmostHeaderIp(value: string | null): string | null {
+  if (!value) return null;
+  const parts = value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1]! : null;
+}
+
 /**
- * Get client IP from request headers.
+ * Get client IP from trusted proxy headers.
+ * Prefers Vercel's edge header (rightmost hop) and x-real-ip, falling back to
+ * the rightmost x-forwarded-for hop so client-prepended spoofed values are ignored.
  */
 export function getClientIp(request: Request): string {
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
+    rightmostHeaderIp(request.headers.get("x-vercel-forwarded-for")) ||
+    request.headers.get("x-real-ip")?.trim() ||
+    rightmostHeaderIp(request.headers.get("x-forwarded-for")) ||
     "unknown"
   );
 }

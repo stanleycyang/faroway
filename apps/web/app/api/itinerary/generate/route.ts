@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
 
     console.error("[Itinerary Generation Error]", error);
     return Response.json(
-      { error: error instanceof Error ? error.message : "Generation failed" },
-      { status: 500 },
+      { error: "Generation failed" },
+      { status: 500, headers: { "Cache-Control": "private, no-store" } },
     );
   }
 }

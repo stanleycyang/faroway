@@ -70,7 +70,7 @@ function stubPlannerGlobals(
     removeItem: (k: string) => sessionMap.delete(k),
   };
   if (initialDraft) {
-    saveEditorDraft(sessionStorageMock, initialDraft);
+    saveEditorDraft(sessionStorageMock, initialDraft, Date.now(), mocks.owner);
   }
   const localMap = new Map<string, string>();
   const localStorageMock = {

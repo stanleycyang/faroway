@@ -4,6 +4,7 @@
  */
 
 import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
+import { logger } from '../logger';
 
 export type NetworkStatus = 'online' | 'offline' | 'unknown';
 
@@ -52,11 +53,11 @@ class NetworkMonitor {
       this.subscription = NetInfo.addEventListener(this.handleNetworkChange);
 
       this.initialized = true;
-      console.log('[NetworkMonitor] Initialized:', this.currentState.status);
+      logger.debug('[NetworkMonitor] Initialized:', this.currentState.status);
 
       return this.currentState;
     } catch (error) {
-      console.error('[NetworkMonitor] Initialization error:', error);
+      logger.error('[NetworkMonitor] Initialization error:', error);
       // Default to online if we can't determine
       this.currentState = {
         status: 'online',
@@ -101,7 +102,7 @@ class NetworkMonitor {
       details: state,
     };
 
-    console.log('[NetworkMonitor] State changed:', status, state.type);
+    logger.debug('[NetworkMonitor] State changed:', status, state.type);
   }
 
   /**
@@ -112,7 +113,7 @@ class NetworkMonitor {
       try {
         listener(this.currentState);
       } catch (error) {
-        console.error('[NetworkMonitor] Listener error:', error);
+        logger.error('[NetworkMonitor] Listener error:', error);
       }
     });
   }
@@ -163,7 +164,7 @@ class NetworkMonitor {
       this.notifyListeners();
       return this.currentState;
     } catch (error) {
-      console.error('[NetworkMonitor] Refresh error:', error);
+      logger.error('[NetworkMonitor] Refresh error:', error);
       return this.currentState;
     }
   }

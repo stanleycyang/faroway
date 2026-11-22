@@ -3,6 +3,10 @@
 import { useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
+import {
+  migrateAndSanitize,
+  migrateAndSanitizeProfile,
+} from "@/lib/tools/world-map/migrations";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import type { AppState, Profile } from "@/lib/tools/world-map/types";
 
@@ -15,18 +19,25 @@ type Parsed =
   | { kind: "state"; state: AppState }
   | { kind: "profile"; profile: Profile };
 
-function validate(json: unknown): Parsed | null {
-  if (!json || typeof json !== "object") return null;
+export function parseImportPayload(json: unknown): Parsed | null {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
   const obj = json as Record<string, unknown>;
   if (Array.isArray(obj.profiles) && typeof obj.activeProfileId === "string") {
-    return { kind: "state", state: obj as unknown as AppState };
+    const sanitized = migrateAndSanitize(obj);
+    if (obj.profiles.length > 0 && sanitized.profiles.length === 0) {
+      return null;
+    }
+    return { kind: "state", state: sanitized };
   }
   if (
     typeof obj.id === "string" &&
     obj.visits &&
-    typeof obj.visits === "object"
+    typeof obj.visits === "object" &&
+    !Array.isArray(obj.visits)
   ) {
-    return { kind: "profile", profile: obj as unknown as Profile };
+    const sanitized = migrateAndSanitizeProfile(obj);
+    if (!sanitized) return null;
+    return { kind: "profile", profile: sanitized };
   }
   return null;
 }
@@ -54,7 +65,7 @@ export function ImportDialog({ open, onClose }: Props) {
     try {
       const text = await file.text();
       const json = JSON.parse(text);
-      const validated = validate(json);
+      const validated = parseImportPayload(json);
       if (!validated) {
         setError("This doesn't look like a valid backup file.");
         setParsed(null);
@@ -71,6 +82,15 @@ export function ImportDialog({ open, onClose }: Props) {
 
   function doImport(mode: "merge" | "replace") {
     if (!parsed) return;
+    if (mode === "replace") {
+      const message =
+        parsed.kind === "state"
+          ? "Replace everything on this device? This will permanently overwrite all existing profiles and pins."
+          : "Replace the current profile's pins with this backup? Existing pins in this profile will be overwritten.";
+      if (typeof window !== "undefined" && !window.confirm(message)) {
+        return;
+      }
+    }
     if (parsed.kind === "state") {
       if (mode === "replace") {
         replaceAll(parsed.state);
@@ -164,25 +184,28 @@ export function ImportDialog({ open, onClose }: Props) {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-2">
                 <button
                   type="button"
                   onClick={() => doImport("merge")}
-                  className="py-2.5 rounded-xl bg-[#143D46] text-white text-sm font-semibold hover:bg-[#0E2C33] transition-colors"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#143D46] text-white text-sm font-semibold hover:bg-[#0E2C33] transition-colors"
                 >
                   Merge into current
                 </button>
                 <button
                   type="button"
                   onClick={() => doImport("replace")}
-                  className="py-2.5 rounded-xl ring-1 ring-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                  className="w-full py-2.5 px-4 rounded-xl ring-1 ring-red-200 text-red-700 bg-red-50/50 text-sm font-semibold hover:bg-red-50 transition-colors"
                 >
-                  Replace current
+                  {parsed.kind === "state"
+                    ? "Replace everything on this device"
+                    : "Replace current profile"}
                 </button>
               </div>
               <p className="text-xs text-slate-600 text-center">
-                Merge keeps existing pins where they overlap · Replace
-                overwrites them
+                {parsed.kind === "state"
+                  ? "Merge keeps existing pins where they overlap · Replace deletes all profiles on this device"
+                  : "Merge keeps existing pins where they overlap · Replace overwrites the current profile"}
               </p>
             </div>
           )}

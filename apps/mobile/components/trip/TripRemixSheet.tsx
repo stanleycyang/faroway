@@ -273,7 +273,7 @@ export function TripRemixSheet({
       <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' || Platform.OS === 'android' ? 'padding' : undefined}
         >
           <View style={styles.header}>
             <View style={{ flex: 1, marginRight: 12 }}>

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ActivityResult, SearchPlan } from "./types";
 import type { ScheduleExclusion } from "./schedule-compiler";
+import { stepFreeRequested } from "./requirement-corroboration";
 
 const date = z
   .string()
@@ -72,11 +73,7 @@ export function applyReviewedActivityDecisions(
 ) {
   date.parse(asOf);
   dates.forEach((value) => date.parse(value));
-  const stepFree =
-    plan.requirements?.accessibility?.includes("step_free_entrance") ||
-    /^(?:wheelchair access|stroller access|step[- ]free)\b/i.test(
-      plan.mobilityNeeds?.trim() ?? "",
-    );
+  const stepFree = stepFreeRequested(plan);
   const exclusions: ScheduleExclusion[] = [];
   const notes: string[] = [];
   const activities = inventory.map((activity) => {

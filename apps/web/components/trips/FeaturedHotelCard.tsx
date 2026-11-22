@@ -154,7 +154,7 @@ export function FeaturedHotelCard({
               <Star className="h-3.5 w-3.5 text-amber-700" />
               {hotel.userRating.toFixed(1)}
               {hotel.reviewCount != null
-                ? ` (${hotel.reviewCount.toLocaleString()} reviews)`
+                ? ` (${hotel.reviewCount.toLocaleString("en-US")} reviews)`
                 : ""}
             </span>
           )}

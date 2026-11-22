@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   Image,
   Platform,
 } from 'react-native';
@@ -21,9 +21,6 @@ import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { localCalendarDate } from '../../lib/dateRangeMarks';
-
-const { width, height: screenHeight } = Dimensions.get('window');
-const HERO_HEIGHT = screenHeight * 0.45;
 
 const HIGHLIGHT_ICONS: Record<string, string> = {
   'Crystal waters': 'water',
@@ -63,10 +60,20 @@ function getNextFriday(): Date {
 
 export default function InspirationDetailScreen() {
   const router = useRouter();
+  const { width, height: screenHeight } = useWindowDimensions();
+  const heroHeight = screenHeight * 0.45;
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const inspiration = getInspirationBySlug(slug || '');
   const reduceMotion = useReduceMotion();
+
+  const handleGoBack = () => {
+    if (typeof router.canGoBack === 'function' && !router.canGoBack()) {
+      router.replace('/(tabs)');
+    } else {
+      router.back();
+    }
+  };
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const sectionAnims = useRef([
@@ -117,7 +124,7 @@ export default function InspirationDetailScreen() {
           Inspiration not found
         </Text>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleGoBack}
           style={{ minHeight: 44, justifyContent: 'center', marginTop: 8 }}
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -131,8 +138,8 @@ export default function InspirationDetailScreen() {
   }
 
   const heroTranslateY = scrollY.interpolate({
-    inputRange: [-100, 0, HERO_HEIGHT],
-    outputRange: [-50, 0, HERO_HEIGHT * 0.3],
+    inputRange: [-100, 0, heroHeight],
+    outputRange: [-50, 0, heroHeight * 0.3],
     extrapolate: 'clamp',
   });
 
@@ -204,11 +211,12 @@ export default function InspirationDetailScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Hero Section */}
-        <View style={styles.heroContainer}>
+        <View style={[styles.heroContainer, { height: heroHeight }]}>
           <Animated.Image
             source={{ uri: inspiration.heroImage }}
             style={[
               styles.heroImage,
+              { width, height: heroHeight + 100 },
               reduceMotion
                 ? undefined
                 : {
@@ -264,7 +272,7 @@ export default function InspirationDetailScreen() {
             {matchingDestinations.map((dest) => (
               <TouchableOpacity
                 key={dest.id}
-                style={styles.destCard}
+                style={[styles.destCard, { width: width * 0.65 }]}
                 activeOpacity={0.9}
                 onPress={() => handleDestinationPress(dest)}
                 accessibilityRole="button"
@@ -295,7 +303,7 @@ export default function InspirationDetailScreen() {
       {/* Back Button */}
       <TouchableOpacity
         style={[styles.backButton, { top: insets.top + 8 }]}
-        onPress={() => router.back()}
+        onPress={handleGoBack}
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
@@ -338,12 +346,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   heroContainer: {
-    height: HERO_HEIGHT,
     overflow: 'hidden',
   },
   heroImage: {
-    width: width,
-    height: HERO_HEIGHT + 100,
     position: 'absolute',
     top: -50,
   },
@@ -419,7 +424,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   destCard: {
-    width: width * 0.65,
     height: 240,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',

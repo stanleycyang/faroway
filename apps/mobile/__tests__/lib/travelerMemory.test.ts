@@ -137,4 +137,35 @@ describe('travelerMemory', () => {
     expect(extracted.avoidEarlyStarts).toBe(true);
     expect(extracted.requirements?.dietaryPreferences).toEqual(['Vegan']);
   });
+
+  it('caps homeAirport to 10 characters so guest brief persistence never rejects it', async () => {
+    const saved = await saveTravelerMemory('user-cap', {
+      homeAirport: 'abcdefghijkl',
+    });
+    expect(saved?.homeAirport).toBe('ABCDEFGHIJ');
+
+    const merged = mergeTravelerMemoryIntoDraft(
+      {
+        destination: '',
+        startDate: '',
+        endDate: '',
+        travelers: 2,
+        travelerType: 'couple',
+        vibes: [],
+      },
+      {
+        homeAirport: 'LONGAIRPORT12',
+        defaultVibes: [],
+        avoidEarlyStarts: false,
+        requirements: {
+          allergies: [],
+          dietaryPreferences: [],
+          accessibility: [],
+          mobilityNotes: '',
+        },
+        updatedAt: '2026-10-01T00:00:00Z',
+      }
+    );
+    expect(merged.originAirport).toBe('LONGAIRPOR');
+  });
 });

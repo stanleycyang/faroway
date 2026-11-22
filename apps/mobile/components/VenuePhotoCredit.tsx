@@ -1,16 +1,14 @@
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { openSafeHttpsUrl } from '../lib/openExternalUrl';
 import type { VenuePhotoCredit as Credit } from '../lib/venuePhotos';
 
 export function VenuePhotoCredit({ credit }: { credit: Credit }) {
-  const open = async (url: string) => {
-    try {
-      await WebBrowser.openBrowserAsync(url);
-    } catch {
-      Alert.alert('Could not open photo details', 'Please try again when you have a connection.');
-    }
-  };
+  const open = (url: string) =>
+    openSafeHttpsUrl(url, {
+      fallbackTitle: 'Could not open photo details',
+      fallbackMessage: 'Please try again when you have a connection.',
+    });
   return (
     <View style={styles.row}>
       <TouchableOpacity

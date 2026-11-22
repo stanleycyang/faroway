@@ -14,7 +14,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   Animated,
   ScrollView,
   TouchableOpacity,
@@ -44,8 +43,6 @@ import { validatePreviewBlocks } from '../../lib/json-render/validate-preview';
 import { registry, StreamingTripContext } from '../../lib/json-render/registry';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
-
-const { width, height } = Dimensions.get('window');
 
 const GENERATION_STEPS = [
   { key: 'orchestrator', text: 'Your preferences', icon: 'options-outline' },
@@ -938,8 +935,8 @@ const styles = StyleSheet.create({
     color: colors.neutral[400],
   },
   container: { flex: 1, backgroundColor: '#143D46' },
-  bgImage: { position: 'absolute', width, height, resizeMode: 'cover' },
-  overlay: { position: 'absolute', width, height },
+  bgImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', resizeMode: 'cover' },
+  overlay: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   safeArea: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 16 },

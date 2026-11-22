@@ -106,10 +106,12 @@ export function CountryDetailDrawer({
   });
   const upsertVisit = useWorldMapStore((s) => s.upsertVisit);
   const deleteVisit = useWorldMapStore((s) => s.deleteVisit);
+  const clearPersistError = useWorldMapStore((s) => s.clearPersistError);
 
   const [draft, setDraft] = useState<CountryVisit | null>(() =>
     iso ? (visit ?? EMPTY_DRAFT(iso)) : null,
   );
+  const [formError, setFormError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(() =>
     Boolean(
       visit?.firstVisit ||
@@ -173,21 +175,59 @@ export function CountryDetailDrawer({
 
   function save() {
     if (!draft || !iso) return;
-    upsertVisit(iso, {
-      firstVisit: draft.firstVisit || undefined,
-      lastVisit: draft.lastVisit || undefined,
-      visitCount: draft.visitCount || undefined,
-      pinnedCity: draft.pinnedCity || undefined,
-      notes: draft.notes || undefined,
-      rating: draft.rating,
-      photoDataUrl: draft.photoDataUrl,
-    });
+    if (
+      draft.firstVisit &&
+      draft.lastVisit &&
+      draft.lastVisit < draft.firstVisit
+    ) {
+      setFormError("Last visit date must be on or after the first visit date.");
+      return;
+    }
+    setFormError(null);
+    const visitCount =
+      typeof draft.visitCount === "number" && Number.isFinite(draft.visitCount)
+        ? Math.floor(Math.max(0, draft.visitCount)) || undefined
+        : undefined;
+    clearPersistError();
+    try {
+      upsertVisit(iso, {
+        firstVisit: draft.firstVisit || undefined,
+        lastVisit: draft.lastVisit || undefined,
+        visitCount,
+        pinnedCity: draft.pinnedCity || undefined,
+        notes: draft.notes || undefined,
+        rating: draft.rating,
+        photoDataUrl: draft.photoDataUrl,
+      });
+    } catch {
+      setFormError(
+        "Couldn’t save changes to browser storage. Try removing a photo or freeing space.",
+      );
+      return;
+    }
+    const persistErr = useWorldMapStore.getState().persistError;
+    if (persistErr) {
+      setFormError(persistErr);
+      return;
+    }
     onClose();
   }
 
   function pinAndClose() {
     if (!iso) return;
-    upsertVisit(iso, {});
+    setFormError(null);
+    clearPersistError();
+    try {
+      upsertVisit(iso, {});
+    } catch {
+      setFormError("Couldn’t save pin to browser storage.");
+      return;
+    }
+    const persistErr = useWorldMapStore.getState().persistError;
+    if (persistErr) {
+      setFormError(persistErr);
+      return;
+    }
     onClose();
   }
 
@@ -211,7 +251,7 @@ export function CountryDetailDrawer({
       <div
         ref={dialogRef}
         role="dialog"
-        aria-modal
+        aria-modal="true"
         aria-labelledby="country-drawer-title"
         tabIndex={-1}
         className="fixed z-50 bg-white shadow-2xl overflow-hidden flex flex-col inset-x-0 bottom-0 top-auto rounded-t-2xl max-h-[92vh] md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[440px] md:max-h-screen md:rounded-none md:rounded-l-2xl animate-slide-up md:animate-slide-in-right"
@@ -253,6 +293,15 @@ export function CountryDetailDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {formError && (
+            <div
+              role="alert"
+              className="text-sm text-red-700 bg-red-50 ring-1 ring-red-200 rounded-lg px-3.5 py-2.5"
+            >
+              {formError}
+            </div>
+          )}
+
           {!isPinned && (
             <p className="text-sm text-slate-600 leading-relaxed">
               You haven&apos;t pinned {countryLabel} yet. Pin it now, and
@@ -363,9 +412,10 @@ export function CountryDetailDrawer({
                       type="date"
                       aria-label="First visit"
                       value={draft.firstVisit || ""}
-                      onChange={(e) =>
-                        setDraft({ ...draft, firstVisit: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setFormError(null);
+                        setDraft({ ...draft, firstVisit: e.target.value });
+                      }}
                       className={inputClass}
                     />
                   </Field>
@@ -373,10 +423,12 @@ export function CountryDetailDrawer({
                     <input
                       type="date"
                       aria-label="Last visit"
+                      min={draft.firstVisit || undefined}
                       value={draft.lastVisit || ""}
-                      onChange={(e) =>
-                        setDraft({ ...draft, lastVisit: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setFormError(null);
+                        setDraft({ ...draft, lastVisit: e.target.value });
+                      }}
                       className={inputClass}
                     />
                   </Field>
@@ -388,12 +440,13 @@ export function CountryDetailDrawer({
                       type="number"
                       aria-label="Times visited"
                       min="0"
+                      step="1"
                       value={draft.visitCount ?? ""}
                       onChange={(e) =>
                         setDraft({
                           ...draft,
                           visitCount: e.target.value
-                            ? Math.max(0, Number(e.target.value))
+                            ? Math.floor(Math.max(0, Number(e.target.value)))
                             : undefined,
                         })
                       }

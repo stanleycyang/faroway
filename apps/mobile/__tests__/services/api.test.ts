@@ -156,17 +156,36 @@ describe('createTrip', () => {
 });
 
 describe('updateTrip', () => {
-  it('sends PATCH with updates', async () => {
+  it('sends PATCH with snake_case updates matching the backend contract', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ trip: { id: 'trip-1', destination: 'Osaka' } }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await updateTrip('trip-1', { destination: 'Osaka' } as any);
+    await updateTrip(
+      'trip-1',
+      {
+        destination: 'Osaka',
+        startDate: '2026-07-01',
+        endDate: '2026-07-05',
+        budget: 'luxury',
+        originAirport: 'SFO',
+      },
+      '2026-06-01T00:00:00Z'
+    );
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toBe('http://localhost:3000/api/trips/trip-1');
     expect(options.method).toBe('PATCH');
+    expect(JSON.parse(options.body)).toEqual({
+      destination: 'Osaka',
+      start_date: '2026-07-01',
+      end_date: '2026-07-05',
+      budget_tier: 'luxury',
+      expectedUpdatedAt: '2026-06-01T00:00:00Z',
+      preferences: {
+        originAirport: 'SFO',
+      },
+    });
   });
 });
 
@@ -282,6 +301,7 @@ describe('push token APIs', () => {
     const result = await registerPushToken({
       token: 'ExpoPushToken[abc123]',
       platform: 'ios',
+      revision: 42,
       deviceName: 'iPhone',
     });
 
@@ -292,7 +312,8 @@ describe('push token APIs', () => {
     expect(JSON.parse(options.body)).toEqual({
       token: 'ExpoPushToken[abc123]',
       platform: 'ios',
-      deviceName: 'iPhone',
+      revision: 42,
+      consentVersion: 'notifications-v2',
     });
   });
 
@@ -302,13 +323,22 @@ describe('push token APIs', () => {
       json: () => Promise.resolve({ deleted: true }),
     });
 
-    const result = await removePushToken('ExpoPushToken[abc123]');
+    const result = await removePushToken({
+      token: 'ExpoPushToken[abc123]',
+      revision: 43,
+      platform: 'ios',
+    });
 
     expect(result.data?.deleted).toBe(true);
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toBe('http://localhost:3000/api/user/push-token');
     expect(options.method).toBe('DELETE');
-    expect(JSON.parse(options.body)).toEqual({ token: 'ExpoPushToken[abc123]' });
+    expect(JSON.parse(options.body)).toEqual({
+      token: 'ExpoPushToken[abc123]',
+      revision: 43,
+      consentVersion: 'notifications-v2',
+      platform: 'ios',
+    });
   });
 });
 

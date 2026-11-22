@@ -274,3 +274,23 @@ it('lets a traveler clear an optional saved budget and clears the local preferen
     budget: undefined,
   });
 });
+
+it.each([
+  ['EditProfileScreen', EditProfileScreen],
+  ['PreferencesScreen', PreferencesScreen],
+] as const)(
+  'redirects signed-out users back to Profile with a recovery button in %s',
+  async (_name, Screen) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockStore.user = null as any;
+    await act(async () => {
+      renderer = create(<Screen />);
+    });
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/profile');
+    const button = renderer.root.findByProps({ accessibilityLabel: 'Return to Profile' });
+    await act(async () => {
+      button.props.onPress();
+    });
+    expect(mockReplace).toHaveBeenCalledTimes(2);
+  }
+);

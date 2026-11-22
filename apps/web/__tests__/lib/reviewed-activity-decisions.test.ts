@@ -82,6 +82,24 @@ it("withholds the full Round Tower route only for the scoped step-free request",
   ).toEqual([]);
   expect(
     applyReviewedActivityDecisions(
+      {
+        ...request,
+        mobilityNeeds: "",
+        requirements: {
+          allergies: [],
+          dietaryPreferences: [],
+          accessibility: [],
+          mobilityNotes: "Traveling with a wheelchair",
+        },
+      },
+      [visit(0)],
+      dates,
+      facts,
+      "2026-11-03",
+    ).exclusions.map((e) => e.date),
+  ).toEqual(dates);
+  expect(
+    applyReviewedActivityDecisions(
       request,
       [{ ...visit(0), proposedVisitType: "exterior_walk" }],
       dates,

@@ -13,12 +13,48 @@ interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
+  readonly length?: number;
+  key?(index: number): string | null;
 }
 
 interface StoredDraftEnvelope<T> {
   version: 1;
   savedAt: number;
   draft: T;
+}
+
+function isValidEnvelope<T>(
+  raw: string | null,
+  now: number,
+): StoredDraftEnvelope<T> | null {
+  if (!raw) return null;
+  try {
+    const envelope = JSON.parse(raw) as Partial<StoredDraftEnvelope<T>>;
+    if (
+      envelope.version !== 1 ||
+      typeof envelope.savedAt !== "number" ||
+      envelope.savedAt > now ||
+      now - envelope.savedAt > CREATE_DRAFT_TTL_MS ||
+      envelope.draft === undefined
+    ) {
+      return null;
+    }
+    return envelope as StoredDraftEnvelope<T>;
+  } catch {
+    return null;
+  }
+}
+
+function listStorageKeys(storage: StorageLike): string[] {
+  if (typeof storage.length !== "number" || typeof storage.key !== "function") {
+    return [];
+  }
+  const keys: string[] = [];
+  for (let i = 0; i < storage.length; i += 1) {
+    const key = storage.key(i);
+    if (typeof key === "string") keys.push(key);
+  }
+  return keys;
 }
 
 function createDraftId(): string {
@@ -66,33 +102,50 @@ export function takeCreateDraft<T>(
   if (!raw) return null;
   storage.removeItem(key);
 
-  try {
-    const envelope = JSON.parse(raw) as Partial<StoredDraftEnvelope<T>>;
-    if (
-      envelope.version !== 1 ||
-      typeof envelope.savedAt !== "number" ||
-      envelope.savedAt > now ||
-      now - envelope.savedAt > CREATE_DRAFT_TTL_MS ||
-      envelope.draft === undefined
-    ) {
-      return null;
+  const envelope = isValidEnvelope<T>(raw, now);
+  return envelope ? envelope.draft : null;
+}
+
+/** Purges expired or malformed one-time create drafts from storage. */
+export function purgeExpiredCreateDrafts(
+  storage: StorageLike,
+  now = Date.now(),
+): void {
+  const keys = listStorageKeys(storage);
+  for (const key of keys) {
+    if (!key.startsWith(CREATE_DRAFT_STORAGE_PREFIX)) continue;
+    try {
+      const raw = storage.getItem(key);
+      if (!isValidEnvelope(raw, now)) {
+        storage.removeItem(key);
+      }
+    } catch {
+      try {
+        storage.removeItem(key);
+      } catch {
+        /* Ignore storage errors while purging stale drafts. */
+      }
     }
-    return envelope.draft;
-  } catch {
-    return null;
   }
 }
 
-const EDITOR_DRAFT_KEY = "faroway-create-editor-draft";
+const LEGACY_EDITOR_DRAFT_KEY = "faroway-create-editor-draft";
+const EDITOR_DRAFT_KEY_PREFIX = "faroway-create-editor-draft:";
 
-/** A same-tab setup draft is independent of any submitted trip request. */
+export function editorDraftStorageKey(scopeId = "guest"): string {
+  const normalized = scopeId.trim() || "guest";
+  return `${EDITOR_DRAFT_KEY_PREFIX}${normalized}`;
+}
+
+/** A same-tab setup draft is independent of any submitted trip request and scoped per user. */
 export function saveEditorDraft<T>(
   storage: StorageLike,
   draft: T,
   now = Date.now(),
+  scopeId = "guest",
 ): void {
   storage.setItem(
-    EDITOR_DRAFT_KEY,
+    editorDraftStorageKey(scopeId),
     JSON.stringify({ version: 1, savedAt: now, draft }),
   );
 }
@@ -100,27 +153,33 @@ export function saveEditorDraft<T>(
 export function readEditorDraft<T>(
   storage: StorageLike,
   now = Date.now(),
+  scopeId = "guest",
 ): T | null {
   try {
-    const raw = storage.getItem(EDITOR_DRAFT_KEY);
-    if (!raw) return null;
-    const envelope = JSON.parse(raw) as Partial<StoredDraftEnvelope<T>>;
-    if (
-      envelope.version !== 1 ||
-      typeof envelope.savedAt !== "number" ||
-      envelope.savedAt > now ||
-      now - envelope.savedAt > CREATE_DRAFT_TTL_MS ||
-      envelope.draft === undefined
-    )
-      return null;
-    return envelope.draft;
+    const raw = storage.getItem(editorDraftStorageKey(scopeId));
+    const envelope = isValidEnvelope<T>(raw, now);
+    return envelope ? envelope.draft : null;
   } catch {
     return null;
   }
 }
 
-export function clearEditorDraft(storage: StorageLike): void {
-  storage.removeItem(EDITOR_DRAFT_KEY);
+export function clearEditorDraft(
+  storage: StorageLike,
+  scopeId = "guest",
+): void {
+  storage.removeItem(editorDraftStorageKey(scopeId));
+}
+
+/** Clears every scoped editor draft (plus legacy unscoped key), e.g. on sign-out. */
+export function clearAllEditorDrafts(storage: StorageLike): void {
+  storage.removeItem(LEGACY_EDITOR_DRAFT_KEY);
+  const keys = listStorageKeys(storage);
+  for (const key of keys) {
+    if (key.startsWith(EDITOR_DRAFT_KEY_PREFIX)) {
+      storage.removeItem(key);
+    }
+  }
 }
 
 /** Restore calendar dates locally and reject malformed legacy timestamp values. */

@@ -10,6 +10,7 @@ jest.mock('react-native', () => ({
   TouchableOpacity: 'TouchableOpacity',
   Image: 'Image',
   Dimensions: { get: () => ({ width: 390, height: 844 }) },
+  useWindowDimensions: () => ({ width: 390, height: 844 }),
   Platform: { OS: 'ios', select: (opts: Record<string, unknown>) => opts.ios ?? opts.default },
   Animated: {
     View: 'AnimatedView',

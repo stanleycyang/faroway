@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
+import { useRetrySegment } from "@/hooks/useRetrySegment";
 import { AlertTriangle, RefreshCw, Home, MessageCircle } from "lucide-react";
 
 export default function Error({
@@ -13,6 +14,7 @@ export default function Error({
   reset: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const { retry, retrying } = useRetrySegment(reset);
   useEffect(() => {
     heading.current?.focus();
     Sentry.captureException(error);
@@ -63,11 +65,17 @@ export default function Error({
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={reset}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-all shadow-lg shadow-primary/25 hover:shadow-xl"
+            type="button"
+            onClick={retry}
+            disabled={retrying}
+            aria-busy={retrying}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-all shadow-lg shadow-primary/25 hover:shadow-xl disabled:opacity-60"
           >
-            <RefreshCw className="w-5 h-5" />
-            Try Again
+            <RefreshCw
+              className={`w-5 h-5 ${retrying ? "animate-spin motion-reduce:animate-none" : ""}`}
+              aria-hidden="true"
+            />
+            {retrying ? "Trying again…" : "Try again"}
           </button>
           <Link
             href="/"

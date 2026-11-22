@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabase } from "@/lib/supabase/server";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 
 const TOKEN_PATTERN = /^[a-zA-Z0-9_-]{4,128}$/;
 const VOTER_COOKIE_NAME = "faroway_voter";
@@ -42,30 +43,40 @@ function getTrustedClientIp(request: NextRequest): string {
   return forwarded || getClientIp(request);
 }
 
-function getVoterCookieSecret(): string {
-  return (
-    process.env.SHARED_REACTIONS_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "faroway-local-voter-secret"
-  );
+function getVoterCookieSecret(): string | null {
+  const dedicated = process.env.SHARED_REACTIONS_SECRET?.trim();
+  if (dedicated) return dedicated;
+
+  const ipSalt = process.env.IP_HASH_SALT?.trim();
+  if (ipSalt) {
+    return createHmac("sha256", ipSalt)
+      .update("faroway:shared-reactions-voter-cookie:v1")
+      .digest("hex");
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return "faroway-local-voter-secret";
+  }
+
+  return null;
 }
 
-function signVoterId(rawId: string): string {
-  const sig = createHmac("sha256", getVoterCookieSecret())
-    .update(rawId)
-    .digest("base64url");
+function signVoterId(rawId: string, secret: string): string {
+  const sig = createHmac("sha256", secret).update(rawId).digest("base64url");
   return `${rawId}.${sig}`;
 }
 
-function verifyVoterCookie(cookieValue: string | undefined): string | null {
+function verifyVoterCookie(
+  cookieValue: string | undefined,
+  secret: string,
+): string | null {
   if (!cookieValue) return null;
   const dotIdx = cookieValue.indexOf(".");
   if (dotIdx <= 0) return null;
   const rawId = cookieValue.slice(0, dotIdx);
   const sig = cookieValue.slice(dotIdx + 1);
   if (!/^[a-zA-Z0-9_-]{16,64}$/.test(rawId) || !sig) return null;
-  const expected = createHmac("sha256", getVoterCookieSecret())
+  const expected = createHmac("sha256", secret)
     .update(rawId)
     .digest("base64url");
   const a = Buffer.from(sig);
@@ -74,18 +85,22 @@ function verifyVoterCookie(cookieValue: string | undefined): string | null {
   return rawId;
 }
 
-function resolveVoterId(request: NextRequest): {
+function resolveVoterId(
+  request: NextRequest,
+  secret: string,
+): {
   voterId: string;
   cookieToSet: string | null;
 } {
   const existing = verifyVoterCookie(
     request.cookies.get(VOTER_COOKIE_NAME)?.value,
+    secret,
   );
   if (existing) {
     return { voterId: existing, cookieToSet: null };
   }
   const freshId = `v_${randomBytes(16).toString("base64url")}`;
-  return { voterId: freshId, cookieToSet: signVoterId(freshId) };
+  return { voterId: freshId, cookieToSet: signVoterId(freshId, secret) };
 }
 
 function attachVoterCookie(
@@ -230,9 +245,10 @@ async function verifySharedTrip(token: string): Promise<{
     }
   ).itineraries;
   const itinerary = Array.isArray(joined) ? joined[0] : joined;
+  const filteredItinerary = filterViatorDisplay(itinerary);
   return {
     tripId: data.id,
-    validStopKeys: extractValidStopKeys(itinerary?.days),
+    validStopKeys: extractValidStopKeys(filteredItinerary?.days),
   };
 }
 
@@ -395,7 +411,15 @@ export async function POST(
       );
     }
 
-    const { voterId, cookieToSet } = resolveVoterId(request);
+    const voterSecret = getVoterCookieSecret();
+    if (!voterSecret) {
+      return NextResponse.json(
+        { error: "Reactions are temporarily unavailable" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const { voterId, cookieToSet } = resolveVoterId(request, voterSecret);
     const supabase = getSupabase();
 
     if (action === "add") {
@@ -409,7 +433,10 @@ export async function POST(
             reaction,
             voter_id: voterId,
           },
-          { onConflict: "share_token,stop_key,reaction,voter_id" },
+          {
+            onConflict: "share_token,stop_key,reaction,voter_id",
+            ignoreDuplicates: true,
+          },
         );
 
       if (upsertError) {

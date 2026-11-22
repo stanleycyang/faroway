@@ -130,6 +130,10 @@ test.each([
         expect(anchor.download).toMatch(
           /^world-map-landscape-\d{4}-\d{2}-\d{2}\.png$/,
         );
+        expect(revoke).not.toHaveBeenCalled();
+        await act(async () => {
+          vi.advanceTimersByTime(1000);
+        });
         expect(revoke).toHaveBeenCalledWith("blob:fixture");
       }
     }

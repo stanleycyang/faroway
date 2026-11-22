@@ -300,3 +300,44 @@ test.each([false, true])(
     ).toBeNull();
   },
 );
+
+test("renders human labels, singular traveler pluralization, and min=today on start date", async () => {
+  await act(async () => {
+    renderer = create(
+      <TripBriefEditor
+        trip={{
+          ...trip(),
+          start_date: "2099-11-01",
+          end_date: "2099-11-05",
+          travelers: 1,
+          budget_tier: "moderate",
+          vibes: ["foodie", "cultural"],
+        }}
+        onSaved={saved}
+        onReload={reload}
+      />,
+    );
+  });
+  const summaryNode = renderer!.root.findByType("summary");
+  const extractText = (node: unknown): string => {
+    if (typeof node === "string" || typeof node === "number")
+      return String(node);
+    if (Array.isArray(node)) return node.map(extractText).join("");
+    if (node && typeof node === "object" && "children" in node) {
+      return extractText((node as { children: unknown }).children);
+    }
+    return "";
+  };
+  const summaryText = extractText(summaryNode);
+  expect(summaryText).toContain("1 traveler");
+  expect(summaryText).not.toContain("1 travelers");
+  expect(summaryText).toContain("Comfort budget");
+  expect(summaryText).toContain("Foodie, Cultural");
+
+  const startInput = renderer!.root
+    .findAllByType("input")
+    .find((node) => node.props.type === "date")!;
+  const now = new Date();
+  const expectedToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  expect(startInput.props.min).toBe(expectedToday);
+});

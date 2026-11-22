@@ -18,6 +18,7 @@ interface Prediction {
 interface PlacesAutocompleteInputProps {
   onSelect: (place: PlaceResult) => void;
   localDestinations: { name: string; country: string }[];
+  showLiveCityDetails?: boolean;
 }
 
 const DEBOUNCE_MS = 300;
@@ -27,6 +28,7 @@ const SEARCH_TIMEOUT_MS = 15_000;
 export function PlacesAutocompleteInput({
   onSelect,
   localDestinations,
+  showLiveCityDetails = true,
 }: PlacesAutocompleteInputProps) {
   const [query, setQuery] = useState("");
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -35,6 +37,7 @@ export function PlacesAutocompleteInput({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [apiAvailable, setApiAvailable] = useState(true);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -240,18 +243,37 @@ export function PlacesAutocompleteInput({
       if (clampedActiveIndex >= 0 && clampedActiveIndex < localResults.length) {
         event.preventDefault();
         handleSelectLocal(localResults[clampedActiveIndex]);
-      } else if (
-        clampedActiveIndex === localResults.length ||
-        query.trim().length >= MIN_QUERY_LENGTH
-      ) {
+      } else if (clampedActiveIndex === localResults.length) {
         event.preventDefault();
         handleSelectCustom();
+      } else if (query.trim().length >= MIN_QUERY_LENGTH) {
+        event.preventDefault();
+        const exactMatch = localResults.find(
+          (destination) => destination.name.toLowerCase() === localQuery,
+        );
+        if (exactMatch) {
+          handleSelectLocal(exactMatch);
+        } else {
+          handleSelectCustom();
+        }
       }
     }
   };
 
+  const handleBlur = (event: React.FocusEvent<HTMLElement>) => {
+    const nextFocus = event.relatedTarget as Node | null;
+    if (
+      nextFocus &&
+      (containerRef.current?.contains(nextFocus) ||
+        dropdownRef.current?.contains(nextFocus))
+    ) {
+      return;
+    }
+    dismissResults();
+  };
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative" onBlur={handleBlur}>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600" />
         <input
@@ -278,6 +300,7 @@ export function PlacesAutocompleteInput({
           role="combobox"
           onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           onFocus={() => {
             if (query.length >= MIN_QUERY_LENGTH) setIsOpen(true);
           }}
@@ -319,46 +342,40 @@ export function PlacesAutocompleteInput({
                   id={`destination-option-${index}`}
                   role="option"
                   aria-selected={clampedActiveIndex === index}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => handleSelectLocal(d)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`w-full cursor-pointer px-4 py-3 flex items-center gap-3 transition-colors text-left ${
+                    clampedActiveIndex === index
+                      ? "bg-primary-50"
+                      : "hover:bg-gray-50"
+                  }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => handleSelectLocal(d)}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left ${
-                      clampedActiveIndex === index
-                        ? "bg-primary-50"
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <MapPin className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 truncate">
-                        {d.name}
-                      </p>
-                      <p className="text-sm text-slate-600 truncate">
-                        {d.country}
-                      </p>
-                    </div>
-                  </button>
+                  <MapPin className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900 truncate">
+                      {d.name}
+                    </p>
+                    <p className="text-sm text-slate-600 truncate">
+                      {d.country}
+                    </p>
+                  </div>
                 </li>
               ))}
               <li
                 id={`destination-option-${localResults.length}`}
                 role="option"
                 aria-selected={clampedActiveIndex === localResults.length}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(localResults.length)}
+                onClick={handleSelectCustom}
+                className={`w-full cursor-pointer px-4 py-3 text-left text-sm font-medium text-primary-700 ${
+                  clampedActiveIndex === localResults.length
+                    ? "bg-primary-50"
+                    : "hover:bg-gray-50"
+                }`}
               >
-                <button
-                  type="button"
-                  className={`w-full px-4 py-3 text-left text-sm font-medium text-primary-700 ${
-                    clampedActiveIndex === localResults.length
-                      ? "bg-primary-50"
-                      : "hover:bg-gray-50"
-                  }`}
-                  onMouseEnter={() => setActiveIndex(localResults.length)}
-                  onClick={handleSelectCustom}
-                >
-                  Plan with “{query.trim()}”
-                </button>
+                Plan with “{query.trim()}”
               </li>
             </ul>
           )}
@@ -384,7 +401,12 @@ export function PlacesAutocompleteInput({
                   >
                     Google Maps
                   </span>
-                  <PlacesExplorer key={p.placeId} initialPlaceId={p.placeId} />
+                  {showLiveCityDetails && (
+                    <PlacesExplorer
+                      key={p.placeId}
+                      initialPlaceId={p.placeId}
+                    />
+                  )}
                 </div>
               ))}
             </div>
